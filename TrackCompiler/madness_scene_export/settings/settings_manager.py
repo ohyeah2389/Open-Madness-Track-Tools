@@ -41,10 +41,9 @@ def get_addon_preferences(context):
     # Add the full addon name if it looks like a Blender extension
     root_module = __name__.split('.')[0]
     if root_module == "bl_ext":
-        # For Blender extensions, try the full module path
-        full_module_name = '.'.join(__name__.split('.')[:-1])  # Remove the current module name
-        if full_module_name not in possible_names:
-            possible_names.insert(0, full_module_name)
+        # For Blender extensions, try the full module path (keep the full __name__)
+        if __name__ not in possible_names:
+            possible_names.insert(0, __name__)
     
     for name in possible_names:
         try:
@@ -59,37 +58,3 @@ def get_addon_preferences(context):
     print(f"Debug: Tried names: {possible_names}")
     
     return None, None
-
-def get_exporter_path(context):
-    """Get exporter path from preferences or fallback file."""
-    preferences, addon_name = get_addon_preferences(context)
-    
-    if preferences and preferences.exporter_exe and preferences.exporter_exe != "MEBExporterExtended.exe":
-        # Found valid preferences with non-default value
-        return preferences.exporter_exe, f"preferences ({addon_name})"
-    
-    # Fall back to JSON file
-    settings = load_settings_from_file()
-    if "exporter_exe" in settings:
-        return settings["exporter_exe"], "settings file"
-    
-    # Final fallback
-    return "MEBExporterExtended.exe", "default"
-
-def set_exporter_path(context, path):
-    """Set exporter path in both preferences and fallback file."""
-    # Try to save to preferences
-    preferences, addon_name = get_addon_preferences(context)
-    if preferences and not getattr(preferences, '_updating', False):
-        preferences._updating = True
-        try:
-            preferences.exporter_exe = path
-            print(f"Saved exporter path to preferences ({addon_name})")
-        finally:
-            preferences._updating = False
-    
-    # Always save to fallback file for development
-    settings = load_settings_from_file()
-    settings["exporter_exe"] = path
-    save_settings_to_file(settings)
-    print(f"Saved exporter path to settings file: {get_settings_file_path()}") 

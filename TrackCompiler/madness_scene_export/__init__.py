@@ -15,13 +15,7 @@ from bpy_extras.io_utils import ExportHelper  # type: ignore
 from pathlib import Path
 from .settings import meb_export_settings
 from .materials import mtx_material_system
-from .settings.settings_manager import (
-    load_settings_from_file,
-    save_settings_to_file,
-    get_settings_file_path,
-    get_exporter_path,
-    get_addon_preferences,
-)
+from .settings.settings_manager import get_addon_preferences
 from .aiw import aiw_export
 from .export import livetrack_mrdf_export
 from .export import triggers_export
@@ -39,90 +33,15 @@ from .export.lights_export import export_lights_sgx
 from .export.dynamic_export import export_dynamic_objects
 
 
-# Module-level update functions that work with class registration
-def _update_exporter_exe(self, context):
-    """Update callback to sync with file."""
-    if getattr(self, "_updating", False):
-        return
-
-    self._updating = True
-    try:
-        if self.exporter_exe and self.exporter_exe != "MEBExporterExtended.exe":
-            # Only save to file, don't modify preferences (avoid recursion)
-            settings = load_settings_from_file()
-            settings["exporter_exe"] = self.exporter_exe
-            save_settings_to_file(settings)
-            print(f"Saved exporter path to settings file: {get_settings_file_path()}")
-    finally:
-        self._updating = False
-
-
 class MadnessSceneExporterPreferences(bpy.types.AddonPreferences):
     """Addon preferences for Madness Scene Exporter"""
 
     bl_idname = __name__
 
-    _updating = False  # Recursion guard
-
-    exporter_exe: StringProperty(
-        name="MEB Exporter Path",
-        description="Path to MEBExporterExtended.exe",
-        default="MEBExporterExtended.exe",
-        subtype="FILE_PATH",
-        update=_update_exporter_exe,
-    )  # type: ignore
 
     def draw(self, context):
         layout = self.layout
-        layout.label(text="Madness Scene Exporter Settings:")
-
-        # Load current values from file if preferences are default
-        if self.exporter_exe == "MEBExporterExtended.exe":
-            settings = load_settings_from_file()
-            if "exporter_exe" in settings:
-                self._updating = True
-                try:
-                    self.exporter_exe = settings["exporter_exe"]
-                finally:
-                    self._updating = False
-
-        layout.prop(self, "exporter_exe")
-
-        # Show current effective paths
-        exporter_path, exporter_source = get_exporter_path(context)
-
-        layout.separator()
-        layout.label(text=f"Current MEB Exporter: {exporter_path}")
-        layout.label(text=f"  Source: {exporter_source}")
-
-        # Validation
-        if not Path(exporter_path).exists():
-            layout.label(text="⚠ MEB Exporter not found!", icon="ERROR")
-
-        # Manual sync button
-        layout.separator()
-        op = layout.operator("madness_scene.sync_settings", text="Sync Settings")
-
-
-class MadnessSceneSyncSettings(bpy.types.Operator):
-    """Sync settings between preferences and file"""
-
-    bl_idname = "madness_scene.sync_settings"
-    bl_label = "Sync Settings"
-    bl_description = "Sync settings between preferences and development file"
-
-    def execute(self, context):
-        preferences, addon_name = get_addon_preferences(context)
-        if preferences:
-            # Save current preferences to file
-            settings = load_settings_from_file()
-            settings["exporter_exe"] = preferences.exporter_exe
-            save_settings_to_file(settings)
-            print(f"Synced settings: exporter={preferences.exporter_exe}")
-            self.report({"INFO"}, "Settings synced")
-        else:
-            self.report({"WARNING"}, "Could not find preferences")
-        return {"FINISHED"}
+        layout.label(text="Addon has no settings.")
 
 
 class MadnessSceneExporter(bpy.types.Operator, ExportHelper):
@@ -142,21 +61,11 @@ class MadnessSceneExporter(bpy.types.Operator, ExportHelper):
     placeholder_mtx: StringProperty(
         name="Placeholder MTX",
         description="Path to template MTX file",
-        default="S:\Assorted Project Files\Synced Projects\AMS2 Track RevEng\placeholder_grass.mtx",
+        default=r"S:\Assorted Project Files\Synced Projects\AMS2 Track RevEng\placeholder_grass.mtx",
         subtype="FILE_PATH",
     )  # type: ignore
 
     def execute(self, context):
-        # Get exporter path using our robust system
-        exporter_path, source = get_exporter_path(context)
-        exporter_exe = Path(exporter_path)
-
-        print(f"Debug: Using exporter from {source}: {exporter_exe}")
-
-        if not exporter_exe.exists():
-            self.report({"ERROR"}, f"MEB Exporter not found at: {exporter_exe}")
-            return {"CANCELLED"}
-
         # Derive resource prefix from output filename
         output_path = Path(self.filepath)
         track_name = output_path.stem
@@ -165,9 +74,8 @@ class MadnessSceneExporter(bpy.types.Operator, ExportHelper):
         try:
             export_madness_scene(
                 filepath=self.filepath,
-                exporter_exe=exporter_exe,
-                placeholder_mtx=Path(self.placeholder_mtx),
                 resource_prefix=resource_prefix,
+                placeholder_mtx=Path(self.placeholder_mtx),
                 context=context,
             )
             self.report({"INFO"}, "Madness scene exported successfully")
@@ -316,7 +224,6 @@ def register():
 
     main_classes = [
         MadnessSceneExporterPreferences,
-        MadnessSceneSyncSettings,
         MadnessSceneExporter,
         MadnessEnvironmentExporter,
         MadnessLightsExporter,
@@ -342,7 +249,6 @@ def unregister():
         MadnessLightsExporter,
         MadnessEnvironmentExporter,
         MadnessSceneExporter,
-        MadnessSceneSyncSettings,
         MadnessSceneExporterPreferences,
     ]
 
