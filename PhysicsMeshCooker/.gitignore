@@ -1,0 +1,33 @@
+# Build outputs
+build/
+x64/
+Debug/
+Release/
+*.exe
+*.dll
+*.lib
+*.pdb
+*.exp
+*.ilk
+*.obj
+*.log
+*.tlog/
+*.lastbuildstate
+*.recipe
+
+# Visual Studio
+.vs/
+*.vcxproj.user
+*.suo
+
+# Visual Studio Code
+.vscode/
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.bak
+*~
