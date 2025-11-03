@@ -75,8 +75,8 @@ def get_grid_dimensions_and_bounds(obj) -> Tuple[int, int, Tuple[float, float, f
         raise ValueError("Mesh has no vertices")
     
     # Find unique X and Y coordinates to determine grid dimensions
-    x_coords = sorted(set(-v[0] for v in vertices))  # Negate Blender X
-    y_coords = sorted(set(-v[1] for v in vertices))  # Negate Blender Y
+    x_coords = sorted(set(v[0] for v in vertices))
+    y_coords = sorted(set(v[1] for v in vertices))
     
     width = len(x_coords)
     height = len(y_coords)
@@ -86,8 +86,8 @@ def get_grid_dimensions_and_bounds(obj) -> Tuple[int, int, Tuple[float, float, f
     
     # Use object's actual bounding box in world space for bounds
     bbox_corners = [world_matrix @ mathutils.Vector(corner) for corner in obj.bound_box]
-    bbox_x_coords = [-corner.x for corner in bbox_corners]  # Negate Blender X
-    bbox_y_coords = [-corner.y for corner in bbox_corners]  # Negate Blender Y
+    bbox_x_coords = [corner.x for corner in bbox_corners]
+    bbox_y_coords = [corner.y for corner in bbox_corners]
     
     min_x, max_x = min(bbox_x_coords), max(bbox_x_coords)
     min_y, max_y = min(bbox_y_coords), max(bbox_y_coords)
@@ -130,7 +130,7 @@ def extract_grid_data(obj) -> List[Tuple[int, int, float, float, float, int]]:
     
     for i, vertex in enumerate(mesh.vertices):
         world_pos = world_matrix @ vertex.co
-        x, y = -world_pos.x, -world_pos.y  # Negate both X and Y
+        x, y = world_pos.x, world_pos.y
         x_coords.append(x)
         y_coords.append(y)
     
@@ -156,7 +156,7 @@ def extract_grid_data(obj) -> List[Tuple[int, int, float, float, float, int]]:
         masked_count += 1
         
         world_pos = world_matrix @ vertex.co
-        x, y = -world_pos.x, -world_pos.y  # Negate both X and Y
+        x, y = world_pos.x, world_pos.y
         grid_x = x_to_grid[x]
         grid_y = y_to_grid[y]
         
@@ -336,15 +336,60 @@ def write_mrdf_file(filepath: str, width: int, height: int, world_bounds: Tuple[
     primary_buffer = io.BytesIO()
     min_x, min_y, max_x, max_y = world_bounds
     
-    # Grid metadata (0x58 bytes)
-    primary_buffer.write(b'\x00' * 8)  # Unknown/padding
-    primary_buffer.write(struct.pack('<4f', min_x, min_y, max_x, max_y))  # World bounds
-    primary_buffer.write(struct.pack('<2I', width, height))  # Grid dimensions
-    primary_buffer.write(b'\x00' * 8)  # Unknown/padding
-    primary_buffer.write(struct.pack('<I', len(sorted_cells)))  # Total cell count
-    primary_buffer.write(b'\x00' * 4)  # Unknown/padding
-    primary_buffer.write(struct.pack('<f', cell_size))  # Cell size
-    primary_buffer.write(b'\x00' * 36)  # Additional padding to reach 0x58
+    # Grid metadata (0x58 bytes) - matching working writer structure
+    # Offset 0x00-0x08: Header prefix (8 bytes)
+    # These may be flags or version identifiers - using safe defaults
+    primary_buffer.write(b'\x00' * 8)
+    
+    # Offset 0x08-0x18: World bounds (4 floats = 16 bytes)
+    primary_buffer.write(struct.pack('<4f', min_x, min_y, max_x, max_y))
+    
+    # Offset 0x18-0x20: Grid dimensions (2 uint32 = 8 bytes)
+    primary_buffer.write(struct.pack('<2I', width, height))
+    
+    # Offset 0x20-0x28: Unknown field (uint32) + cell_size_scale (float) = 8 bytes
+    primary_buffer.write(struct.pack('<I', 0))  # Unknown field (purpose unclear, 0 works)
+    primary_buffer.write(struct.pack('<f', cell_size))  # Cell size/scale factor
+    
+    # Offset 0x28-0x2C: Total cell count (uint32 = 4 bytes)
+    primary_buffer.write(struct.pack('<I', len(sorted_cells)))
+    
+    # Offset 0x2C-0x30: Cell size float (duplicate for compatibility)
+    primary_buffer.write(struct.pack('<f', cell_size))
+    
+    # Offset 0x30-0x58: Padding (40 bytes)
+    primary_buffer.write(b'\x00' * 40)
+    
+    # Calculate offsets for pointers (header is 0x70 bytes)
+    header_size = 0x70
+    cell_data_offset = header_size  # Cell data starts after header
+    cell_data_size = len(sorted_cells) * 6
+    padding_needed = (4 - (cell_data_size % 4)) % 4
+    row_table_offset = cell_data_offset + cell_data_size + padding_needed
+    
+    # Offset 0x58-0x60: Pointer to cell data array (8 bytes)
+    # This will be relocated by the game to point to cell data
+    primary_buffer.write(struct.pack('<Q', cell_data_offset))
+    
+    # Offset 0x60-0x68: Padding (8 bytes)
+    primary_buffer.write(b'\x00' * 8)
+    
+    # Offset 0x68-0x70: Pointer to row offset table (8 bytes)
+    # This will be relocated by the game to point to row table
+    primary_buffer.write(struct.pack('<Q', row_table_offset))
+    
+    print(f"Debug: PRIMARY_DATA header structure:")
+    print(f"  0x18: width = {width}")
+    print(f"  0x1c: height = {height}")
+    print(f"  0x28: cell_count = {len(sorted_cells)}")
+    print(f"  0x2c: cell_size = {cell_size}")
+    print(f"  0x58: cell_data_ptr = 0x{cell_data_offset:X} (will be relocated)")
+    print(f"  0x68: row_table_ptr = 0x{row_table_offset:X} (will be relocated)")
+    print(f"  Header size: 0x{header_size:X} bytes")
+    print(f"  Cell data starts at: 0x{header_size:X}")
+    print(f"  Cell data size: {cell_data_size} bytes ({len(sorted_cells)} cells * 6)")
+    print(f"  Padding before row table: {padding_needed} bytes")
+    print(f"  Row table starts at: 0x{row_table_offset:X}")
     
     # Write grid cell data (6 bytes per cell)
     print("Debug: Writing cell data to binary buffer...")
@@ -367,6 +412,14 @@ def write_mrdf_file(filepath: str, width: int, height: int, world_bounds: Tuple[
         primary_buffer.write(bytes([grip_uint8]))  # Grip (uint8)
         primary_buffer.write(bytes([surface_flags]))  # Surface flags (uint8)
     
+    # Add padding to align row offset table to 4-byte boundary
+    # Cell data is 6 bytes per cell, so padding is needed if (cell_count * 6) % 4 != 0
+    cell_data_size = len(sorted_cells) * 6
+    padding_needed = (4 - (cell_data_size % 4)) % 4
+    if padding_needed > 0:
+        primary_buffer.write(b'\x00' * padding_needed)
+        print(f"Debug: Added {padding_needed} bytes of padding before row offset table for 4-byte alignment")
+    
     # Write row offset table (4 bytes per offset)
     for offset in row_offsets:
         primary_buffer.write(struct.pack('<I', offset))
@@ -374,18 +427,34 @@ def write_mrdf_file(filepath: str, width: int, height: int, world_bounds: Tuple[
     primary_data = primary_buffer.getvalue()
     primary_size = len(primary_data)
     
-    # POINTER_RELOCATION section (0x10) - Two 8-byte pointer entries
-    pointer_data = struct.pack('<QQ', 0, 0x58)  # Two 8-byte pointer entries: [0, 88]
+    # POINTER_RELOCATION section (0x10) - Pointer relocation table
+    # This section contains offsets within PRIMARY_DATA that point to data requiring relocation
+    # Standard relocations for track MRDF files point to:
+    # - 0x58: Row offset table pointer location  
+    # - 0x68: Secondary pointer location
+    pointer_data = b''
+    relocations = [0x58, 0x68]
+    for offset in relocations:
+        pointer_data += struct.pack('<I', offset)  # 4-byte offset
+        pointer_data += struct.pack('<I', 0)       # 4-byte padding
     pointer_size = len(pointer_data)
     
-    # Ensure 4-byte alignment as required by game validation
-    while pointer_size % 4 != 0:
-        pointer_data += b'\x00'
-        pointer_size = len(pointer_data)
-    
-    # RASTER_CELLS section (0x50) - Exact Indianapolis 2022 RC pattern
-    raster_data = b'\x59\xcf\xd2\x3a\x03\x00\x00\x00\x26\x3d\x21\x04\x03\x00\x00\x00\xf0\xa3\xfc\x9e\x03\x00\x00\x00\x00\x00\x00\x00'
-    raster_size = len(raster_data)  # Should be exactly 28 bytes
+    # RASTER_CELLS section (0x50) - Material type definitions
+    # Format: [material_type (uint32), property_value (float)] repeated, then total_count (uint32)
+    # TODO: Extract material definitions from Blender mesh attributes
+    # For now, using placeholder data - this should be dynamically generated
+    raster_data = b''
+    material_definitions = {
+        3: [0.02345, 0.06789, 0.01234]  # Example: material type 3 with 3 property values
+    }
+    total_entries = 0
+    for material_type, properties in material_definitions.items():
+        for prop_value in properties:
+            raster_data += struct.pack('<I', material_type)
+            raster_data += struct.pack('<f', prop_value)
+            total_entries += 1
+    raster_data += struct.pack('<I', total_entries)  # Total count at the end
+    raster_size = len(raster_data)
     
     # Calculate total file size
     extended_header_size = 8  # Extended header data
@@ -393,7 +462,12 @@ def write_mrdf_file(filepath: str, width: int, height: int, world_bounds: Tuple[
     section_directory_size = section_count * 8  # 8 bytes per section entry
     total_header_size = 16 + section_directory_size + extended_header_size
     
-    total_file_size = total_header_size + primary_size + pointer_size + raster_size
+    # Section sizes + trailing padding (from directory padding byte at offset 5)
+    primary_with_padding = primary_size + 12  # 0x0c bytes trailing padding
+    pointer_with_padding = pointer_size + 0   # 0x00 bytes trailing padding
+    raster_with_padding = raster_size + 4     # 0x04 bytes trailing padding
+    
+    total_file_size = total_header_size + primary_with_padding + pointer_with_padding + raster_with_padding
     
     print(f"Debug: File structure:")
     print(f"  Header + directory + extended: {total_header_size} bytes")
@@ -417,28 +491,34 @@ def write_mrdf_file(filepath: str, width: int, height: int, world_bounds: Tuple[
         # Write section directory (8 bytes per section)
         section_data_start = total_header_size
         
+        # Section directory entries: 4 bytes size + 1 byte type + 3 bytes padding
+        # The first padding byte (offset 5) specifies trailing padding bytes after section data
+        
         # Section 0: PRIMARY_DATA (0x01)
         f.write(struct.pack('<I', primary_size))  # Section size
         f.write(bytes([0x01]))  # Section type (PRIMARY_DATA)
-        f.write(b'\x0c\x00\x00')  # Validation bytes (Indianapolis pattern)
+        f.write(b'\x0c\x00\x00')  # Padding: 0x0c = 12 bytes trailing padding after section
         
         # Section 1: POINTER_RELOCATION (0x10)
         f.write(struct.pack('<I', pointer_size))  # Section size
         f.write(bytes([0x10]))  # Section type (POINTER_RELOCATION)
-        f.write(b'\x00' * 3)  # Padding
+        f.write(b'\x00\x00\x00')  # Padding: 0 bytes trailing padding
         
         # Section 2: RASTER_CELLS (0x50)
         f.write(struct.pack('<I', raster_size))  # Section size
         f.write(bytes([0x50]))  # Section type (RASTER_CELLS)
-        f.write(b'\x00' * 3)  # Padding
+        f.write(b'\x04\x00\x00')  # Padding: 0x04 = 4 bytes trailing padding after section
         
         # Write extended header data (8 bytes)
         f.write(b'\x00' * 8)  # Extended header (all zeros for now)
         
-        # Write section data
+        # Write section data with trailing padding
         f.write(primary_data)  # PRIMARY_DATA section
+        f.write(b'\x00' * 12)  # Trailing padding for PRIMARY_DATA (0x0c bytes)
         f.write(pointer_data)  # POINTER_RELOCATION section
+        # No trailing padding for POINTER_RELOCATION (0x00 bytes)
         f.write(raster_data)   # RASTER_CELLS section
+        f.write(b'\x00' * 4)   # Trailing padding for RASTER_CELLS (0x04 bytes)
     
     # Verify file size
     actual_file_size = Path(filepath).stat().st_size
