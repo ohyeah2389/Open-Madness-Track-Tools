@@ -3,6 +3,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 from typing import List
 from . import mtx_material_system
+from .bmt_converter import convertMtxToBmt
 
 def prepare_mtx_files_from_materials(
     material_names: List[str], dest_dir: Path, context, track_name: str = None
@@ -85,11 +86,29 @@ def prepare_mtx_files_from_materials(
             
             # Export from Blender material (fallback or normal mode)
             try:
-                mtx_material_system.write_mtx_file(blender_material, dest, track_name)
-                print(f"Generated MTX from material: {dest.name}")
+                # Check if we should export as BMT
+                shouldExportBmt = getattr(mtx_settings, 'export_as_bmt', True)
+                
+                if shouldExportBmt:
+                    # Generate MTX first, then convert to BMT
+                    tempMtxPath = dest
+                    mtx_material_system.write_mtx_file(blender_material, tempMtxPath, track_name)
+                    
+                    # Convert to BMT
+                    bmtDest = dest_dir / f"{mat_name.upper()}.bmt"
+                    convertMtxToBmt(tempMtxPath, bmtDest)
+                    
+                    # Remove temporary MTX file
+                    tempMtxPath.unlink()
+                    
+                    print(f"Generated BMT from material: {bmtDest.name}")
+                else:
+                    # Export as MTX
+                    mtx_material_system.write_mtx_file(blender_material, dest, track_name)
+                    print(f"Generated MTX from material: {dest.name}")
                 continue
             except Exception as e:
-                print(f"Failed to export MTX for {mat_name}: {e}")
+                print(f"Failed to export material for {mat_name}: {e}")
 
         # Fall back to placeholder
         if placeholder_path and placeholder_path.exists():

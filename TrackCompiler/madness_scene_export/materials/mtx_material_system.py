@@ -150,6 +150,13 @@ class MTXMaterialSettings(bpy.types.PropertyGroup):
         ),
     )  # type: ignore
 
+    # Export format
+    export_as_bmt: BoolProperty(
+        name="Export as BMT",
+        description="Export material as binary BMT format instead of XML MTX",
+        default=False
+    )  # type: ignore
+
     # Override path functionality
     use_override_path: BoolProperty(
         name="Use Override Path",
@@ -350,6 +357,9 @@ class MTX_PT_material_settings(bpy.types.Panel):
         row = box.row()
         row.label(text="MTX Name:")
         row.label(text=mtx.material_name)
+
+        # Export format option
+        box.prop(mtx, "export_as_bmt")
 
         # Override path settings
         override_box = box.box()
@@ -573,8 +583,7 @@ def write_mtx_file(material, filepath: Path, track_name: str = None):
         elif param.param_type == "EPT_TEXTURE":
             type_elem = ET.SubElement(param_elem, "type", t="ET_STANDARD")
 
-            # Texture path will be updated by export process during texture copying
-            # For now, use the original value as placeholder
+            # Texture path should already be corrected by apply_corrected_texture_paths() before this function is called
             texture_path = param.texture_value if param.texture_value else ""
 
             value_elem = ET.SubElement(param_elem, "value", v=texture_path)
