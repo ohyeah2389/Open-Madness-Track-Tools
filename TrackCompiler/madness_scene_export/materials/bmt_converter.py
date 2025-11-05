@@ -99,8 +99,17 @@ class BmtBuilder:
         
         offset = len(self.strings)
         self.stringOffsets[s] = offset
-        self.strings.extend(s.encode('utf-8'))
-        self.strings.append(0)  # Null terminator
+        encoded = s.encode('utf-8')
+        self.strings.extend(encoded)
+        
+        # Add null terminator and pad to 4-byte boundary
+        self.strings.append(0)
+        # Calculate padding needed to reach 4-byte alignment
+        current_len = len(encoded) + 1  # +1 for null terminator
+        padding_needed = (4 - (current_len % 4)) % 4
+        for _ in range(padding_needed):
+            self.strings.append(0)
+        
         return offset
     
     def addNumber(self, value: float) -> int:
@@ -116,18 +125,57 @@ class BmtBuilder:
         return index
     
     def processElement(self, xmlElem: ET.Element, parentIdx: int = -1) -> int:
-        """Process an XML element and convert it to BMT element/attribute structures."""
+        """
+        Process an XML element and convert it to BMT element/attribute structures.
+        Uses post-order traversal: processes children first, then parent attributes.
+        This ensures parent strings (like header strings) are added last.
+        """
         elementIdx = len(self.elements)
         
         # Get the element name hash
         tagName = xmlElem.tag
         nameHash = hashString(tagName)
         
-        # Start building the element
+        # Remember where attributes will start (before processing children)
         attrStart = len(self.attributes)
-        attrCount = 0
         
-        # Process XML attributes (these become BMT attributes)
+        # All child XML elements become BMT child elements
+        childElements = list(xmlElem)
+        
+        # Create element structure FIRST (before processing children)
+        # We'll update attr_start and attr_num after processing children
+        childFirst = -1
+        childCount = len(childElements)
+        
+        if childCount > 0:
+            childFirst = len(self.elements) + 1  # Next element to be added
+        
+        element = {
+            'name': nameHash,
+            'attr_start': attrStart,  # Will be updated after children
+            'attr_num': 0,  # Will be updated after processing attributes
+            'child_num': childCount,
+            'child_first': childFirst,
+            'next_sibling': -1,
+            'next_same_tag': -1
+        }
+        
+        self.elements.append(element)
+        
+        # Process children FIRST (post-order traversal)
+        prevChildIdx = -1
+        for child in childElements:
+            childIdx = self.processElement(child, elementIdx)
+            
+            # Link siblings
+            if prevChildIdx != -1:
+                self.elements[prevChildIdx]['next_sibling'] = childIdx
+            
+            prevChildIdx = childIdx
+        
+        # NOW process parent's XML attributes (these become BMT attributes)
+        # This ensures parent strings are added after all child strings
+        attrCount = 0
         for attrName, attrValue in xmlElem.attrib.items():
             attrNameHash = hashString(attrName)
             
@@ -162,38 +210,9 @@ class BmtBuilder:
             self.attributes.append(attribute)
             attrCount += 1
         
-        # All child XML elements become BMT child elements
-        childElements = list(xmlElem)
-        
-        # Create element structure
-        childFirst = -1
-        childCount = len(childElements)
-        
-        if childCount > 0:
-            childFirst = len(self.elements) + 1  # Next element to be added
-        
-        element = {
-            'name': nameHash,
-            'attr_start': attrStart,
-            'attr_num': attrCount,
-            'child_num': childCount,
-            'child_first': childFirst,
-            'next_sibling': -1,
-            'next_same_tag': -1
-        }
-        
-        self.elements.append(element)
-        
-        # Process children
-        prevChildIdx = -1
-        for child in childElements:
-            childIdx = self.processElement(child, elementIdx)
-            
-            # Link siblings
-            if prevChildIdx != -1:
-                self.elements[prevChildIdx]['next_sibling'] = childIdx
-            
-            prevChildIdx = childIdx
+        # Update element with final attribute info
+        self.elements[elementIdx]['attr_start'] = attrStart
+        self.elements[elementIdx]['attr_num'] = attrCount
         
         return elementIdx
     
@@ -331,7 +350,7 @@ class BmtBuilder:
         # STRS block - null-terminated strings
         strsData = bytes(self.strings)
         
-        # Build block table
+        # Build block table with proper alignment
         numBlocks = 7
         fileHeaderSize = 16
         blockTableSize = 16 * numBlocks
@@ -351,6 +370,9 @@ class BmtBuilder:
         for blockId, data in blocksInfo:
             blockTable.append((blockId, len(data), currentOffset, 0))
             currentOffset += len(data)
+            # Align to 4-byte boundary for next block
+            if currentOffset % 4 != 0:
+                currentOffset = ((currentOffset + 3) // 4) * 4
         
         fileSize = currentOffset
         
@@ -369,9 +391,13 @@ class BmtBuilder:
         for blockId, length, start, unknown in blockTable:
             output.extend(struct.pack('<4I', blockId, length, start, unknown))
         
-        # Block data
-        for _, data in blocksInfo:
+        # Block data with padding between blocks
+        for i, (blockId, data) in enumerate(blocksInfo):
             output.extend(data)
+            # Add padding to align next block to 4-byte boundary
+            if i < len(blocksInfo) - 1:  # Don't pad after last block
+                while len(output) % 4 != 0:
+                    output.append(0)
         
         return bytes(output)
 
