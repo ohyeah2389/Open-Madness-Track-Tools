@@ -143,7 +143,7 @@ def generate_lights_sgx(lights: List[Dict[str, Any]], filepath: Path) -> None:
     scene = ET.Element(
         "SCENE",
         FileVersion="0.1.0.0",
-        ExporterVersion="Madness Lights Export",
+        ExporterVersion="Open Madness Track Tools 0.1.0",
         NumObjects=str(len(lights)),
         Merged="1",
         NumPartitions="1"
