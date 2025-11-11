@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Notes/DiscordLogCSPServer.md",
+                "file": "Tutorial.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "DiscordLogCSPServer"
+              "title": "Tutorial"
             }
           }
         ]
