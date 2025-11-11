@@ -326,25 +326,24 @@ def export_madness_scene(
         # Generate list of unique materials
         unique_materials = sorted(set(all_materials))
         
-        # Calculate and apply corrected texture paths BEFORE writing MTX/BMT files
-        print("Preparing texture paths...")
+        # Prepare texture mapping (resolves paths and calculates game-relative paths)
+        print("Preparing texture mapping...")
+        texture_mapping = {}
         if unique_materials:
-            apply_corrected_texture_paths(
+            texture_mapping = prepare_texture_mapping(
                 unique_materials, output_dir, texture_export_dir, track_name, context
             )
         
-        # Generate MTX/BMT files (with corrected paths already applied)
+        # Generate MTX/BMT files (passes texture_mapping for correct paths)
         print("Generating MTX/BMT files...")
         prepare_mtx_files_from_materials(
-            unique_materials, output_dir, context, track_name
+            unique_materials, output_dir, context, track_name, texture_mapping
         )
         print(f"Generated {len(unique_materials)} material files")
 
         # Export textures to determined location
-        if unique_materials:
-            export_textures(
-                unique_materials, texture_export_dir, context
-            )
+        if texture_mapping:
+            export_textures(texture_mapping, texture_export_dir)
 
         # Generate SGX file
         print("Generating SGX file...")
@@ -391,17 +390,20 @@ def determine_texture_export_path(output_dir: Path, track_name: str) -> Path:
     return texture_dir
 
 
-def apply_corrected_texture_paths(
+def prepare_texture_mapping(
     material_names: list,
     mtx_dir: Path,
     texture_export_dir: Path,
     track_name: str,
     context
 ):
-    """Calculate and apply corrected texture paths to material settings BEFORE writing MTX/BMT files.
+    """Create a mapping of textures for MTX generation and texture copying.
     
-    Stores original paths in a temporary attribute for later texture copying.
+    Returns a dict mapping (material_name, param_name) to (resolved_src_path, game_relative_path).
+    Does NOT modify material settings - just prepares the mapping.
     """
+    texture_mapping = {}
+    
     for mat_name in material_names:
         # Find corresponding Blender material
         blender_material = None
@@ -413,100 +415,63 @@ def apply_corrected_texture_paths(
         if blender_material and hasattr(blender_material, "mtx_settings"):
             mtx = blender_material.mtx_settings
             
-            # Store original texture paths for later copying
-            if not hasattr(mtx, '_original_texture_paths'):
-                mtx._original_texture_paths = {}
-            
             for param in mtx.shader_params:
                 if param.param_type == "EPT_TEXTURE" and param.texture_value:
-                    # Get the original path from material settings
-                    original_path = param.texture_value
-                    
-                    # Resolve the source texture path (actual file path)
+                    # Resolve the texture path to actual file location
                     from ..materials.mtx_material_system import resolve_texture_path
-                    src_path, exists = resolve_texture_path(original_path, context)
+                    src_path, exists = resolve_texture_path(param.texture_value, context)
                     
                     if exists and src_path:
-                        # Store the RESOLVED path (actual file path) for later copying
-                        mtx._original_texture_paths[param.name] = str(src_path)
-                        
-                        # Calculate the corrected relative path for MTX/BMT
-                        relative_texture_path = create_relative_texture_path(
+                        # Calculate the game-relative path for MTX files
+                        game_relative_path = create_relative_texture_path(
                             mtx_dir, texture_export_dir, src_path.name, track_name
                         )
                         
-                        # Update the material's texture path directly with corrected path
-                        param.texture_value = relative_texture_path
-                        print(f"  Prepared texture path for {mat_name}.{param.name}: {relative_texture_path}")
+                        # Store mapping
+                        key = (mat_name, param.name)
+                        texture_mapping[key] = (str(src_path), game_relative_path)
+                        
+                        print(f"  Mapped {mat_name}.{param.name}: {game_relative_path}")
                     else:
-                        print(f"  Warning: Texture not found for {mat_name}.{param.name}: {original_path}")
+                        print(f"  Warning: Texture not found for {mat_name}.{param.name}: {param.texture_value}")
+    
+    return texture_mapping
 
 
 def export_textures(
-    material_names: list,
-    texture_export_dir: Path,
-    context
+    texture_mapping: dict,
+    texture_export_dir: Path
 ):
-    """Export textures to target directory using original paths stored during path correction."""
+    """Export textures to target directory using the prepared texture mapping.
+    
+    Args:
+        texture_mapping: Dict mapping (material_name, param_name) to (resolved_src_path, game_relative_path)
+        texture_export_dir: Directory to export textures to
+    """
     texture_export_dir.mkdir(parents=True, exist_ok=True)
     
     texture_count = 0
+    copied_files = set()  # Track already copied files to avoid duplicates
     
-    for mat_name in material_names:
-        # Find corresponding Blender material
-        blender_material = None
-        for mat in bpy.data.materials:
-            if sanitize(mat.name) == mat_name:
-                blender_material = mat
-                break
+    for (mat_name, param_name), (src_path_str, game_path) in texture_mapping.items():
+        src_path = Path(src_path_str)
         
-        if blender_material and hasattr(blender_material, "mtx_settings"):
-            mtx = blender_material.mtx_settings
+        if src_path.exists():
+            dest_path = texture_export_dir / src_path.name
             
-            # Use stored original paths if available
-            original_paths = getattr(mtx, '_original_texture_paths', {})
+            # Skip if already copied
+            if dest_path in copied_files:
+                continue
             
-            for param in mtx.shader_params:
-                if param.param_type == "EPT_TEXTURE" and param.texture_value:
-                    # Get resolved source path from stored dict (should be actual file path)
-                    resolved_path_str = original_paths.get(param.name)
-                    
-                    if resolved_path_str:
-                        # Use the stored resolved path directly
-                        src_path = Path(resolved_path_str)
-                        
-                        if src_path.exists():
-                            dest_path = texture_export_dir / src_path.name
-                            
-                            try:
-                                # Copy texture to export location
-                                shutil.copy2(src_path, dest_path)
-                                texture_count += 1
-                                print(f"  Copied texture: {src_path.name} -> {dest_path}")
-                            except Exception as e:
-                                print(f"  Failed to copy texture {src_path.name}: {e}")
-                        else:
-                            print(f"  Warning: Stored texture path does not exist: {src_path}")
-                    else:
-                        # Fallback: try to resolve from current corrected path (extract filename)
-                        texture_filename = Path(param.texture_value).name
-                        from ..materials.mtx_material_system import resolve_texture_path
-                        src_path, exists = resolve_texture_path(texture_filename, context)
-                        
-                        if exists and src_path:
-                            dest_path = texture_export_dir / src_path.name
-                            try:
-                                shutil.copy2(src_path, dest_path)
-                                texture_count += 1
-                                print(f"  Copied texture: {src_path.name} -> {dest_path}")
-                            except Exception as e:
-                                print(f"  Failed to copy texture {src_path.name}: {e}")
-                        else:
-                            print(f"  Warning: Could not locate source texture for {mat_name}.{param.name}")
-            
-            # Clean up temporary storage
-            if hasattr(mtx, '_original_texture_paths'):
-                delattr(mtx, '_original_texture_paths')
+            try:
+                shutil.copy2(src_path, dest_path)
+                texture_count += 1
+                copied_files.add(dest_path)
+                print(f"  Copied texture: {src_path.name}")
+            except Exception as e:
+                print(f"  Failed to copy texture {src_path.name}: {e}")
+        else:
+            print(f"  Warning: Source texture no longer exists: {src_path}")
     
     print(f"Exported {texture_count} textures to {texture_export_dir}")
 

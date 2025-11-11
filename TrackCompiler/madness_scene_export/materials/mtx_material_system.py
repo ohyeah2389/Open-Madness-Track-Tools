@@ -2,6 +2,7 @@ import bpy  # type: ignore
 from bpy.props import StringProperty, BoolProperty, FloatProperty, EnumProperty, PointerProperty, CollectionProperty  # type: ignore
 from pathlib import Path
 import xml.etree.ElementTree as ET
+from typing import Optional
 from .shader_definitions import (
     SHADER_TECHNIQUES,
     SHADER_DEFINES,
@@ -62,10 +63,10 @@ def validate_override_path(path_str):
 
 
 def resolve_texture_path(texture_path_str, context=None):
-    """Resolve a texture path, handling absolute, relative, and blend-relative paths.
+    """Resolve a texture path, handling absolute and relative paths.
 
     Args:
-        texture_path_str: The texture path string (absolute, relative, or blend-relative)
+        texture_path_str: The texture path string (absolute or relative to blend file)
         context: Blender context (optional, uses bpy.context if None)
 
     Returns:
@@ -87,18 +88,52 @@ def resolve_texture_path(texture_path_str, context=None):
     if texture_path.is_absolute():
         return texture_path, texture_path.exists()
 
-    # For relative paths, try multiple resolution strategies
-
-    # 1. Try relative to blend file first (if blend file is saved)
+    # For relative paths, resolve relative to blend file (if saved)
     if hasattr(bpy, "data") and bpy.data.filepath:
         blend_dir = Path(bpy.data.filepath).parent
         blend_relative_path = blend_dir / texture_path
-        if blend_relative_path.exists():
-            return blend_relative_path, True
+        return blend_relative_path, blend_relative_path.exists()
 
-    # 2. If blend file resolution didn't work, return the original relative path (non-existing)
-    # This allows the UI to show the path even if file doesn't exist
+    # Blend file not saved, return the relative path as-is (probably doesn't exist)
     return texture_path, False
+
+
+def texture_value_update(self, context):
+    """Update callback to convert absolute paths to plain relative paths when texture_value is set."""
+    import bpy  # type: ignore
+    
+    if not self.texture_value:
+        return
+    
+    texture_path = Path(self.texture_value)
+    
+    # Skip if already a plain relative path (not absolute)
+    if not texture_path.is_absolute():
+        # Normalize to forward slashes
+        normalized = str(self.texture_value).replace("\\", "/")
+        if normalized != self.texture_value:
+            self.texture_value = normalized
+        return
+    
+    # Check if blend file is saved
+    if not bpy.data.filepath:
+        # Can't convert to relative without saved blend file
+        return
+    
+    try:
+        # Normalize both paths
+        texture_abs = texture_path.resolve()
+        blend_dir = Path(bpy.data.filepath).resolve().parent
+        
+        # Try to make relative to blend file
+        relative_path = texture_abs.relative_to(blend_dir)
+        # Store as plain relative path with forward slashes
+        self.texture_value = str(relative_path).replace("\\", "/")
+        
+        print(f"[Auto-converted] {texture_abs.name} -> {self.texture_value}")
+    except (ValueError, OSError):
+        # Path not relative to blend directory - keep as absolute
+        pass
 
 
 # MTX Support Classes
@@ -125,8 +160,8 @@ class MTXShaderParam(bpy.types.PropertyGroup):
     vec4_value: bpy.props.FloatVectorProperty(name="Value", size=4)  # type: ignore
     texture_value: StringProperty(
         name="Texture Path",
-        subtype="FILE_PATH",
         description="Texture file path (relative to .blend file by default)",
+        update=texture_value_update,
     )  # type: ignore
     bool_value: BoolProperty(name="Value")  # type: ignore
 
@@ -465,6 +500,17 @@ class MTX_PT_shader_parameters(bpy.types.Panel):
                 col = box.column()
                 col.prop(param, "texture_value", text="DDS File")
 
+                button_row = col.row(align=True)
+                browse_op = button_row.operator(
+                    "mtx.pick_texture", text="Browse...", icon="FILE_FOLDER"
+                )
+                browse_op.param_index = mtx.active_param_index
+
+                clear_row = button_row.row(align=True)
+                clear_row.enabled = bool(param.texture_value)
+                clear_op = clear_row.operator("mtx.clear_texture", text="Clear", icon="X")
+                clear_op.param_index = mtx.active_param_index
+
                 # Show preview info if texture is set
                 if param.texture_value:
                     resolved_path, exists = resolve_texture_path(
@@ -479,8 +525,6 @@ class MTX_PT_shader_parameters(bpy.types.Panel):
                         col.label(
                             text=f"Size: {resolved_path.stat().st_size / 1024:.1f} KB"
                         )
-                        if not original_path.is_absolute():
-                            col.label(text=f"Resolved: {resolved_path}")
                     else:
                         col.label(
                             text=f"Not found: {original_path.name}", icon="ERROR"
@@ -491,14 +535,7 @@ class MTX_PT_shader_parameters(bpy.types.Panel):
                             )
 
                 # Clear button
-                if param.texture_value:
-                    row = col.row()
-                    try:
-                        op = row.operator("mtx.clear_texture", text="Clear", icon="X")
-                        if op:
-                            op.param_index = mtx.active_param_index
-                    except:
-                        row.label(text="Clear (not available)", icon="ERROR")
+                # (Handled by button row above)
             elif param.param_type == "EPT_BOOL":
                 box.prop(param, "bool_value", text="Value")
 
@@ -536,8 +573,15 @@ class MTX_PT_shader_defines(bpy.types.Panel):
 
 
 # MTX File I/O Functions
-def write_mtx_file(material, filepath: Path, track_name: str = None):
-    """Write MTX file from Blender material settings"""
+def write_mtx_file(material, filepath: Path, track_name: str = None, texture_mapping: dict = None):
+    """Write MTX file from Blender material settings
+    
+    Args:
+        material: Blender material with mtx_settings
+        filepath: Path to write MTX file to
+        track_name: Name of the track (optional)
+        texture_mapping: Dict mapping (material_name, param_name) to (resolved_src_path, game_relative_path)
+    """
     if not hasattr(material, "mtx_settings"):
         raise RuntimeError(f"Material {material.name} has no MTX settings")
 
@@ -583,8 +627,17 @@ def write_mtx_file(material, filepath: Path, track_name: str = None):
         elif param.param_type == "EPT_TEXTURE":
             type_elem = ET.SubElement(param_elem, "type", t="ET_STANDARD")
 
-            # Texture path should already be corrected by apply_corrected_texture_paths() before this function is called
-            texture_path = param.texture_value if param.texture_value else ""
+            # Use game-relative path from texture_mapping if available, otherwise use param value as-is
+            texture_path = ""
+            if texture_mapping:
+                key = (sanitize(material.name), param.name)
+                if key in texture_mapping:
+                    _, game_path = texture_mapping[key]
+                    texture_path = game_path
+                else:
+                    texture_path = param.texture_value if param.texture_value else ""
+            else:
+                texture_path = param.texture_value if param.texture_value else ""
 
             value_elem = ET.SubElement(param_elem, "value", v=texture_path)
         elif param.param_type == "EPT_BOOL":
@@ -792,51 +845,93 @@ class MTX_OT_pick_texture(bpy.types.Operator):
     """Pick DDS texture file"""
 
     bl_idname = "mtx.pick_texture"
-    bl_label = "Pick Texture"
-    bl_description = "Pick a DDS texture file"
+    bl_label = "Browse Texture"
+    bl_description = "Select a DDS texture file"
 
     filepath: StringProperty(subtype="FILE_PATH")  # type: ignore
     filter_glob: StringProperty(default="*.dds", options={"HIDDEN"})  # type: ignore
-    param_index: bpy.props.IntProperty()  # type: ignore
+    param_index: bpy.props.IntProperty(default=-1)  # type: ignore
 
-    def execute(self, context):
-        if context.material and hasattr(context.material, "mtx_settings"):
-            mtx = context.material.mtx_settings
-            if self.param_index < len(mtx.shader_params):
-                param = mtx.shader_params[self.param_index]
+    def _resolve_existing_path(self, path_value: str) -> Optional[Path]:
+        import bpy  # type: ignore
 
-                # Convert to blend-relative path if possible
-                filepath = Path(self.filepath)
-                if filepath.is_absolute() and bpy.data.filepath:
-                    blend_dir = Path(bpy.data.filepath).parent
-                    try:
-                        # Try to make the path relative to the blend file
-                        relative_path = filepath.relative_to(blend_dir)
-                        param.texture_value = str(relative_path).replace("\\", "/")
-                        self.report(
-                            {"INFO"},
-                            f"Selected texture: {relative_path} (relative to .blend)",
-                        )
-                    except ValueError:
-                        # Path is not within blend directory, use absolute
-                        param.texture_value = self.filepath
-                        self.report(
-                            {"INFO"},
-                            f"Selected texture: {filepath.name} (absolute path)",
-                        )
-                else:
-                    # No blend file saved or already relative, use as-is
-                    param.texture_value = self.filepath
-                    self.report(
-                        {"INFO"}, f"Selected texture: {Path(self.filepath).name}"
-                    )
-            else:
-                self.report({"WARNING"}, "Invalid parameter index")
-        return {"FINISHED"}
+        if not path_value:
+            return None
+
+        path_obj = Path(path_value)
+        if path_obj.is_absolute():
+            try:
+                return path_obj.resolve()
+            except OSError:
+                return path_obj
+
+        if bpy.data.filepath:
+            blend_dir = Path(bpy.data.filepath).resolve().parent
+            try:
+                return (blend_dir / path_obj).resolve()
+            except OSError:
+                return blend_dir / path_obj
+
+        return path_obj
 
     def invoke(self, context, event):
+        import bpy  # type: ignore
+
+        if context.material and hasattr(context.material, "mtx_settings"):
+            mtx = context.material.mtx_settings
+            index = self.param_index
+            if index < 0 or index >= len(mtx.shader_params):
+                index = mtx.active_param_index
+
+            if 0 <= index < len(mtx.shader_params):
+                param = mtx.shader_params[index]
+                existing_path = self._resolve_existing_path(param.texture_value)
+
+                if existing_path and existing_path.exists():
+                    self.filepath = str(existing_path)
+                elif bpy.data.filepath:
+                    self.filepath = str(Path(bpy.data.filepath).resolve().parent)
+
+                self.param_index = index
+
         context.window_manager.fileselect_add(self)
         return {"RUNNING_MODAL"}
+
+    def execute(self, context):
+        import bpy  # type: ignore
+
+        if context.material and hasattr(context.material, "mtx_settings"):
+            mtx = context.material.mtx_settings
+            index = self.param_index
+            if index < 0 or index >= len(mtx.shader_params):
+                index = mtx.active_param_index
+
+            if 0 <= index < len(mtx.shader_params):
+                param = mtx.shader_params[index]
+                selected_path = Path(self.filepath)
+
+                try:
+                    normalized = selected_path.resolve()
+                except OSError:
+                    normalized = selected_path
+
+                stored_value = str(normalized).replace("\\", "/")
+
+                if bpy.data.filepath:
+                    blend_dir = Path(bpy.data.filepath).resolve().parent
+                    try:
+                        relative_path = normalized.relative_to(blend_dir)
+                        stored_value = str(relative_path).replace("\\", "/")
+                        self.report({"INFO"}, f"Stored relative path: {relative_path}")
+                    except ValueError:
+                        self.report(
+                            {"WARNING"},
+                            "Texture is outside the blend directory; storing absolute path",
+                        )
+
+                param.texture_value = stored_value
+
+        return {"FINISHED"}
 
 
 class MTX_OT_clear_texture(bpy.types.Operator):

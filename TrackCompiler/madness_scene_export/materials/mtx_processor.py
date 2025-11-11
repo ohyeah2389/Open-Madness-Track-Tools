@@ -6,7 +6,7 @@ from . import mtx_material_system
 from .bmt_converter import convertMtxToBmt
 
 def prepare_mtx_files_from_materials(
-    material_names: List[str], dest_dir: Path, context, track_name: str = None
+    material_names: List[str], dest_dir: Path, context, track_name: str = None, texture_mapping: dict = None
 ):
     """Create MTX files from Blender materials or use placeholder, overwriting existing files."""
     placeholder_path = None
@@ -92,7 +92,7 @@ def prepare_mtx_files_from_materials(
                 if shouldExportBmt:
                     # Generate MTX first, then convert to BMT
                     tempMtxPath = dest
-                    mtx_material_system.write_mtx_file(blender_material, tempMtxPath, track_name)
+                    mtx_material_system.write_mtx_file(blender_material, tempMtxPath, track_name, texture_mapping)
                     
                     # Convert to BMT
                     bmtDest = dest_dir / f"{mat_name.upper()}.bmt"
@@ -104,7 +104,7 @@ def prepare_mtx_files_from_materials(
                     print(f"Generated BMT from material: {bmtDest.name}")
                 else:
                     # Export as MTX
-                    mtx_material_system.write_mtx_file(blender_material, dest, track_name)
+                    mtx_material_system.write_mtx_file(blender_material, dest, track_name, texture_mapping)
                     print(f"Generated MTX from material: {dest.name}")
                 continue
             except Exception as e:
