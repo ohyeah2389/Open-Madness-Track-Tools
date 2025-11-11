@@ -214,6 +214,8 @@ class MEBWriter:
         for mat_name, indices, vertices in zip(materials, indices_by_material, vertices_by_material):
             # Material path
             mat_path = f"{material_dir}{mat_name}.mtx".upper()
+            # Convert forward slashes to backslashes for Windows-style paths
+            mat_path = mat_path.replace('/', '\\')
             mat_bytes = mat_path.encode('ascii', errors='replace')
             
             # Pad to 4-byte boundary
