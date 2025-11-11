@@ -1,0 +1,13 @@
+# Allowed TimeOfDay
+
+**Type:** String
+
+**Appears in:** 248 TRD file(s) out of 248
+
+**Unique values found:** 2
+
+## Values
+
+- `All` (239)
+- `Day` (9)
+
