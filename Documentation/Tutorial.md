@@ -111,3 +111,83 @@ Instructions on general track modeling are outside the scope of this tutorial, b
 - The Blender scene exporter supports export-time object combining. If you have a significant number of objects that need to be combined, name them using the prefix `KSTREE_GROUP_blabla_`, where `blabla` can be any string without underscores or spaces. This is designed to handle Assetto Corsa's ksEditor Y-tree grouping system. Note, though, that it does NOT apply the vertex normal adjustments that ksEditor does.
 	- Additionally, the naming pattern `SMS_GRP_groupname_objectname.123` can be used instead, where all objects with the `SMS_GRP_groupname_` prefix will be combined into an object named `groupname`. Ensure `groupname` is unique and will not overlap with any non-grouped object names.
 - The Madness engine, similar to Assetto Corsa, has a limit of 65535 vertices per mesh.
+# Step 3: Author the Materials
+In the process of building the track model, you should have given each object a material. What that material looks like in Blender doesn't translate over to the game; the game uses its own method of defining materials to be used on each mesh object. Therefore, the Blender plugin provides an interface for setting up each material to work when exported to the Madness Engine. 
+Under the Material Properties page of the Properties panel, you will see a new pane named "Madness MTX Settings". Expanding the pane will show a configuration GUI with four sections:
+- Basic Settings
+	- Allows selection of the shader and shader technique to use, along with other general options available on all shaders.
+- Shader Parameters
+	- Allows selection and configuration of each input parameter to the selected shader technique.
+- Shader Defines
+	- Allows selection of which defines to include for this shader.
+- MTX Operations
+	- Allows saving and loading of loose MTX files to and from the current Blender material.
+This UI has been designed to closely mirror the MTX file format and therefore isn't the most visual or intuitive. Designing and configuring shaders may require trial and error until you gain experience with which shader does what and what options are available for each shader. The demo project contains preconfigured shaders for its used materials. 
+# Step 4: Export the Track Model
+As was covered in step 1, there are many files we must create using the toolkit. The following substeps will cover how to create each of the required files, in suggested order, using the tools in the toolkit.
+## Step 4.1: Cook the Physics Mesh
+In your Blender project (which should be organized into collections), deactivate all collections containing objects that should not contribute to the collision surfaces of the track. Leave only the meshes such as the high-resolution road meshes, grass meshes, and invisible wall meshes. 
+The CSM we'll be preparing stores each mesh's material index beside it in the binary content. Creation of the CSM will be through the provided tool `PhysicsMeshCooker.exe`. It takes two arguments as input: a path to an input OBJ file and a path to an output CSM file.
+`PhysicsMeshCooker.exe` expects an OBJ mesh with each mesh having a prefixed name corresponding to the material index of that element. While the final material index is numeric, the tool checks for a certain name string from the game's master physics material list. Similar to how Assetto Corsa needs each mesh to be prefixed with `1ROAD_` or `1GRASS_` to index to both the master and custom `surfaces.ini` files, this checks for meshes to be prefixed with names such as `ROADS_` or `GRASS_` to reference to that master material list, embedded as a look-up table.
+
+This is that look-up table, a list of all available material names and their indices. All names on the same line are aliases to the same material index.
+```
+{"PAINTCRETE_ILLEGAL", 49}, {"PCRETE_ILLEGAL", 49}, {"RDGREEN", 49},
+{"PAINTCRETE_LEGAL", 48}, {"PCRETE_LEGAL", 48},
+{"BUMPYDIRT_ROAD", 20}, {"BDIRT_ROAD", 20},
+{"ILLEGAL_STRIP", 47}, {"ILLEGALSTRIP", 47},
+{"TRAIN_TRACKS", 36}, {"TRAINROAD", 36},
+{"BUMPYCOBBLES", 37}, {"RAMP_METAL", 37},
+{"BUMPYROADS1", 2}, {"B1ROAD", 2},
+{"BUMPYROADS2", 3}, {"B2ROAD", 3}, {"CONC", 3},
+{"BUMPYROADS3", 4}, {"B3ROAD", 4},
+{"BUMPYGRAVEL", 9}, {"BGRV", 9},
+{"BUMPYSAND", 16}, {"BSAND", 16},
+{"BUMPYDIRT", 18}, {"BDIRT", 18},
+{"GRASSYBERMS", 6}, {"GBRM", 6},
+{"LOWGRIPROADS", 1}, {"LGROAD", 1},
+{"RUMBLESTRIPS", 10}, {"BRICK", 10}, {"RMBL", 10},
+{"CEMENTWALLS", 13}, {"CEMA", 13}, {"CWAL", 13}, {"CMWL", 13},
+{"TIREWALLS", 12}, {"TWALL", 12},
+{"GUARDRAILS", 14}, {"GRDR", 14},
+{"DIRT_ROAD", 19},
+{"DIRT BANK", 22}, {"DBANK", 22},
+{"DRY VERGE", 24}, {"DVERGE", 24},
+{"EXITRUMBLES", 25}, {"ERUMBLE", 25}, {"RMBBL", 25},
+{"GRASSCRETE", 26}, {"GCRETE", 26},
+{"LONGGRASS", 27}, {"LNGGRS", 27},
+{"SLOPEGRASS", 28}, {"SLPGRS", 28},
+{"SAND_ROAD", 30}, {"SNDROAD", 30},
+{"BAKED_CLAY", 31}, {"BAKEDCLAY", 31},
+{"ASTROTURF", 32}, {"ASTRO", 32},
+{"DAMAGEDROAD1", 35}, {"DAMROAD1", 35},
+{"B1RUMBLES", 40}, {"B1RUMBLE", 40},
+{"B2RUMBLES", 41}, {"B2RUMBLE", 41},
+{"ROUGHSAND1", 42}, {"RSAND1", 42},
+{"ROUGHSAND2", 43}, {"RSAND2", 43},
+{"SNOWWALLS", 44}, {"SWALLS", 44},
+{"ORION_ONLY", 39}, {"ORIONONLY", 39},
+{"SNOWHALF", 33}, {"SNOW", 33},
+{"RALLY_TARMAC", 51},
+{"RALLYTARMAC", 50},
+{"RUNOFFROAD", 46},
+{"SNOWFULL", 34},
+{"WOODRAILS", 23}, {"WDRL", 23},
+{"PAVEMENT", 21},
+{"ICEROAD", 45},
+{"COBBLES", 29},
+{"RMPMTL", 38}, {"RAMP", 38},
+{"ROADS", 0}, {"ROAD", 0},
+{"MARBLES", 5},
+{"GRASS", 7}, {"GRAS", 7}, {"LOGO", 7}, {"FLDGRASS", 7}, {"RDGRASS", 7},
+{"GRAVEL", 8}, {"GRV", 8}, {"GRAV", 8}, {"GBER", 8},
+{"DRAINS", 11}, {"DRAIN", 11},
+{"SAND", 15}, {"SBER", 15},
+{"DIRT", 17}
+```
+
+In Blender, once all objects have been renamed according to their desired physical material (for example: `ROADS_MainTrack.001`, `GRASS_CloseGrass.001`, `GUARDRAILS_ArmcoCollision.001`, `BRICK_CurbT1`, `SAND_Turn5RunoffPit`, etc.), export the scene as an OBJ file without materials. Then, open a terminal in the folder containing `PhysicsMeshCooker.exe` and run the following command: `./PhysicsMeshCooker.exe path_to_exported.obj path_to_target.csm`
+A Batch file is provided in the example project folder that contains a setup for the example track.
+The exported CSM's path should be in the track's physics folder, named the same as the track (for the Meadowdale example: `\Automobilista 2\Tracks\meadowdale\physics\meadowdale.csm`).
+## Step 4.2: Assemble the Visuals
+Reactivate all collections containing all visible objects. Deactivate all collections consisting of physics-only objects (wall collision, etc.) as well as all marker object collections ("Madness Objects" in the demo project). Ensure that every visible object has a material assigned and that every visible material has been configured (step 3). Then, export the scene using the "Madness Scene" option, and export to the SGX file named the same as the track under the track's folder (`Automobilista 2/tracks/trackname/trackname.sgx`). This will take a long time; it needs to export every object in the scene as its own MEB, each material as its own MTX, and then write the assembled SGX scenegraph file. No caching is currently performed, so the entire operation is redone every time. No status updates are currently provided; the Blender UI will lock up and will unlock with a message in the bottom bar upon a successful export. To see progress reports, show the Blender Console window using the Window > Toggle System Console button in the top bar. 
