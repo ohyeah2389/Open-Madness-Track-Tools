@@ -179,7 +179,6 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
             wall_line_left_obj if export_wall_lines else None,
             wall_line_right_obj if export_wall_lines else None,
             0,
-            True  # Default clockwise - will be auto-detected from centerline
         )
         all_waypoints.extend(racing_waypoints)
         print(f"Processed {len(racing_waypoints)} racing waypoints from centerline")
@@ -187,7 +186,7 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
     # Pit line (branch_id 1) - use pit line as before
     if pit_line_obj:
         pit_waypoints = WaypointProcessor.process_waypoint_line(
-            pit_line_obj, 1, True  # Default clockwise for pit line processing
+            pit_line_obj, 1
         )
         all_waypoints.extend(pit_waypoints)
 
@@ -203,7 +202,6 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
         alt_waypoints = WaypointProcessor.process_waypoint_line(
             alt_line_objects[alt_id],
             branch_id,
-            True,  # Default clockwise for alt line processing
         )
         alt_waypoints_dict[branch_id] = alt_waypoints
         all_waypoints.extend(alt_waypoints)

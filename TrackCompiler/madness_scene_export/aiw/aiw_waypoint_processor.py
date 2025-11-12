@@ -53,24 +53,16 @@ class WaypointProcessor:
         wall_line_left_obj: bpy.types.Object = None,
         wall_line_right_obj: bpy.types.Object = None,
         branch_id: int = 0,
-        clockwise: bool = True
     ) -> List[aiw_parser.Waypoint]:
         """Process centerline waypoints with lateral offset calculations."""
         if not centerline_obj or centerline_obj.type != "MESH":
             return []
 
-        # Get centerline vertices (use initial clockwise setting for ordering)
-        centerline_vertices = WaypointProcessor._get_ordered_vertices(centerline_obj, clockwise)
+        # Get centerline vertices using the provided mesh ordering
+        centerline_vertices = WaypointProcessor._get_ordered_vertices(centerline_obj)
 
         if not centerline_vertices:
             return []
-
-        # Detect actual direction from vertex ordering (ignore user setting)
-        actual_clockwise = WaypointProcessor._detect_track_direction(centerline_vertices)
-        print(f"Detected track direction from centerline vertices: {'clockwise' if actual_clockwise else 'counterclockwise'}")
-
-        # Use detected direction instead of user setting
-        clockwise = actual_clockwise
 
         waypoints = []
 
@@ -83,7 +75,6 @@ class WaypointProcessor:
                 cut_line_right_obj,
                 wall_line_left_obj,
                 wall_line_right_obj,
-                clockwise,
                 centerline_vertices
             )
 
@@ -104,10 +95,7 @@ class WaypointProcessor:
 
             # Calculate right direction
             up_vec = np.array([0, 0, 1])  # Blender Z-up
-            if clockwise:
-                right_vec = np.cross(forward_vec, up_vec)  # Right for clockwise
-            else:
-                right_vec = np.cross(up_vec, forward_vec)  # Left for counter-clockwise
+            right_vec = np.cross(forward_vec, up_vec)
 
             if np.linalg.norm(right_vec) > 0:
                 right_vec = right_vec / np.linalg.norm(right_vec)
@@ -209,7 +197,7 @@ class WaypointProcessor:
         return waypoints
 
     @staticmethod
-    def _get_ordered_vertices(mesh_obj: bpy.types.Object, clockwise: bool = True) -> List[np.ndarray]:
+    def _get_ordered_vertices(mesh_obj: bpy.types.Object) -> List[np.ndarray]:
         """Get ordered vertices from a mesh object."""
         if not mesh_obj or mesh_obj.type != "MESH":
             return []
@@ -232,23 +220,14 @@ class WaypointProcessor:
 
         matrix = mesh_obj.matrix_world
 
-        # Get vertices in world coordinates
-        vertices = []
-        for vert in bm.verts:
-            world_pos = matrix @ vert.co
-            vertices.append(np.array(world_pos))
-
-        # Sort vertices by their position along the path
-        if len(vertices) > 0:
-            ordered_vertices = WaypointProcessor.order_vertices_along_path(bm, matrix)
-        else:
-            ordered_vertices = vertices
+        # Get vertices in world coordinates respecting vertex indices
+        ordered_vertices = [
+            np.array(matrix @ vert.co)
+            for vert in sorted(bm.verts, key=lambda v: v.index)
+        ]
 
         # Clean up bmesh
         bm.free()
-
-        if not clockwise:
-            ordered_vertices.reverse()
 
         return ordered_vertices
 
@@ -260,7 +239,6 @@ class WaypointProcessor:
         cut_line_right_obj: bpy.types.Object = None,
         wall_line_left_obj: bpy.types.Object = None,
         wall_line_right_obj: bpy.types.Object = None,
-        clockwise: bool = True,
         centerline_vertices: List[np.ndarray] = None
     ) -> Dict[str, any]:
         """Calculate lateral offsets from centerline to various track geometry lines."""
@@ -275,7 +253,7 @@ class WaypointProcessor:
         # Calculate racing_offset (distance from centerline to racing line)
         if racing_line_obj:
             racing_distance = WaypointProcessor._calculate_lateral_distance(
-                centerline_pos, racing_line_obj, clockwise, centerline_vertices
+                centerline_pos, racing_line_obj, centerline_vertices
             )
             if racing_distance is not None:
                 racing_offset = racing_distance
@@ -283,14 +261,14 @@ class WaypointProcessor:
         # Calculate width (distance from centerline to cut lines)
         if cut_line_left_obj:
             left_distance = WaypointProcessor._calculate_lateral_distance(
-                centerline_pos, cut_line_left_obj, clockwise, centerline_vertices
+                centerline_pos, cut_line_left_obj, centerline_vertices
             )
             if left_distance is not None:
                 width_left = abs(left_distance)
 
         if cut_line_right_obj:
             right_distance = WaypointProcessor._calculate_lateral_distance(
-                centerline_pos, cut_line_right_obj, clockwise, centerline_vertices
+                centerline_pos, cut_line_right_obj, centerline_vertices
             )
             if right_distance is not None:
                 width_right = abs(right_distance)
@@ -298,56 +276,50 @@ class WaypointProcessor:
         # Calculate dwidth (distance from centerline to wall lines)
         if wall_line_left_obj:
             left_wall_distance = WaypointProcessor._calculate_lateral_distance(
-                centerline_pos, wall_line_left_obj, clockwise, centerline_vertices
+                centerline_pos, wall_line_left_obj, centerline_vertices
             )
             if left_wall_distance is not None:
                 dwidth_left = abs(left_wall_distance)
 
         if wall_line_right_obj:
             right_wall_distance = WaypointProcessor._calculate_lateral_distance(
-                centerline_pos, wall_line_right_obj, clockwise, centerline_vertices
+                centerline_pos, wall_line_right_obj, centerline_vertices
             )
             if right_wall_distance is not None:
                 dwidth_right = abs(right_wall_distance)
 
         return {
             'racing_offset': -racing_offset,
-            'width': (width_right, width_left),
-            'dwidth': (dwidth_right, dwidth_left)
+            'width': (width_left, width_right),
+            'dwidth': (dwidth_left, dwidth_right)
         }
 
     @staticmethod
     def _calculate_lateral_distance(
         centerline_pos: np.ndarray,
         target_obj: bpy.types.Object,
-        clockwise: bool = True,
         centerline_vertices: List[np.ndarray] = None
     ) -> float:
         """Calculate the lateral distance from centerline position to the first edge intersection on target mesh."""
         if not target_obj or target_obj.type != "MESH":
             return None
 
-        # Get target mesh edges (use detected clockwise direction)
-        edges_2d = WaypointProcessor._get_mesh_edges_2d(target_obj, clockwise)
+        # Get target mesh edges
+        edges_2d = WaypointProcessor._get_mesh_edges_2d(target_obj)
         if not edges_2d:
             return None
 
         # Calculate the track direction at this centerline position
         forward_dir = WaypointProcessor._calculate_local_tangent(
-            centerline_pos, centerline_vertices, clockwise
+            centerline_pos, centerline_vertices
         )
 
         if forward_dir is None:
             return None
 
         # Calculate lateral direction (perpendicular to forward) - in 2D X-Y plane
-        # For clockwise tracks, we want to project outward to the right
-        # For counterclockwise tracks, we want to project outward to the left
         up_vec = np.array([0, 0, 1])  # Blender Z-up
-        if clockwise:
-            lateral_dir_3d = np.cross(up_vec, forward_dir)  # Right for clockwise
-        else:
-            lateral_dir_3d = np.cross(forward_dir, up_vec)  # Left for counterclockwise
+        lateral_dir_3d = np.cross(forward_dir, up_vec)
 
         if np.linalg.norm(lateral_dir_3d) > 0:
             lateral_dir_3d = lateral_dir_3d / np.linalg.norm(lateral_dir_3d)
@@ -511,45 +483,9 @@ class WaypointProcessor:
         return sign * min_distance
 
     @staticmethod
-    def _detect_track_direction(vertices: List[np.ndarray]) -> bool:
-        """Detect track direction from vertex ordering using signed area method.
-
-        Returns True for clockwise, False for counterclockwise.
-        """
-        if len(vertices) < 3:
-            return True  # Default to clockwise for short tracks
-
-        # Calculate centroid of all vertices (2D projection)
-        centroid_x = sum(v[0] for v in vertices) / len(vertices)
-        centroid_y = sum(v[1] for v in vertices) / len(vertices)
-        centroid = np.array([centroid_x, centroid_y])
-
-        # Calculate signed area by summing cross products
-        # Positive sum = counterclockwise, Negative sum = clockwise
-        signed_area = 0.0
-
-        for i in range(len(vertices)):
-            current = np.array([vertices[i][0], vertices[i][1]])
-            next_idx = (i + 1) % len(vertices)
-            next_point = np.array([vertices[next_idx][0], vertices[next_idx][1]])
-
-            # Vectors from centroid to points
-            to_current = current - centroid
-            to_next = next_point - centroid
-
-            # Cross product (z-component) gives signed area contribution
-            cross_product = to_current[0] * to_next[1] - to_current[1] * to_next[0]
-            signed_area += cross_product
-
-        # For a closed loop, positive signed area = counterclockwise
-        # But we want to return True for clockwise, so we invert the logic
-        return signed_area < 0
-
-    @staticmethod
     def _calculate_local_tangent(
         position: np.ndarray,
         vertices: List[np.ndarray],
-        clockwise: bool = True
     ) -> np.ndarray:
         """Calculate the local tangent direction at a given position along the vertex path."""
         if not vertices or len(vertices) < 2:
@@ -590,7 +526,7 @@ class WaypointProcessor:
         return tangent
 
     @staticmethod
-    def _get_mesh_edges_2d(target_obj: bpy.types.Object, clockwise: bool = True) -> List[tuple]:
+    def _get_mesh_edges_2d(target_obj: bpy.types.Object) -> List[tuple]:
         """Get 2D edges from a mesh object for ray intersection testing."""
         if not target_obj or target_obj.type != "MESH":
             return []
@@ -667,7 +603,7 @@ class WaypointProcessor:
 
     @staticmethod
     def process_waypoint_line(
-        mesh_obj: bpy.types.Object, branch_id: int, clockwise: bool = True
+        mesh_obj: bpy.types.Object, branch_id: int
     ) -> List[aiw_parser.Waypoint]:
         """Process vertices of a mesh object into waypoint data."""
         if not mesh_obj or mesh_obj.type != "MESH":
@@ -694,27 +630,17 @@ class WaypointProcessor:
 
         matrix = mesh_obj.matrix_world
 
-        # Get vertices in world coordinates from evaluated mesh
-        vertices = []
-        for vert in bm.verts:
-            world_pos = matrix @ vert.co
-            vertices.append(np.array(world_pos))
-
-        # Sort vertices by their position along the path
-        # Find the path order by following connected edges
-        if len(vertices) > 0:
-            ordered_vertices = WaypointProcessor.order_vertices_along_path(bm, matrix)
-        else:
-            ordered_vertices = vertices
+        # Get vertices in world coordinates from evaluated mesh respecting vertex indices
+        ordered_vertices = [
+            np.array(matrix @ vert.co)
+            for vert in sorted(bm.verts, key=lambda v: v.index)
+        ]
 
         # Determine if this is a closed or open path
         is_closed_path = branch_id == 0  # Only racing line is closed
 
         # Clean up bmesh
         bm.free()
-
-        if not clockwise:
-            ordered_vertices.reverse()
 
         waypoints = []
 
@@ -738,10 +664,7 @@ class WaypointProcessor:
 
             # Calculate right direction (perpendicular to forward)
             up_vec = np.array([0, 0, 1])  # Blender Z-up
-            if clockwise:
-                right_vec = np.cross(forward_vec, up_vec)  # Right for clockwise
-            else:
-                right_vec = np.cross(up_vec, forward_vec)  # Left for counter-clockwise
+            right_vec = np.cross(forward_vec, up_vec)
 
             if np.linalg.norm(right_vec) > 0:
                 right_vec = right_vec / np.linalg.norm(right_vec)
@@ -843,62 +766,3 @@ class WaypointProcessor:
             waypoints.append(waypoint)
 
         return waypoints
-
-    @staticmethod
-    def order_vertices_along_path(bm, matrix):
-        """Order vertices along the path by following connected edges."""
-        if len(bm.verts) == 0:
-            return []
-
-        # Convert all vertices to world coordinates
-        world_vertices = []
-        for vert in bm.verts:
-            world_pos = matrix @ vert.co
-            world_vertices.append((vert, np.array(world_pos)))
-
-        # If there are no edges, just return vertices in original order
-        if len(bm.edges) == 0:
-            return [world_pos for _, world_pos in world_vertices]
-
-        # Find vertices with only one connection (start/end points for open paths)
-        end_vertices = []
-        for vert in bm.verts:
-            if len(vert.link_edges) == 1:
-                end_vertices.append(vert)
-
-        # Choose starting vertex
-        if len(end_vertices) >= 1:
-            # Open path: start from an end vertex
-            start_vert = end_vertices[0]
-        else:
-            # Closed path: start from any vertex (use first one)
-            start_vert = bm.verts[0]
-
-        # Traverse the path following edges
-        ordered_verts = []
-        current_vert = start_vert
-        visited = set()
-
-        while current_vert and current_vert not in visited:
-            visited.add(current_vert)
-            world_pos = matrix @ current_vert.co
-            ordered_verts.append(np.array(world_pos))
-
-            # Find next vertex
-            next_vert = None
-            for edge in current_vert.link_edges:
-                other_vert = edge.other_vert(current_vert)
-                if other_vert not in visited:
-                    next_vert = other_vert
-                    break
-
-            current_vert = next_vert
-
-        # If we successfully traversed all vertices, return the ordered list
-        if len(ordered_verts) == len(bm.verts):
-            return ordered_verts
-
-        # If edge traversal failed, fall back to original vertex order
-        # This preserves the original ordering instead of using projection
-        print(f"Warning: Edge traversal failed for mesh, using original vertex order")
-        return [world_pos for _, world_pos in world_vertices]
