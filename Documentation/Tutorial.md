@@ -110,7 +110,12 @@ Instructions on general track modeling are outside the scope of this tutorial, b
 	- This could also help when troubleshooting track load crashes, in that you could isolate down to specific similar groups of objects. The Blender scene export option won't export objects inside deactivated (unchecked) collections.
 - The Blender scene exporter supports export-time object combining. If you have a significant number of objects that need to be combined, name them using the prefix `KSTREE_GROUP_blabla_`, where `blabla` can be any string without underscores or spaces. This is designed to handle Assetto Corsa's ksEditor Y-tree grouping system. Note, though, that it does NOT apply the vertex normal adjustments that ksEditor does.
 	- Additionally, the naming pattern `SMS_GRP_groupname_objectname.123` can be used instead, where all objects with the `SMS_GRP_groupname_` prefix will be combined into an object named `groupname`. Ensure `groupname` is unique and will not overlap with any non-grouped object names.
-- The Madness engine, similar to Assetto Corsa, has a limit of 65535 vertices per mesh.
+- The Madness Engine, similar to Assetto Corsa, has a limit of 65535 vertices per mesh.
+- The Madness Engine has been seen to support the following texture formats so far:
+	- DDS DXT5 Linear
+	- DDS BC7 Linear
+- The Madness Engine has been seen to NOT support the following texture formats so far:
+	- DDS R8G8B8 Uncompressed
 # Step 3: Author the Materials
 In the process of building the track model, you should have given each object a material. What that material looks like in Blender doesn't translate over to the game; the game uses its own method of defining materials to be used on each mesh object. Therefore, the Blender plugin provides an interface for setting up each material to work when exported to the Madness Engine. 
 Under the Material Properties page of the Properties panel, you will see a new pane named "Madness MTX Settings". Expanding the pane will show a configuration GUI with four sections:
@@ -123,9 +128,11 @@ Under the Material Properties page of the Properties panel, you will see a new p
 - MTX Operations
 	- Allows saving and loading of loose MTX files to and from the current Blender material.
 This UI has been designed to closely mirror the MTX file format and therefore isn't the most visual or intuitive. Designing and configuring shaders may require trial and error until you gain experience with which shader does what and what options are available for each shader. The demo project contains preconfigured shaders for its used materials. 
-# Step 4: Export the Track Model
+# Step 4: Design the AIW Data
+placeholder...
+# Step 5: Export the Track Model
 As was covered in step 1, there are many files we must create using the toolkit. The following substeps will cover how to create each of the required files, in suggested order, using the tools in the toolkit.
-## Step 4.1: Cook the Physics Mesh
+## Step 5.1: Cook the Physics Mesh
 In your Blender project (which should be organized into collections), deactivate all collections containing objects that should not contribute to the collision surfaces of the track. Leave only the meshes such as the high-resolution road meshes, grass meshes, and invisible wall meshes. 
 The CSM we'll be preparing stores each mesh's material index beside it in the binary content. Creation of the CSM will be through the provided tool `PhysicsMeshCooker.exe`. It takes two arguments as input: a path to an input OBJ file and a path to an output CSM file.
 `PhysicsMeshCooker.exe` expects an OBJ mesh with each mesh having a prefixed name corresponding to the material index of that element. While the final material index is numeric, the tool checks for a certain name string from the game's master physics material list. Similar to how Assetto Corsa needs each mesh to be prefixed with `1ROAD_` or `1GRASS_` to index to both the master and custom `surfaces.ini` files, this checks for meshes to be prefixed with names such as `ROADS_` or `GRASS_` to reference to that master material list, embedded as a look-up table.
@@ -189,5 +196,5 @@ This is that look-up table, a list of all available material names and their ind
 In Blender, once all objects have been renamed according to their desired physical material (for example: `ROADS_MainTrack.001`, `GRASS_CloseGrass.001`, `GUARDRAILS_ArmcoCollision.001`, `BRICK_CurbT1`, `SAND_Turn5RunoffPit`, etc.), export the scene as an OBJ file without materials. Then, open a terminal in the folder containing `PhysicsMeshCooker.exe` and run the following command: `./PhysicsMeshCooker.exe path_to_exported.obj path_to_target.csm`
 A Batch file is provided in the example project folder that contains a setup for the example track.
 The exported CSM's path should be in the track's physics folder, named the same as the track (for the Meadowdale example: `\Automobilista 2\Tracks\meadowdale\physics\meadowdale.csm`).
-## Step 4.2: Assemble the Visuals
+## Step 5.2: Assemble the Visuals
 Reactivate all collections containing all visible objects. Deactivate all collections consisting of physics-only objects (wall collision, etc.) as well as all marker object collections ("Madness Objects" in the demo project). Ensure that every visible object has a material assigned and that every visible material has been configured (step 3). Then, export the scene using the "Madness Scene" option, and export to the SGX file named the same as the track under the track's folder (`Automobilista 2/tracks/trackname/trackname.sgx`). This will take a long time; it needs to export every object in the scene as its own MEB, each material as its own MTX, and then write the assembled SGX scenegraph file. No caching is currently performed, so the entire operation is redone every time. No status updates are currently provided; the Blender UI will lock up and will unlock with a message in the bottom bar upon a successful export. To see progress reports, show the Blender Console window using the Window > Toggle System Console button in the top bar. 

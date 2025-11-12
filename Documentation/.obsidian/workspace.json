@@ -14,7 +14,7 @@
               "type": "markdown",
               "state": {
                 "file": "Tutorial.md",
-                "mode": "source",
+                "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
@@ -172,11 +172,12 @@
   },
   "active": "ecf0228d566ef2a9",
   "lastOpenFiles": [
+    "Formats/AIW.md",
+    "Tutorial.md",
     "Notes/File Format Listing.md",
     "Notes",
     "README.md",
     "Open Madness FMOD Tools/Notes.md",
-    "Tutorial.md",
     "Formats/TRD.md",
     "Formats/TRD Property Details/ShortTrackName.md",
     "Formats/TRD Property Details/Setup group.md",
@@ -184,7 +185,6 @@
     "Formats/TRD Property Details/Allowed TimeOfDay.md",
     "Formats/TRD Property Details/AI Exclude Filter.md",
     "Formats/SGX.md",
-    "Formats/AIW.md",
     "Formats/Camera XML.md",
     "Formats/CSM.md",
     "Formats/GCL.md",
