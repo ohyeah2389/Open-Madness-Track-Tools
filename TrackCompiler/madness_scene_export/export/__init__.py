@@ -1,4 +1,4 @@
-# Export module for Madness Scene Exporter
+# Export module for OMTT TrackCompiler
 
 from . import livetrack_mrdf_export
 from . import triggers_export

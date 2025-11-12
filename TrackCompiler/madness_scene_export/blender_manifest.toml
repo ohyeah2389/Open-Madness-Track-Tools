@@ -1,9 +1,9 @@
 schema_version = "1.0.0"
 
-id = "madness_scene_exporter"
+id = "madness_scene_export"
 version = "0.1.0"
-name = "Open Madness Track Tools"
-tagline = "An open-source toolchain for track development for Madness Engine games."
+name = "OMTT TrackCompiler"
+tagline = "An open-source toolkit for track development for Madness Engine games."
 maintainer = "ohyeah2389"
 type = "add-on"
 tags = ["Import-Export", "Pipeline"]
@@ -23,7 +23,7 @@ platforms = ["windows-x64"]
 # ]
 
 [permissions]
-files = "Export of track files, use of external tool MeshCooker"
+files = "Export of track files, use of external tool PhysicsMeshCooker"
 
 # Optional: build settings.
 # https://docs.blender.org/manual/en/dev/advanced/extensions/command_line_arguments.html#command-line-args-extension-build

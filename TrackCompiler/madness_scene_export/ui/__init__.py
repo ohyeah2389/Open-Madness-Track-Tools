@@ -1,4 +1,4 @@
-# UI module for Madness Scene Exporter
+# UI module for OMTT TrackCompiler
 
 from . import camera_ui
 from . import light_ui

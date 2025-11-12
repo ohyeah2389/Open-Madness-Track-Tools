@@ -1,4 +1,4 @@
-# Settings and configuration module for Madness Scene Exporter
+# Settings and configuration module for OMTT TrackCompiler
 
 from .settings_manager import (
     get_settings_file_path,

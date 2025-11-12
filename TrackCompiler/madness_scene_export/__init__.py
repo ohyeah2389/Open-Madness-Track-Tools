@@ -35,7 +35,7 @@ from .export.gcl_export import export_gcl
 
 
 class MadnessSceneExporterPreferences(bpy.types.AddonPreferences):
-    """Addon preferences for Madness Scene Exporter"""
+    """Addon preferences for OMTT TrackCompiler"""
 
     bl_idname = __name__
 

@@ -1,4 +1,4 @@
-# Properties module for Madness Scene Exporter
+# Properties module for OMTT TrackCompiler
 
 from .dynamic_properties import (
     get_available_dynamic_templates,

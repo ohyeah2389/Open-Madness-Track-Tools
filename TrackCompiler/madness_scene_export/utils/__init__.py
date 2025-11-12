@@ -1,4 +1,4 @@
-# Utilities module for Madness Scene Exporter
+# Utilities module for OMTT TrackCompiler
 
 from .utils import get_game_folder, sanitize
 

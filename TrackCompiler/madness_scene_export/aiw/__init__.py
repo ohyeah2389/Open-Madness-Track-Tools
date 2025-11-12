@@ -1,4 +1,4 @@
-# AIW (track layout) module for Madness Scene Exporter
+# AIW (track layout) module for OMTT TrackCompiler
 
 from . import aiw_export
 
