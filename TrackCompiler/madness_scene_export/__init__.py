@@ -1,7 +1,7 @@
 bl_info = {
-    "name": "Madness Scene Exporter",
-    "author": "Madness Scene Exporter",
-    "description": "Export AMS2/PC2 SGXs, MEB/MTXs, auto-copy textures, generate AIW and trigger files, and Environment XML camera sets",
+    "name": "OMTT TrackCompiler",
+    "author": "ohyeah2389",
+    "description": "Implements export of Madness Engine (AMS2/PC2) track data files of various types.",
     "blender": (4, 0, 0),
     "version": (0, 1, 0),
     "location": "File > Export",
