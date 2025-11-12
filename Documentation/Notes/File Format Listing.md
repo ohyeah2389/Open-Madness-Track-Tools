@@ -42,7 +42,7 @@ Some tracks also specify other files in `/_data/physics`, `/_data/pitgarages`, `
   * Contains mesh data about visual objects placed from VHF scenegraphs
   * Commonly used for vegetation and repetitive trackside objects
   * Can be encrypted?
-  * 🔴Undocumented
+  * 🟨Partially documented
 ### MTX Material XML
 * `/tracks/trackname/[MATERIAL].mtx`
   * Human-readable material configuration for each object
@@ -50,9 +50,7 @@ Some tracks also specify other files in `/_data/physics`, `/_data/pitgarages`, `
   * 🟦Already human-readable
 ### BMT Binary Material
 * `/tracks/trackname/[MATERIAL].bmt`
-  * Binary packed material configuration
-  * PCarsTools repository has a BLMY.bt that might match up with this format
-  * 🟨Partially documented
+	* [[BMT]]
 ### ENV.XML Environment Physics XML
 * `/tracks/_data/dynamic/physics/trackname.env.xml`
   * Contains listings of all dynamic physics track objects (cones, etc.)

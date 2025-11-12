@@ -1,0 +1,4 @@
+BMT is the binary-packed version of the MTX format, an XML container used to define the shader and shader-related information to be used for setting up a specific material. 
+Each [[MEB]] references one MTX, and the game will preferentially load same-name BMTs in place of MTXs if one is found. 
+BMTs do not appear to work when stored on disk, only working while contained inside a BFF pakfile. Any extracted BMTs must be translated to MTX in order to work unpacked. 
+As compared to BMT, MTX has a critical deficiency around the way its DEFINE parameters are stored to memory to be used in rendering; they don't get stored correctly when MTXs are used, leading to the DEFINEs not taking proper effect, including the LIVETRACKRENDERING flags, preventing LiveTrack data from rendering on surfaces it is assigned to render on.
