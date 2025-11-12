@@ -10,7 +10,7 @@ bl_info = {
 }
 
 import bpy  # type: ignore
-from bpy.props import StringProperty  # type: ignore
+from bpy.props import StringProperty, BoolProperty, FloatProperty  # type: ignore
 from bpy_extras.io_utils import ExportHelper  # type: ignore
 from pathlib import Path
 from .settings import meb_export_settings
@@ -31,6 +31,7 @@ from .export.exporter import export_madness_scene
 from .export.environment_export import export_environment_xml
 from .export.lights_export import export_lights_sgx
 from .export.dynamic_export import export_dynamic_objects
+from .export.gcl_export import export_gcl
 
 
 class MadnessSceneExporterPreferences(bpy.types.AddonPreferences):
@@ -191,6 +192,75 @@ class MadnessDynamicObjectsExporter(bpy.types.Operator, ExportHelper):
             return {"CANCELLED"}
 
 
+class MadnessGclExporter(bpy.types.Operator, ExportHelper):
+    """Export LiveTrack Cells (GCL)"""
+
+    bl_idname = "export_scene.madness_gcl"
+    bl_label = "Export GCL"
+
+    filename_ext = ".gcl"
+
+    filter_glob: StringProperty(
+        default="*.gcl",
+        options={"HIDDEN"},
+        maxlen=255,
+    )  # type: ignore
+
+    version_string: StringProperty(
+        name="GCL Version",
+        description="Header version value (accepts decimal or hex with 0x prefix)",
+        default="0x10000001",
+    )  # type: ignore
+
+    use_elevation_override: BoolProperty(
+        name="Override Elevation",
+        description="Use a custom elevation instead of the auto-calculated value",
+        default=False,
+    )  # type: ignore
+
+    elevation_override: FloatProperty(
+        name="Elevation",
+        description="Elevation (Y) to assign to all triangles and cells",
+        default=0.0,
+    )  # type: ignore
+
+    def execute(self, context):
+        try:
+            version = int(self.version_string, 0)
+        except ValueError:
+            self.report({"ERROR"}, f"Invalid GCL version value: {self.version_string}")
+            return {"CANCELLED"}
+
+        elevation = self.elevation_override if self.use_elevation_override else None
+
+        try:
+            result = export_gcl(
+                filepath=self.filepath,
+                context=context,
+                version=version,
+                elevation_override=elevation,
+            )
+        except Exception as exc:
+            self.report({"ERROR"}, f"GCL export failed: {exc}")
+            return {"CANCELLED"}
+
+        grid_x, grid_z = result["grid"]
+        message = (
+            f"GCL exported: {result['triangles']} triangles, grid {grid_x}x{grid_z}, "
+            f"elevation {result['elevation']:.3f}m"
+        )
+        self.report({"INFO"}, message)
+        return {"FINISHED"}
+
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(self, "version_string")
+        layout.prop(self, "use_elevation_override")
+        row = layout.row()
+        row.enabled = self.use_elevation_override
+        row.prop(self, "elevation_override")
+
+
 def menu_func_export(self, context):
     self.layout.operator(
         MadnessSceneExporter.bl_idname, text="Madness Scene (.sgx, .meb, .mtx)"
@@ -204,6 +274,10 @@ def menu_func_export(self, context):
     self.layout.operator(
         MadnessDynamicObjectsExporter.bl_idname,
         text="Madness Dynamic Objects (collision & env)",
+    )
+    self.layout.operator(
+        MadnessGclExporter.bl_idname,
+        text="Madness LiveTrack Cells (.gcl)",
     )
 
 
@@ -227,6 +301,7 @@ def register():
         MadnessSceneExporter,
         MadnessEnvironmentExporter,
         MadnessLightsExporter,
+        MadnessGclExporter,
         MadnessDynamicObjectsExporter,
     ]
 
@@ -249,6 +324,7 @@ def unregister():
         MadnessLightsExporter,
         MadnessEnvironmentExporter,
         MadnessSceneExporter,
+        MadnessGclExporter,
         MadnessSceneExporterPreferences,
     ]
 
