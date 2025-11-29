@@ -49,7 +49,7 @@ Below is a list of every known assignable property found in AMS2's stock TRD fil
 	- Two-letter identifier for the country the track is located in (likely for UI elements only).
 - [[Crowd Pak Filename]]
 - [[CutTrackFraction]]
-	- May control track cut detection sensitivity?
+	- Controls the normalized distance along the track from the start line where a track cut will NOT trigger a "this AND next lap invalid", only a "this lap invalid": `mCutDistanceToInvalidateNextLap = (1.0f - trackStatus.GetCutTrackFraction()) * trackLength;`
 - [[DLC ID]]
 	- Can be used to restrict your track to owners of certain DLC only (but why would you do that?)
 - [[DirtParticlesOverride]]
