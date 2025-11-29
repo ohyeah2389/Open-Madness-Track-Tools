@@ -1,0 +1,790 @@
+{
+  "AmbientSounds": {
+    "AMS2": {
+      "LevelSounds/AMS2/Ambient/General/Ambience_south_Europe": {
+        "Category": "Ambience",
+        "Count": 12
+      },
+      "LevelSounds/AMS2/Ambient/crowd/Near/crowd_big_cheer_spot_01_150m_NEAR": {
+        "Category": "Crowd",
+        "Count": 4
+      },
+      "LevelSounds/AMS2/Ambient/General/Ambience_countryside_North": {
+        "Category": "Ambience",
+        "Count": 91
+      },
+      "LevelSounds/AMS2/Ambient/General/Ambience_countryside_South": {
+        "Category": "Ambience",
+        "Count": 19
+      },
+      "LevelSounds/Environment/water/area/waterlap_seashore_area_01": {
+        "Category": "Other",
+        "Count": 2
+      },
+      "LevelSounds/AMS2/Ambient/General/Ambience_forest_North": {
+        "Category": "Forest",
+        "Count": 12
+      },
+      "LevelSounds/AMS2/Ambient/Trees/Forest_varied_03": {
+        "Category": "Forest",
+        "Count": 5
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_small_cheer_spot_150m_01": {
+        "Category": "Crowd",
+        "Count": 6
+      },
+      "LevelSounds/AMS2/Ambient_garage": {
+        "Category": "Ambience",
+        "Count": 1
+      },
+      "LevelSounds/Environment/wind/wind_generic_loop_05_no_birds": {
+        "Category": "Wind",
+        "Count": 1
+      },
+      "LevelSounds/Environment/water/area/waterlap_sea_area_02": {
+        "Category": "Other",
+        "Count": 1
+      },
+      "LevelSounds/AMS2/Ambient/Trees/Forest_varied_02": {
+        "Category": "Forest",
+        "Count": 5
+      },
+      "LevelSounds/AMS2/Ambient/Pits/Ambient_garage": {
+        "Category": "Ambience",
+        "Count": 150
+      },
+      "LevelSounds/AMS2/Ambient/Trees/Forest_varied_01": {
+        "Category": "Forest",
+        "Count": 12
+      },
+      "LevelSounds/AMS2/Ambient/crowd/spot/crowd_small_cheer_spot_01": {
+        "Category": "Crowd",
+        "Count": 2
+      },
+      "LevelSounds/AMS2/Ambient/General/Ambience_urban_North": {
+        "Category": "Ambience",
+        "Count": 2
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_small_cheer_spot_01": {
+        "Category": "Crowd",
+        "Count": 1
+      },
+      "LevelSounds/Environment/water/area/waterlap_sea_area_01": {
+        "Category": "Other",
+        "Count": 1
+      },
+      "LevelSounds/AMS2/Ambient/General/Brasilian_Ambience": {
+        "Category": "Ambience",
+        "Count": 60
+      },
+      "LevelSounds/AMS2/747_flight": {
+        "Category": "Other",
+        "Count": 10
+      },
+      "LevelSounds/AMS2/Ambient/Pits/Ambient_pitlane": {
+        "Category": "Ambience",
+        "Count": 69
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_medium_cheer_spot_03": {
+        "Category": "Crowd",
+        "Count": 1
+      }
+    },
+    "Both": {
+      "LevelSounds/Environment/wind/wind_generic_loop_05_no_birds": {
+        "Count": 44,
+        "Category": "Wind"
+      },
+      "LevelSounds/Environment/water/area/waterlap_sea_area_02": {
+        "Count": 2,
+        "Category": "Other"
+      },
+      "LevelSounds/Environment/water/area/waterlap_seashore_area_01": {
+        "Count": 17,
+        "Category": "Other"
+      },
+      "LevelSounds/Environment/water/area/waterlap_sea_area_01": {
+        "Count": 2,
+        "Category": "Other"
+      }
+    },
+    "PC2": {
+      "LevelSounds/Environment/water/area/waterlap_calm_area_01": {
+        "Category": "Other",
+        "Count": 3
+      },
+      "LevelSounds/Environment/forest/spot/forest_generic_loop_spot_03": {
+        "Category": "Forest",
+        "Count": 2
+      },
+      "LevelSounds/Environment/wind/wind_generic_loop_03": {
+        "Category": "Wind",
+        "Count": 28
+      },
+      "LevelSounds/Environment/water/area/waterlap_seashore_area_01": {
+        "Category": "Other",
+        "Count": 15
+      },
+      "LevelSounds/Environment/forest/area/forest_generic_loop_area_03": {
+        "Category": "Forest",
+        "Count": 64
+      },
+      "LevelSounds/Environment/water/area/waterlap_river_area_01": {
+        "Category": "Other",
+        "Count": 4
+      },
+      "LevelSounds/Environment/forest/area/forest_generic_loop_area_04_birds": {
+        "Category": "Forest",
+        "Count": 25
+      },
+      "LevelSounds/Environment/water/area/waterlap_ocean_area_01": {
+        "Category": "Other",
+        "Count": 3
+      },
+      "LevelSounds/Environment/wind/wind_generic_loop_05_no_birds": {
+        "Category": "Wind",
+        "Count": 43
+      },
+      "LevelSounds/Environment/water/area/waterlap_sea_area_02": {
+        "Category": "Other",
+        "Count": 1
+      },
+      "LevelSounds/Environment/wind/wind_generic_loop_05": {
+        "Category": "Wind",
+        "Count": 25
+      },
+      "LevelSounds/Environment/wind/wind_generic_loop_02": {
+        "Category": "Wind",
+        "Count": 102
+      },
+      "LevelSounds/Environment/forest/area/forest_generic_loop_area_05_crickets": {
+        "Category": "Forest",
+        "Count": 25
+      },
+      "LevelSounds/Environment/wind/wind_whistling_peak_loop_01": {
+        "Category": "Wind",
+        "Count": 13
+      },
+      "LevelSounds/Environment/forest/area/forest_generic_loop_area_01": {
+        "Category": "Forest",
+        "Count": 23
+      },
+      "LevelSounds/Environment/water/area/seagulls_area_01": {
+        "Category": "Other",
+        "Count": 13
+      },
+      "LevelSounds/Environment/forest/area/forest_generic_loop_area_02": {
+        "Category": "Forest",
+        "Count": 8
+      },
+      "LevelSounds/Environment/wind/wind_winter_loop_02": {
+        "Category": "Wind",
+        "Count": 2
+      },
+      "LevelSounds/Environment/pitstop/pitstop_loop_01": {
+        "Category": "Pitstop",
+        "Count": 93
+      },
+      "LevelSounds/Environment/water/area/waterlap_sea_area_01": {
+        "Category": "Other",
+        "Count": 1
+      },
+      "LevelSounds/Environment/wind/wind_generic_loop_04": {
+        "Category": "Wind",
+        "Count": 19
+      },
+      "LevelSounds/Environment/wind/wind_generic_loop_01": {
+        "Category": "Wind",
+        "Count": 42
+      },
+      "LevelSounds/Environment/wind/wind_winter_loop_01": {
+        "Category": "Wind",
+        "Count": 7
+      }
+    }
+  },
+  "TotalFiles": 361,
+  "AmbientReverbs": {
+    "AMS2": {
+      "AMBIENT_Reverb_GLOBAL": {
+        "Count": 203
+      },
+      "AMBIENT_Reverb_RaceTrackDefault_AMS": {
+        "Count": 2
+      }
+    },
+    "Both": {},
+    "PC2": {
+      "AMBIENT_Reverb_PlainConcrete": {
+        "Count": 2
+      },
+      "AMBIENT_Reverb_RaceTrackDefault": {
+        "Count": 46
+      },
+      "AMBIENT_Reverb_Forest": {
+        "Count": 90
+      },
+      "AMBIENT_Reverb_City_Walls": {
+        "Count": 5
+      },
+      "AMBIENT_Reverb_Open_Area": {
+        "Count": 9
+      }
+    }
+  },
+  "LocalReverbs": {
+    "AMS2": {
+      "AMBIENT_Reverb_Under_Bridge": {
+        "Count": 6
+      },
+      "AMBIENT_Reverb_StartLaneNoWalls": {
+        "Count": 7
+      },
+      "AMBIENT_Reverb_StartLaneWalls": {
+        "Count": 7
+      },
+      "LOCAL_Reverb_City_Walls": {
+        "Count": 13
+      },
+      "LOCAL_Reverb_StartLaneWalls": {
+        "Count": 56
+      },
+      "LOCAL_Reverb_StartLaneNoWalls": {
+        "Count": 95
+      },
+      "AMBIENT_Reverb_Beach": {
+        "Count": 14
+      },
+      "LOCAL_LongBeach_City_Walls": {
+        "Count": 2
+      },
+      "LOCAL_Reverb_Under_Bridge": {
+        "Count": 160
+      },
+      "LOCAL_Reverb_PlainConcrete": {
+        "Count": 5
+      },
+      "LOCAL_Reverb_StartLaneGrandstands": {
+        "Count": 115
+      },
+      "LOCAL_Reverb_TunnelLong": {
+        "Count": 10
+      },
+      "LOCAL_Reverb_TunnelShort": {
+        "Count": 11
+      },
+      "LOCAL_Reverb_PitLane": {
+        "Count": 94
+      },
+      "LOCAL_Reverb_TunnelMedium": {
+        "Count": 13
+      }
+    },
+    "Both": {
+      "LOCAL_Reverb_City_Walls": {
+        "Count": 55
+      },
+      "LOCAL_Reverb_Under_Bridge": {
+        "Count": 240
+      },
+      "LOCAL_Reverb_TunnelShort": {
+        "Count": 60
+      },
+      "LOCAL_Reverb_TunnelLong": {
+        "Count": 29
+      },
+      "LOCAL_Reverb_PlainConcrete": {
+        "Count": 30
+      },
+      "LOCAL_Reverb_PitLane": {
+        "Count": 100
+      },
+      "LOCAL_Reverb_StartLaneNoWalls": {
+        "Count": 168
+      },
+      "LOCAL_Reverb_TunnelMedium": {
+        "Count": 37
+      },
+      "LOCAL_Reverb_StartLaneWalls": {
+        "Count": 131
+      }
+    },
+    "PC2": {
+      "LOCAL_LongBeach_TunnelMedium": {
+        "Count": 1
+      },
+      "LOCAL_Reverb_Forest": {
+        "Count": 2
+      },
+      "LOCAL_Reverb_City_Walls": {
+        "Count": 42
+      },
+      "LOCAL_Reverb_RaceTrackDefault": {
+        "Count": 36
+      },
+      "LOCAL_LongBeach_TunnelShort": {
+        "Count": 1
+      },
+      "LOCAL_Reverb_RaceTrackBouncy": {
+        "Count": 380
+      },
+      "LOCAL_Reverb_StartLaneWalls": {
+        "Count": 75
+      },
+      "LOCAL_Reverb_StartLaneNoWalls": {
+        "Count": 73
+      },
+      "LOCAL_LongBeach_City_Walls_Weak": {
+        "Count": 10
+      },
+      "LOCAL_Reverb_Under_Bridge": {
+        "Count": 80
+      },
+      "LOCAL_Reverb_PlainConcrete": {
+        "Count": 25
+      },
+      "LOCAL_Reverb_Open_Area": {
+        "Count": 45
+      },
+      "LOCAL_Reverb_TunnelLong": {
+        "Count": 19
+      },
+      "LOCAL_Reverb_TunnelShort": {
+        "Count": 49
+      },
+      "LOCAL_Reverb_PitLane": {
+        "Count": 6
+      },
+      "LOCAL_Reverb_TunnelMedium": {
+        "Count": 24
+      }
+    }
+  },
+  "Statistics": {
+    "AMS2TrackCount": 207,
+    "AvgEnvironmentSoundsPerTrack": 55.39,
+    "PC2TrackCount": 154,
+    "AvgAmbientSoundsPerTrack": 2.85,
+    "AvgLocalReverbsPerTrack": 4.11
+  },
+  "EnvironmentSounds": {
+    "AMS2": {
+      "LevelSounds/Environment/city/spot/city_traffic_loop_spot_150m_03": {
+        "Category": "Other",
+        "Count": 1
+      },
+      "LevelSounds/AMS2/Ambient/Announcer/Spot/announcer_01_300m": {
+        "Category": "Announcer/Tannoy",
+        "Count": 35
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_small_cheer_spot_150m_01": {
+        "Category": "Crowd",
+        "Count": 1
+      },
+      "LevelSounds/AMS2/Ambient/General/Brasilian_Ambience": {
+        "Category": "Other",
+        "Count": 2
+      },
+      "LevelSounds/Environment/water/spot/waterlap_lake_spot_01": {
+        "Category": "Other",
+        "Count": 70
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_small_cheer_spot_01": {
+        "Category": "Crowd",
+        "Count": 276
+      },
+      "LevelSounds/Environment/city/spot/city_traffic_loop_spot_150m_01": {
+        "Category": "Other",
+        "Count": 1
+      },
+      "LevelSounds/Environment/water/spot/waterlap_sea_spot_01": {
+        "Category": "Other",
+        "Count": 35
+      },
+      "LevelSounds/AMS2/Ambient/Announcer/Spot/announcer_02_100m": {
+        "Category": "Announcer/Tannoy",
+        "Count": 2225
+      },
+      "LevelSounds/Environment/tannoy/spot/tannoy_around_track_spot_150m_01": {
+        "Category": "Announcer/Tannoy",
+        "Count": 1
+      },
+      "LevelSounds/Environment/forest/spot/generic_crickets_loop_spot_01": {
+        "Category": "Forest",
+        "Count": 3
+      },
+      "LevelSounds/AMS2/Ambient/Announcer/Spot/announcer_03_300m": {
+        "Category": "Announcer/Tannoy",
+        "Count": 3
+      },
+      "LevelSounds/Environment/water/area/waterlap_sea_area_01": {
+        "Category": "Other",
+        "Count": 3
+      },
+      "LevelSounds/AMS2/Ambient/Track_Specific/Imola/Tosa_Ambience": {
+        "Category": "Other",
+        "Count": 1
+      },
+      "LevelSounds/AMS2/Ambient/Announcer/Spot/announcer_03_100m": {
+        "Category": "Announcer/Tannoy",
+        "Count": 2446
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_medium_cheer_spot_02": {
+        "Category": "Crowd",
+        "Count": 2
+      },
+      "LevelSounds/AMS2/Ambient/crowd/spot/crowd_medium_cheer_spot_01": {
+        "Category": "Crowd",
+        "Count": 297
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_medium_cheer_spot_01": {
+        "Category": "Crowd",
+        "Count": 654
+      },
+      "LevelSounds/AMS2/Ambient/crowd/Far/crowd_big_cheer_spot_01_150m_FAR": {
+        "Category": "Crowd",
+        "Count": 107
+      },
+      "LevelSounds/AMS2/Ambient/Announcer/Spot/announcer_01_200m": {
+        "Category": "Announcer/Tannoy",
+        "Count": 97
+      },
+      "LevelSounds/AMS2/Ambient/Announcer/Spot/announcer_02_300m": {
+        "Category": "Announcer/Tannoy",
+        "Count": 3
+      },
+      "LevelSounds/AMS2/Ambient/crowd/spot/crowd_medium_cheer_spot_150m_01": {
+        "Category": "Crowd",
+        "Count": 3
+      },
+      "LevelSounds/AMS2/Ambient/Track_Specific/Ring_rave/Party": {
+        "Category": "Other",
+        "Count": 5
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_medium_spot_150m_01": {
+        "Category": "Crowd",
+        "Count": 2
+      },
+      "LevelSounds/Environment/city/spot/city_traffic_loop_spot_150m_02": {
+        "Category": "Other",
+        "Count": 1
+      },
+      "LevelSounds/AMS2/Ambient/General/City_ambience": {
+        "Category": "Other",
+        "Count": 1
+      },
+      "LevelSounds/AMS2/Ambient/crowd/spot/crowd_medium_spot_01": {
+        "Category": "Crowd",
+        "Count": 56
+      },
+      "LevelSounds/AMS2/Ambient/Announcer/Spot/announcer_01_100m": {
+        "Category": "Announcer/Tannoy",
+        "Count": 2870
+      },
+      "LevelSounds/AMS2/747_flight": {
+        "Category": "Other",
+        "Count": 12
+      },
+      "LevelSounds/AMS2/Ambient/crowd/Near/crowd_big_cheer_spot_01_150m_NEAR": {
+        "Category": "Crowd",
+        "Count": 2545
+      },
+      "LevelSounds/AMS2/Ambient/Announcer/Spot/announcer_02_200m": {
+        "Category": "Announcer/Tannoy",
+        "Count": 111
+      },
+      "LevelSounds/Environment/tannoy/spot/tannoy_around_track_spot_150m_02": {
+        "Category": "Announcer/Tannoy",
+        "Count": 1
+      },
+      "LevelSounds/AMS2/Ambient/crowd/spot/crowd_small_cheer_spot_01": {
+        "Category": "Crowd",
+        "Count": 2331
+      },
+      "LevelSounds/AMS2/Ambient/crowd/spot/crowd_big_cheer_spot_01_150m": {
+        "Category": "Crowd",
+        "Count": 130
+      },
+      "LevelSounds/AMS2/Ambient/Announcer/Spot/announcer_03_200m": {
+        "Category": "Announcer/Tannoy",
+        "Count": 47
+      },
+      "LevelSounds/AMS2/Ambient/crowd/spot/crowd_small_cheer_spot_150m_01": {
+        "Category": "Crowd",
+        "Count": 35
+      },
+      "LevelSounds/Environment/water/spot/waterlap_ocean_spot_01": {
+        "Category": "Other",
+        "Count": 18
+      },
+      "LevelSounds/Environment/water/area/waterlap_calm_area_01": {
+        "Category": "Other",
+        "Count": 21
+      },
+      "LevelSounds/Environment/water/spot/waterlap_sea_spot_02": {
+        "Category": "Other",
+        "Count": 5
+      }
+    },
+    "Both": {
+      "LevelSounds/Environment/water/spot/waterlap_lake_spot_01": {
+        "Count": 194,
+        "Category": "Other"
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_medium_cheer_spot_01": {
+        "Count": 944,
+        "Category": "Crowd"
+      },
+      "LevelSounds/Environment/water/spot/waterlap_ocean_spot_01": {
+        "Count": 98,
+        "Category": "Other"
+      },
+      "LevelSounds/Environment/city/spot/city_traffic_loop_spot_150m_01": {
+        "Count": 5,
+        "Category": "Other"
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_small_cheer_spot_150m_01": {
+        "Count": 94,
+        "Category": "Crowd"
+      },
+      "LevelSounds/Environment/water/spot/waterlap_sea_spot_02": {
+        "Count": 131,
+        "Category": "Other"
+      },
+      "LevelSounds/Environment/city/spot/city_traffic_loop_spot_150m_03": {
+        "Count": 2,
+        "Category": "Other"
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_medium_spot_150m_01": {
+        "Count": 37,
+        "Category": "Crowd"
+      },
+      "LevelSounds/Environment/forest/spot/generic_crickets_loop_spot_01": {
+        "Count": 158,
+        "Category": "Forest"
+      },
+      "LevelSounds/Environment/tannoy/spot/tannoy_around_track_spot_150m_02": {
+        "Count": 243,
+        "Category": "Announcer/Tannoy"
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_small_cheer_spot_01": {
+        "Count": 463,
+        "Category": "Crowd"
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_medium_cheer_spot_02": {
+        "Count": 175,
+        "Category": "Crowd"
+      },
+      "LevelSounds/Environment/tannoy/spot/tannoy_around_track_spot_150m_01": {
+        "Count": 233,
+        "Category": "Announcer/Tannoy"
+      },
+      "LevelSounds/Environment/city/spot/city_traffic_loop_spot_150m_02": {
+        "Count": 2,
+        "Category": "Other"
+      },
+      "LevelSounds/Environment/water/spot/waterlap_sea_spot_01": {
+        "Count": 184,
+        "Category": "Other"
+      }
+    },
+    "PC2": {
+      "LevelSounds/Environment/tannoy/spot/tannoy_around_track_spot_04": {
+        "Category": "Announcer/Tannoy",
+        "Count": 91
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_small_cheer_spot_150m_01": {
+        "Category": "Crowd",
+        "Count": 93
+      },
+      "LevelSounds/Environment/tannoy/spot/tannoy_around_track_spot_02": {
+        "Category": "Announcer/Tannoy",
+        "Count": 106
+      },
+      "LevelSounds/Environment/water/spot/waterlap_lake_spot_01": {
+        "Category": "Other",
+        "Count": 124
+      },
+      "LevelSounds/Environment/city/spot/city_traffic_loop_spot_150m_01": {
+        "Category": "Other",
+        "Count": 4
+      },
+      "LevelSounds/Environment/tannoy/spot/tannoy_around_track_spot_150m_04": {
+        "Category": "Announcer/Tannoy",
+        "Count": 98
+      },
+      "LevelSounds/Environment/wind/wind_generic_loop_03": {
+        "Category": "Wind",
+        "Count": 1
+      },
+      "LevelSounds/Environment/forest/spot/forest_generic_loop_spot_01_bird": {
+        "Category": "Forest",
+        "Count": 463
+      },
+      "LevelSounds/Environment/tannoy/spot/tannoy_around_track_spot_03": {
+        "Category": "Announcer/Tannoy",
+        "Count": 50
+      },
+      "LevelSounds/Environment/water/spot/waterlap_sea_spot_01": {
+        "Category": "Other",
+        "Count": 149
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_small_cheer_spot_01": {
+        "Category": "Crowd",
+        "Count": 187
+      },
+      "LevelSounds/Environment/tannoy/spot/tannoy_around_track_spot_01": {
+        "Category": "Announcer/Tannoy",
+        "Count": 162
+      },
+      "LevelSounds/Environment/tannoy/spot/tannoy_around_track_spot_150m_01": {
+        "Category": "Announcer/Tannoy",
+        "Count": 232
+      },
+      "LevelSounds/Environment/water/spot/waterlap_calm_spot_02": {
+        "Category": "Other",
+        "Count": 5
+      },
+      "LevelSounds/Environment/forest/spot/forest_generic_loop_spot_03": {
+        "Category": "Forest",
+        "Count": 837
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_medium_cheer_spot_150m_02": {
+        "Category": "Crowd",
+        "Count": 250
+      },
+      "LevelSounds/Environment/water/spot/waterlap_calm_spot_01": {
+        "Category": "Other",
+        "Count": 2
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_medium_cheer_spot_03": {
+        "Category": "Crowd",
+        "Count": 40
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_medium_spot_150m_01": {
+        "Category": "Crowd",
+        "Count": 35
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_medium_cheer_spot_02": {
+        "Category": "Crowd",
+        "Count": 173
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_big_cheer_spot_01_100m": {
+        "Category": "Crowd",
+        "Count": 100
+      },
+      "LevelSounds/Environment/water/spot/waterlap_seashore_spot_01": {
+        "Category": "Other",
+        "Count": 87
+      },
+      "LevelSounds/Environment/tannoy/spot/tannoy_pitstop_spot_01": {
+        "Category": "Announcer/Tannoy",
+        "Count": 72
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_medium_cheer_spot_150m_01": {
+        "Category": "Crowd",
+        "Count": 247
+      },
+      "LevelSounds/Environment/wind/wind_generic_loop_01": {
+        "Category": "Wind",
+        "Count": 4
+      },
+      "LevelSounds/Environment/tannoy/spot/tannoy_pitstop_spot_150m_02": {
+        "Category": "Announcer/Tannoy",
+        "Count": 5
+      },
+      "LevelSounds/Environment/tannoy/spot/tannoy_around_track_spot_05": {
+        "Category": "Announcer/Tannoy",
+        "Count": 77
+      },
+      "LevelSounds/Environment/tannoy/spot/tannoy_around_track_spot_150m_03": {
+        "Category": "Announcer/Tannoy",
+        "Count": 161
+      },
+      "LevelSounds/Environment/tannoy/spot/tannoy_pitstop_spot_02": {
+        "Category": "Announcer/Tannoy",
+        "Count": 13
+      },
+      "LevelSounds/Environment/wind/wind_generic_loop_04": {
+        "Category": "Wind",
+        "Count": 1
+      },
+      "LevelSounds/Environment/city/spot/city_traffic_loop_spot_150m_02": {
+        "Category": "Other",
+        "Count": 1
+      },
+      "LevelSounds/Environment/city/spot/city_traffic_loop_spot_150m_03": {
+        "Category": "Other",
+        "Count": 1
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_medium_cheer_spot_150m_03": {
+        "Category": "Crowd",
+        "Count": 42
+      },
+      "LevelSounds/Environment/forest/spot/forest_generic_loop_spot_02_birds_crickets": {
+        "Category": "Forest",
+        "Count": 23
+      },
+      "LevelSounds/Environment/forest/spot/generic_crickets_loop_spot_01": {
+        "Category": "Forest",
+        "Count": 155
+      },
+      "LevelSounds/Environment/tannoy/spot/tannoy_around_track_spot_150m_05": {
+        "Category": "Announcer/Tannoy",
+        "Count": 113
+      },
+      "LevelSounds/Environment/tannoy/spot/tannoy_pitstop_spot_150m_01": {
+        "Category": "Announcer/Tannoy",
+        "Count": 5
+      },
+      "LevelSounds/Environment/tannoy/spot/tannoy_around_track_spot_150m_02": {
+        "Category": "Announcer/Tannoy",
+        "Count": 242
+      },
+      "LevelSounds/Environment/crowd/area/crowd_medium_cheer_spot_01": {
+        "Category": "Crowd",
+        "Count": 4
+      },
+      "LevelSounds/Environment/water/spot/waterlap_ocean_spot_01": {
+        "Category": "Other",
+        "Count": 80
+      },
+      "LevelSounds/Environment/forest/spot/generic_birds_loop_spot_01": {
+        "Category": "Forest",
+        "Count": 41
+      },
+      "LevelSounds/Environment/forest/spot/generic_sheep_rnd_spot_01": {
+        "Category": "Forest",
+        "Count": 6
+      },
+      "LevelSounds/Environment/water/spot/waterlap_river_spot_01": {
+        "Category": "Other",
+        "Count": 24
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_medium_spot_01": {
+        "Category": "Crowd",
+        "Count": 332
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_medium_cheer_spot_01": {
+        "Category": "Crowd",
+        "Count": 290
+      },
+      "LevelSounds/Environment/forest/spot/generic_cow_rnd_spot_01": {
+        "Category": "Forest",
+        "Count": 7
+      },
+      "LevelSounds/Environment/water/spot/waterlap_sea_spot_02": {
+        "Category": "Other",
+        "Count": 126
+      },
+      "LevelSounds/Environment/crowd/spot/crowd_big_cheer_spot_01_150m": {
+        "Category": "Crowd",
+        "Count": 172
+      },
+      "LevelSounds/Environment/tannoy/spot/tannoy_LeMans_Era": {
+        "Category": "Announcer/Tannoy",
+        "Count": 5
+      }
+    }
+  }
+}

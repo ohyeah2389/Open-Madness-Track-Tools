@@ -27,11 +27,14 @@ from .properties import light_properties
 from .ui import light_ui
 from .properties import dynamic_properties
 from .ui import dynamic_ui
+from .properties import sound_properties
+from .ui import sound_ui
 from .export.exporter import export_madness_scene
 from .export.environment_export import export_environment_xml
 from .export.lights_export import export_lights_sgx
 from .export.dynamic_export import export_dynamic_objects
 from .export.gcl_export import export_gcl
+from .export.sound_export import export_sounds
 
 
 class MadnessSceneExporterPreferences(bpy.types.AddonPreferences):
@@ -192,6 +195,60 @@ class MadnessDynamicObjectsExporter(bpy.types.Operator, ExportHelper):
             return {"CANCELLED"}
 
 
+class MadnessSoundExporter(bpy.types.Operator, ExportHelper):
+    """Export Sound Definitions (LSD)"""
+
+    bl_idname = "export_scene.madness_sounds"
+    bl_label = "Export Sound Definitions"
+
+    filename_ext = ".lsd"
+
+    filter_glob: StringProperty(
+        default="*.lsd",
+        options={"HIDDEN"},
+        maxlen=255,
+    )  # type: ignore
+
+    def draw(self, context):
+        layout = self.layout
+
+        # Add helpful information about what will be exported
+        box = layout.box()
+        box.label(text="Export Information:", icon="INFO")
+        box.label(text="This will generate an LSD (LevelSoundDefinition) file.")
+        box.label(text="Create empties named SMS_SOUND_[name] to define sound objects.")
+        box.separator()
+        box.label(text="Supported sound types:")
+        box.label(text="• Environment Sound (positional audio)")
+        box.label(text="• Ambient Sound (background audio)")
+        box.label(text="• Ambient Reverb (global reverb)")
+        box.label(text="• Local Reverb (area reverb)")
+
+    def execute(self, context):
+        try:
+            results = export_sounds(self.filepath)
+
+            if results["sounds"] == 0:
+                self.report(
+                    {"WARNING"},
+                    "No SMS_SOUND objects found in scene. Create empties named SMS_SOUND_[name] first.",
+                )
+                return {"CANCELLED"}
+
+            # Create a success message with actual file paths
+            message = (
+                f"Sound definitions exported successfully! "
+                f"{results['sounds']} sound objects. "
+                f"File: {results.get('lsd_path', 'N/A')}"
+            )
+
+            self.report({"INFO"}, message)
+            return {"FINISHED"}
+        except Exception as e:
+            self.report({"ERROR"}, f"Sound definitions export failed: {str(e)}")
+            return {"CANCELLED"}
+
+
 class MadnessGclExporter(bpy.types.Operator, ExportHelper):
     """Export LiveTrack Cells (GCL)"""
 
@@ -276,6 +333,10 @@ def menu_func_export(self, context):
         text="Madness Dynamic Objects (collision & env)",
     )
     self.layout.operator(
+        MadnessSoundExporter.bl_idname,
+        text="Madness Sound Definitions (.lsd)",
+    )
+    self.layout.operator(
         MadnessGclExporter.bl_idname,
         text="Madness LiveTrack Cells (.gcl)",
     )
@@ -295,6 +356,8 @@ def register():
     light_ui.register()
     dynamic_properties.register()
     dynamic_ui.register()
+    sound_properties.register()
+    sound_ui.register()
 
     main_classes = [
         MadnessSceneExporterPreferences,
@@ -303,6 +366,7 @@ def register():
         MadnessLightsExporter,
         MadnessGclExporter,
         MadnessDynamicObjectsExporter,
+        MadnessSoundExporter,
     ]
 
     for cls in main_classes:
@@ -320,6 +384,7 @@ def unregister():
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 
     main_classes = [
+        MadnessSoundExporter,
         MadnessDynamicObjectsExporter,
         MadnessLightsExporter,
         MadnessEnvironmentExporter,
@@ -336,6 +401,8 @@ def unregister():
 
     dynamic_ui.unregister()
     dynamic_properties.unregister()
+    sound_ui.unregister()
+    sound_properties.unregister()
     light_ui.unregister()
     light_properties.unregister()
     camera_ui.unregister()

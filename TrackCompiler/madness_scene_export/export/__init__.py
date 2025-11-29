@@ -7,6 +7,7 @@ from .environment_export import export_environment_xml
 from .lights_export import export_lights_sgx
 from .dynamic_export import export_dynamic_objects
 from .gcl_export import export_gcl
+from .sound_export import export_sounds
 __all__ = [
     'livetrack_mrdf_export',
     'triggers_export',
@@ -14,5 +15,6 @@ __all__ = [
     'export_environment_xml',
     'export_lights_sgx',
     'export_dynamic_objects',
-    'export_gcl'
+    'export_gcl',
+    'export_sounds'
 ]

@@ -9,6 +9,7 @@ from .dynamic_properties import (
 from .light_properties import is_sms_light
 from .camera_properties import is_sms_camera
 from .area_properties import is_sms_area, get_area_name
+from .sound_properties import is_sms_sound, get_sound_name
 
 __all__ = [
     'get_available_dynamic_templates',
@@ -18,5 +19,7 @@ __all__ = [
     'is_sms_light',
     'is_sms_camera',
     'is_sms_area',
-    'get_area_name'
+    'get_area_name',
+    'is_sms_sound',
+    'get_sound_name'
 ]
