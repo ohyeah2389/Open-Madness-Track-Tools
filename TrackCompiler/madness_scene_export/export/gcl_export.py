@@ -254,10 +254,10 @@ def write_header(
         "<2I4f2I",
         version,
         tri_count,
-        float(min_z),
         float(min_x),
-        float(max_z),
         float(max_x),
+        float(min_z),
+        float(max_z),
         int(grid_100_z),
         int(grid_100_x),
     )
