@@ -4,39 +4,24 @@
     "type": "split",
     "children": [
       {
-        "id": "d59e69cee5e693f5",
+        "id": "585b78034fadfa7c",
         "type": "tabs",
         "children": [
           {
-            "id": "ecf0228d566ef2a9",
+            "id": "67b4237fbad445e6",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Notes/File Format Listing.md",
+                "file": "Formats/GCL.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "File Format Listing"
-            }
-          },
-          {
-            "id": "f07d589b25894a97",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Formats/BMT.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "BMT"
+              "title": "GCL"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -185,16 +170,28 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "f07d589b25894a97",
+  "active": "67b4237fbad445e6",
   "lastOpenFiles": [
-    "Notes/File Format Listing.md",
+    "Formats/CSM.md",
     "Formats/BMT.md",
-    "Tutorial.md",
     "Formats/AIW.md",
+    "Notes/File Format Listing.md",
+    "Tutorial.md",
+    "Formats/TRD Property Details/Cut track disabled.md",
+    "Formats/TRD Property Details/Vehicle Filter.md",
+    "Formats/TRD Property Details/Uses Reflection Flag.md",
+    "Formats/TRD Property Details/ZoneName.md",
+    "Formats/TRD Property Details/Track_Altitude.md",
+    "Formats/TRD Property Details/Track_Climate.md",
+    "Formats/TRD Property Details/DLC ID.md",
+    "Formats/TRD.md",
+    "Formats/TRD Property Details/GrassSkidmarksOverride.md",
+    "Formats/TRD Property Details/GrassParticlesOverride.md",
+    "Formats/TRD Property Details/Weather Weights.md",
+    "Formats/TRD Property Details/CutTrackFraction.md",
     "Notes",
     "README.md",
     "Open Madness FMOD Tools/Notes.md",
-    "Formats/TRD.md",
     "Formats/TRD Property Details/ShortTrackName.md",
     "Formats/TRD Property Details/Setup group.md",
     "Formats/TRD Property Details/Allowed Weather.md",
@@ -202,19 +199,8 @@
     "Formats/TRD Property Details/AI Exclude Filter.md",
     "Formats/SGX.md",
     "Formats/Camera XML.md",
-    "Formats/CSM.md",
-    "Formats/GCL.md",
-    "Formats/LiveTrack MRDF.md",
-    "Formats/MEB.md",
     "Open Madness FMOD Tools",
-    "Notes/DiscordLogCSPServer.md",
-    "Unknown Functionality.md",
-    "Overview.md",
-    "Formats/triggers.xml.md",
-    "Limitations.md",
     "Open Madness Track Tools",
-    "Formats",
-    "Welcome.md",
-    "2025-07-15.md"
+    "Formats"
   ]
 }
