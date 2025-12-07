@@ -6,6 +6,7 @@ from typing import Optional
 from .shader_definitions import (
     SHADER_TECHNIQUES,
     SHADER_DEFINES,
+    get_shader_items,
     get_technique_items,
     update_shader_params,
     update_shader_change,
@@ -209,52 +210,8 @@ class MTXMaterialSettings(bpy.types.PropertyGroup):
     shader_path: EnumProperty(
         name="Shader",
         description="Shader file path",
-        items=[
-            ("Render\\Shaders\\basic.fx", "Basic", "Basic shader"),
-            (
-                "Render\\Shaders\\basic_anim.fx",
-                "Basic Animated",
-                "Animated basic shader",
-            ),
-            (
-                "Render\\Shaders\\basic_instanced.fx",
-                "Basic Instanced",
-                "Instanced basic shader",
-            ),
-            (
-                "Render\\Shaders\\basic_translucent.fx",
-                "Basic Translucent",
-                "Translucent basic shader",
-            ),
-            ("Render\\Shaders\\basic_windows.fx", "Basic Windows", "Windows shader"),
-            (
-                "Render\\Shaders\\baked_instance_tree.fx",
-                "Baked Instance Tree",
-                "Baked instance tree shader",
-            ),
-            (
-                "Render\\Shaders\\billboard_instance_tree.fx",
-                "Billboard Instance Tree",
-                "Billboard instance tree shader",
-            ),
-            (
-                "Render\\Shaders\\lightglow_billboard.fx",
-                "Light Glow",
-                "Light glow billboard",
-            ),
-            ("Render\\Shaders\\locator.fx", "Locator", "Locator shader"),
-            ("Render\\Shaders\\new_ground.fx", "Ground", "Ground shader"),
-            (
-                "Render\\Shaders\\new_ground_transition.fx",
-                "Ground Transition",
-                "Ground transition shader",
-            ),
-            ("Render\\Shaders\\overlay.fx", "Overlay", "Overlay shader"),
-            ("Render\\Shaders\\road_dbv.fx", "Road DBV", "Road shader"),
-            ("Render\\Shaders\\skintest.fx", "Skintest", "Skintest shader"),
-            ("Render\\Shaders\\water.fx", "Water", "Water shader"),
-        ],
-        default="Render\\Shaders\\basic.fx",
+        items=get_shader_items,
+        default=0,
         update=update_shader_change,
     )  # type: ignore
 
