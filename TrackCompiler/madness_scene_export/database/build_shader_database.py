@@ -8,6 +8,7 @@ writes a JSON database that the Blender add-on can consume.
 
 import argparse
 import json
+import math
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Iterable
@@ -74,6 +75,10 @@ class ShaderDatabaseBuilder:
         tech_entry = self._get_technique_entry(shader, technique)
         tech_entry["filesSeen"] += 1
 
+        # Track per-file presence to compute always-on sets
+        params_seen_this_file = set()
+        defines_seen_this_file = set()
+
         for shader_param in root.findall("shaderparam"):
             param_name = shader_param.get("name")
             param_type = shader_param.get("type")
@@ -84,11 +89,19 @@ class ShaderDatabaseBuilder:
             value_elem = shader_param.find("value")
             value_str = value_elem.get("v", "") if value_elem is not None else ""
             self._record_parameter(tech_entry, param_name, param_type, value_str)
+            params_seen_this_file.add(param_name)
 
         for define_elem in root.findall("define"):
             define_name = define_elem.get("name")
             if define_name:
                 tech_entry["defines"].add(define_name)
+                defines_seen_this_file.add(define_name)
+
+        # Increment counts for always-on detection
+        for pname in params_seen_this_file:
+            tech_entry["paramCounts"][pname] = tech_entry["paramCounts"].get(pname, 0) + 1
+        for dname in defines_seen_this_file:
+            tech_entry["defineCounts"][dname] = tech_entry["defineCounts"].get(dname, 0) + 1
 
     def _get_technique_entry(self, shader: str, technique: str) -> Dict[str, Any]:
         shader_entry = self.raw_db["shaders"].setdefault(shader, {"techniques": {}})
@@ -98,6 +111,8 @@ class ShaderDatabaseBuilder:
                 "filesSeen": 0,
                 "parameters": {},
                 "defines": set(),
+                "paramCounts": {},
+                "defineCounts": {},
             },
         )
 
@@ -110,8 +125,14 @@ class ShaderDatabaseBuilder:
                 "types": set(),
                 "floatMin": None,
                 "floatMax": None,
+                "floatSum": 0.0,
+                "floatCount": 0,
+                "floatVals": [],
                 "intMin": None,
                 "intMax": None,
+                "vec4Sum": [0.0, 0.0, 0.0, 0.0],
+                "vec4Count": 0,
+                "vec4Vals": [],
                 "vec4Examples": [],
                 "textureExtensions": set(),
                 "boolValues": set(),
@@ -131,6 +152,9 @@ class ShaderDatabaseBuilder:
 
             entry["floatMin"] = numeric if entry["floatMin"] is None else min(entry["floatMin"], numeric)
             entry["floatMax"] = numeric if entry["floatMax"] is None else max(entry["floatMax"], numeric)
+            entry["floatSum"] += numeric
+            entry["floatCount"] += 1
+            entry["floatVals"].append(numeric)
             _add_example(entry["sampleValues"], numeric, self.max_examples)
             return
 
@@ -154,6 +178,10 @@ class ShaderDatabaseBuilder:
             if len(parts) >= 4:
                 vec4 = parts[:4]
                 _add_example(entry["vec4Examples"], vec4, self.max_examples)
+                entry["vec4Count"] += 1
+                for i in range(4):
+                    entry["vec4Sum"][i] += vec4[i]
+                entry["vec4Vals"].append(vec4)
             return
 
         if param_type == "EPT_TEXTURE":
@@ -185,6 +213,16 @@ class ShaderDatabaseBuilder:
     def _serialize(self) -> Dict[str, Any]:
         source_roots = [str(r) for r in self.mtx_roots]
 
+        def median(vals: List[float]):
+            if not vals:
+                return None
+            vals_sorted = sorted(vals)
+            n = len(vals_sorted)
+            mid = n // 2
+            if n % 2 == 1:
+                return round(vals_sorted[mid], 1)
+            return round((vals_sorted[mid - 1] + vals_sorted[mid]) / 2.0, 1)
+
         serialized = {
             "generatedAt": datetime.utcnow().isoformat() + "Z",
             "sourceRoot": source_roots[0] if source_roots else "",
@@ -202,13 +240,38 @@ class ShaderDatabaseBuilder:
             for technique, technique_data in shader_data["techniques"].items():
                 params_out = {}
                 for param_name, param_data in technique_data["parameters"].items():
+                    float_avg = None
+                    float_median = None
+                    if param_data["floatCount"] > 0:
+                        avg = param_data["floatSum"] / param_data["floatCount"]
+                        float_avg = round(avg, 2)
+                        float_median = median(param_data["floatVals"])
+
+                    vec4_avg = None
+                    vec4_median = None
+                    if param_data["vec4Count"] > 0:
+                        vec4_avg = [
+                            round((param_data["vec4Sum"][i] / param_data["vec4Count"]), 2)
+                            for i in range(4)
+                        ]
+                        # median per component
+                        comps = list(zip(*param_data["vec4Vals"]))
+                        vec4_median = [
+                            median(list(comps[i]))
+                            for i in range(4)
+                        ]
+
                     params_out[param_name] = {
                         "types": sorted(param_data["types"]),
                         "floatMin": param_data["floatMin"],
                         "floatMax": param_data["floatMax"],
+                        "floatAvg": float_avg,
+                        "floatMedian": float_median,
                         "intMin": param_data["intMin"],
                         "intMax": param_data["intMax"],
                         "vec4Examples": param_data["vec4Examples"],
+                        "vec4Avg": vec4_avg,
+                        "vec4Median": vec4_median,
                         "textureExtensions": sorted(param_data["textureExtensions"]),
                         "boolValues": sorted(param_data["boolValues"]),
                         "sampleValues": param_data["sampleValues"],
@@ -217,6 +280,12 @@ class ShaderDatabaseBuilder:
                 techniques_out[technique] = {
                     "filesSeen": technique_data["filesSeen"],
                     "defines": sorted(technique_data["defines"]),
+                    "baseDefines": sorted(
+                        d for d, count in technique_data["defineCounts"].items() if count == technique_data["filesSeen"]
+                    ),
+                    "baseParameters": sorted(
+                        p for p, count in technique_data["paramCounts"].items() if count == technique_data["filesSeen"]
+                    ),
                     "parameters": params_out,
                 }
 

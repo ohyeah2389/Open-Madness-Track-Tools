@@ -426,6 +426,11 @@ SHADER_DEFINES = {
     },
 }
 
+ALWAYS_ON_PARAMETERS = {}
+ALWAYS_ON_DEFINES = {}
+DEFAULT_PARAM_VALUES = {}
+PARAM_METADATA = {}
+
 DATABASE_PATH = Path(__file__).resolve().parent.parent / "database" / "mtx_shader_database.json"
 LOADED_SHADER_DATABASE = None
 
@@ -443,6 +448,10 @@ def _normalize_loaded_database(db_dict):
     techniques = {}
     parameters = {}
     defines = {}
+    always_params = {}
+    always_defines = {}
+    default_param_values = {}
+    param_metadata = {}
 
     shaders = db_dict.get("shaders", {})
     for shader_path, shader_data in shaders.items():
@@ -453,19 +462,37 @@ def _normalize_loaded_database(db_dict):
         techniques[shader_path] = sorted(tech_map.keys())
         params_by_tech = {}
         defines_by_tech = {}
+        base_params_by_tech = {}
+        base_defines_by_tech = {}
+        default_values_by_tech = {}
+        metadata_by_tech = {}
 
         for technique, technique_data in tech_map.items():
             raw_params = technique_data.get("parameters", {})
             param_list = []
+            defaults_for_tech = {}
+            metadata_for_tech = {}
 
             for param_name, param_details in raw_params.items():
                 # Support either a single type string or a list of types (pick the first)
                 param_type = None
+                float_avg = None
+                vec4_avg = None
+                float_min = None
+                float_max = None
+                float_median = None
+                vec4_median = None
                 if isinstance(param_details, dict):
                     if isinstance(param_details.get("types"), list):
                         param_type = param_details["types"][0] if param_details["types"] else None
                     elif isinstance(param_details.get("type"), str):
                         param_type = param_details["type"]
+                    float_avg = param_details.get("floatAvg")
+                    float_min = param_details.get("floatMin")
+                    float_max = param_details.get("floatMax")
+                    float_median = param_details.get("floatMedian")
+                    vec4_avg = param_details.get("vec4Avg")
+                    vec4_median = param_details.get("vec4Median")
                 elif isinstance(param_details, str):
                     param_type = param_details
 
@@ -473,23 +500,49 @@ def _normalize_loaded_database(db_dict):
                     continue
 
                 param_list.append((param_name, param_type))
+                if float_median is not None:
+                    defaults_for_tech[param_name] = ("EPT_F32", float_median)
+                elif vec4_median is not None:
+                    defaults_for_tech[param_name] = ("EPT_VEC4", tuple(vec4_median))
+                elif float_avg is not None:
+                    defaults_for_tech[param_name] = ("EPT_F32", float_avg)
+                elif vec4_avg is not None:
+                    defaults_for_tech[param_name] = ("EPT_VEC4", tuple(vec4_avg))
+
+                metadata_for_tech[param_name] = {
+                    "floatMin": float_min,
+                    "floatMax": float_max,
+                    "floatAvg": float_avg,
+                    "floatMedian": float_median,
+                    "vec4Avg": tuple(vec4_avg) if vec4_avg is not None else None,
+                    "vec4Median": tuple(vec4_median) if vec4_median is not None else None,
+                }
 
             # Keep parameter order deterministic for UI lists and writing
             param_list.sort(key=lambda item: item[0].lower())
             params_by_tech[technique] = param_list
+            default_values_by_tech[technique] = defaults_for_tech
+            metadata_by_tech[technique] = metadata_for_tech
 
             define_list = technique_data.get("defines", [])
             defines_by_tech[technique] = sorted(set(define_list))
 
+            base_params_by_tech[technique] = set(technique_data.get("baseParameters", []))
+            base_defines_by_tech[technique] = set(technique_data.get("baseDefines", []))
+
         parameters[shader_path] = params_by_tech
         defines[shader_path] = defines_by_tech
+        always_params[shader_path] = base_params_by_tech
+        always_defines[shader_path] = base_defines_by_tech
+        default_param_values[shader_path] = default_values_by_tech
+        param_metadata[shader_path] = metadata_by_tech
 
-    return techniques, parameters, defines
+    return techniques, parameters, defines, always_params, always_defines, default_param_values, param_metadata
 
 
 def _try_apply_external_database():
     """Load shader data from the generated database file if it exists."""
-    global SHADER_TECHNIQUES, SHADER_PARAMETERS, SHADER_DEFINES, LOADED_SHADER_DATABASE
+    global SHADER_TECHNIQUES, SHADER_PARAMETERS, SHADER_DEFINES, ALWAYS_ON_PARAMETERS, ALWAYS_ON_DEFINES, DEFAULT_PARAM_VALUES, PARAM_METADATA, LOADED_SHADER_DATABASE
 
     if not DATABASE_PATH.exists():
         return
@@ -502,7 +555,7 @@ def _try_apply_external_database():
         return
 
     try:
-        techniques, parameters, defines = _normalize_loaded_database(db_content)
+        techniques, parameters, defines, always_params, always_defines, default_param_values, param_metadata = _normalize_loaded_database(db_content)
     except Exception as exc:
         print(f"Failed to normalize shader database from {DATABASE_PATH}: {exc}")
         return
@@ -512,11 +565,30 @@ def _try_apply_external_database():
         SHADER_TECHNIQUES = techniques
         SHADER_PARAMETERS = parameters
         SHADER_DEFINES = defines
+        ALWAYS_ON_PARAMETERS = always_params
+        ALWAYS_ON_DEFINES = always_defines
+        DEFAULT_PARAM_VALUES = default_param_values
+        PARAM_METADATA = param_metadata
         LOADED_SHADER_DATABASE = db_content
         print(f"Loaded shader database: {len(SHADER_TECHNIQUES)} shaders from {DATABASE_PATH}")
 
 
 _try_apply_external_database()
+
+
+def is_param_required(shader: str, technique: str, param_name: str) -> bool:
+    """Return True if the parameter is marked always-on in the database."""
+    return param_name in ALWAYS_ON_PARAMETERS.get(shader, {}).get(technique, set())
+
+
+def is_define_required(shader: str, technique: str, define_name: str) -> bool:
+    """Return True if the define is marked always-on in the database."""
+    return define_name in ALWAYS_ON_DEFINES.get(shader, {}).get(technique, set())
+
+
+def get_param_stats(shader: str, technique: str, param_name: str):
+    """Return metadata for a parameter (min/max/avg values) if available."""
+    return PARAM_METADATA.get(shader, {}).get(technique, {}).get(param_name, None)
 
 def get_technique_items(self, context):
     """Dynamic technique items based on selected shader"""
@@ -564,6 +636,7 @@ def update_shader_params(self, context):
             param = mtx_settings.shader_params.add()
             param.name = param_name
             param.param_type = param_type
+            param_defaults = DEFAULT_PARAM_VALUES.get(shader, {}).get(technique, {})
             
             # Check if we have existing values for this parameter
             key = (param_name, param_type)
@@ -582,7 +655,9 @@ def update_shader_params(self, context):
                 param.enabled = param_name in common_params
                 
                 if param_type == 'EPT_F32':
-                    if 'Factor' in param_name or 'Power' in param_name:
+                    if param_name in param_defaults and param_defaults[param_name][0] == 'EPT_F32':
+                        param.float_value = float(param_defaults[param_name][1])
+                    elif 'Factor' in param_name or 'Power' in param_name:
                         param.float_value = 1.0
                     elif 'Scale' in param_name:
                         param.float_value = 1.0
@@ -596,10 +671,18 @@ def update_shader_params(self, context):
                     else:
                         param.int_value = 0
                 elif param_type == 'EPT_VEC4':
-                    param.vec4_value = (1.0, 1.0, 1.0, 1.0)
+                    if param_name in param_defaults and param_defaults[param_name][0] == 'EPT_VEC4':
+                        param.vec4_value = param_defaults[param_name][1]
+                    else:
+                        param.vec4_value = (1.0, 1.0, 1.0, 1.0)
                 elif param_type == 'EPT_BOOL':
                     param.bool_value = False
                 # EPT_TEXTURE gets empty string by default
+
+            # Force always-on parameters
+            always_params = ALWAYS_ON_PARAMETERS.get(shader, {}).get(technique, set())
+            if param.name in always_params:
+                param.enabled = True
 
 def update_shader_defines(self, context):
     """Update shader defines based on selected shader and technique."""
@@ -619,11 +702,6 @@ def update_shader_defines(self, context):
     # Clear existing defines
     settings.defines.clear()
     
-    # Define common defines to be enabled by default
-    common_defines = {
-        'NORMAL_MAPPING', 'USE_SPECULAR', 'USE_FRESNEL', 'ENV_MAPPING'
-    }
-    
     # Get defines for the specific shader and technique
     if shader in SHADER_DEFINES and technique in SHADER_DEFINES[shader]:
         for define_name in SHADER_DEFINES[shader][technique]:
@@ -636,8 +714,12 @@ def update_shader_defines(self, context):
                 new_define.enabled = existing_defines[define_name]
                 print(f"Carried over define: {define_name} (enabled: {new_define.enabled})")
             else:
-                # Set default state for new defines
-                new_define.enabled = define_name in common_defines
+                # Default to disabled; always-on set will override below
+                new_define.enabled = False
+
+            always_defines = ALWAYS_ON_DEFINES.get(shader, {}).get(technique, set())
+            if define_name in always_defines:
+                new_define.enabled = True
 
 def update_shader_change(self, context):
     """Update technique, parameters, and defines when shader changes"""

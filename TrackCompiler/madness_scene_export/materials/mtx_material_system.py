@@ -10,6 +10,9 @@ from .shader_definitions import (
     get_technique_items,
     update_shader_params,
     update_shader_change,
+    is_param_required,
+    is_define_required,
+    get_param_stats,
 )
 from ..utils import sanitize
 
@@ -265,8 +268,16 @@ class MTX_UL_shader_params(bpy.types.UIList):
     ):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             row = layout.row(align=True)
-            row.prop(item, "enabled", text="")
-            row.prop(item, "name", text="", emboss=False)
+            shader = data.shader_path if hasattr(data, "shader_path") else ""
+            technique = data.technique if hasattr(data, "technique") else ""
+            required = is_param_required(shader, technique, item.name)
+
+            toggle_col = row.column(align=True)
+            toggle_col.enabled = not required
+            toggle_col.prop(item, "enabled", text="")
+
+            display_name = f"(Req.) {item.name}" if required else item.name or "<unnamed>"
+            row.label(text=display_name)
             row.label(text=item.param_type)
             
             # Add copy button on the right
@@ -295,8 +306,16 @@ class MTX_UL_defines(bpy.types.UIList):
     ):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             row = layout.row(align=True)
-            row.prop(item, "enabled", text="")
-            row.prop(item, "name", text="", emboss=False)
+            shader = data.shader_path if hasattr(data, "shader_path") else ""
+            technique = data.technique if hasattr(data, "technique") else ""
+            required = is_define_required(shader, technique, item.name)
+
+            toggle_col = row.column(align=True)
+            toggle_col.enabled = not required
+            toggle_col.prop(item, "enabled", text="")
+
+            display_name = f"(Req.) {item.name}" if required else item.name or "<unnamed>"
+            row.label(text=display_name)
             
             # Add copy button on the right
             if len(context.selected_objects) > 1:
@@ -446,6 +465,29 @@ class MTX_PT_shader_parameters(bpy.types.Panel):
             box = layout.box()
             
             box.label(text=f"Type: {param.param_type}")
+
+            # Show observed statistics if available
+            stats = get_param_stats(mtx.shader_path, mtx.technique, param.name)
+            if stats:
+                if param.param_type == "EPT_F32":
+                    stats_line = []
+                    if stats.get("floatMin") is not None:
+                        stats_line.append(f"min {stats['floatMin']:.2f}")
+                    if stats.get("floatMax") is not None:
+                        stats_line.append(f"max {stats['floatMax']:.2f}")
+                    if stats.get("floatAvg") is not None:
+                        stats_line.append(f"avg {stats['floatAvg']:.2f}")
+                    if stats.get("floatMedian") is not None:
+                        stats_line.append(f"med {stats['floatMedian']:.2f}")
+                    if stats_line:
+                        box.label(text="Stats: " + ", ".join(stats_line))
+                elif param.param_type == "EPT_VEC4":
+                    if stats.get("vec4Avg") is not None:
+                        avg = stats["vec4Avg"]
+                        box.label(text=f"Avg: ({avg[0]:.2f}, {avg[1]:.2f}, {avg[2]:.2f}, {avg[3]:.2f})")
+                    if stats.get("vec4Median") is not None:
+                        med = stats["vec4Median"]
+                        box.label(text=f"Med: ({med[0]:.2f}, {med[1]:.2f}, {med[2]:.2f}, {med[3]:.2f})")
 
             if param.param_type == "EPT_F32":
                 box.prop(param, "float_value", text="Value")
