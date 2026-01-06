@@ -127,7 +127,8 @@ Under the Material Properties page of the Properties panel, you will see a new p
 	- Allows selection of which defines to include for this shader.
 - MTX Operations
 	- Allows saving and loading of loose MTX files to and from the current Blender material.
-This UI has been designed to closely mirror the MTX file format and therefore isn't the most visual or intuitive. Designing and configuring shaders may require trial and error until you gain experience with which shader does what and what options are available for each shader. The demo project contains preconfigured shaders for its used materials. 
+
+This UI has been designed to closely mirror the MTX file format and therefore isn't the most visual or intuitive. Designing and configuring shaders may require trial and error until you gain experience with which shader does what and what options are available for each shader. The demo project contains preconfigured shaders for its used materials. If you misconfigure a shader, objects using it will fail to render in game.
 # Step 4: Design the AIW Data
 placeholder...
 # Step 5: Export the Track Model
