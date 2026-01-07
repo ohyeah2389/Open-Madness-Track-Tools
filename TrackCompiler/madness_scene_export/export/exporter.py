@@ -2,7 +2,7 @@ import bpy  # type: ignore
 import tempfile
 from pathlib import Path
 import shutil
-from typing import List
+from typing import List, Tuple
 import xml.etree.ElementTree as ET
 import numpy as np
 from .object_export import (
@@ -347,19 +347,7 @@ def export_madness_scene(
 
         # Generate SGX file
         print("Generating SGX file...")
-        scene_min, scene_max = np.array([0, 0, 0]), np.array([0, 0, 0])
-        if objects:
-            # Initialize with the first object's bounding box adjusted by translation
-            first_obj = objects[0]
-            scene_min = first_obj.translation + first_obj.bb_min
-            scene_max = first_obj.translation + first_obj.bb_max
-            for obj in objects[1:]:
-                # Calculate object bounds using the bounding box data from exporter
-                obj_min = obj.translation + obj.bb_min
-                obj_max = obj.translation + obj.bb_max
-                scene_min = np.minimum(scene_min, obj_min)
-                scene_max = np.maximum(scene_max, obj_max)
-        build_sgx(objects, sgx_path, scene_min, scene_max, resource_prefix)
+        build_sgx(objects, sgx_path, resource_prefix)
         print(f"Generated SGX file: {sgx_path}")
 
     return {"FINISHED"}
@@ -590,11 +578,25 @@ def create_relative_meb_path_for_sgx(output_dir: Path, copied_meb_path: Path, tr
 def build_sgx(
     objects: List[ObjectInfo],
     dest_path: Path,
-    scene_min: np.ndarray,
-    scene_max: np.ndarray,
     resource_prefix: str = "",
 ):
     """Generate SGX file from object data."""
+    def _scene_bounds(items: List[ObjectInfo]) -> Tuple[np.ndarray, np.ndarray]:
+        if not items:
+            zero = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+            return zero.copy(), zero.copy()
+
+        first = items[0]
+        scene_min = first.translation + first.bb_min
+        scene_max = first.translation + first.bb_max
+        for obj in items[1:]:
+            obj_min = obj.translation + obj.bb_min
+            obj_max = obj.translation + obj.bb_max
+            scene_min = np.minimum(scene_min, obj_min)
+            scene_max = np.maximum(scene_max, obj_max)
+        return scene_min, scene_max
+
+    scene_min, scene_max = _scene_bounds(objects)
     scene = ET.Element(
         "SCENE",
         FileVersion="0.1.0.0",

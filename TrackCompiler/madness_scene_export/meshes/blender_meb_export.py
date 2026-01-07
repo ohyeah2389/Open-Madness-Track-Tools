@@ -5,7 +5,7 @@ Extracts mesh data directly from Blender objects to write MEB files.
 import numpy as np
 from pathlib import Path
 from typing import List, Tuple, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 try:
     import bpy  # type: ignore
@@ -15,8 +15,7 @@ try:
 except ImportError:
     BLENDER_AVAILABLE = False
 
-from .meb_writer import write_meb_file
-from .meb_geometry import BoundingInfo
+from .meb_writer import BoundingInfo, write_meb_file
 from . import meb_format
 
 
@@ -32,20 +31,14 @@ class MeshExportOptions:
     flip_coordinates: bool = False
     
     # UV maps (indices into the mesh's UV layers)
-    uv_map_indices: List[int] = None  # None = auto (use first UV layer)
+    uv_map_indices: List[int] = field(default_factory=list)
     
     # Tangent space
     generate_tangent_space: bool = False
     
     # Special sections
     bodywork_data: bool = False
-    w_sections: List[Tuple[int, int]] = None  # (uv_layer_index, w_section_type)
-
-    def __post_init__(self):
-        if self.uv_map_indices is None:
-            self.uv_map_indices = []
-        if self.w_sections is None:
-            self.w_sections = []
+    w_sections: List[Tuple[int, int]] = field(default_factory=list)
 
 
 def extract_mesh_data_from_blender(
@@ -286,6 +279,7 @@ def export_object_to_meb(
     
     if mesh_name is None:
         mesh_name = obj.name
+    mesh_name = str(mesh_name)
     
     # Extract mesh data from Blender
     (

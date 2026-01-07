@@ -4,11 +4,69 @@ Writes mesh data to binary MEB format used by Automobilista 2.
 """
 
 import struct
-import numpy as np
+from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
+
+import numpy as np
+
 from . import meb_format
-from .meb_geometry import BoundingInfo
+
+
+@dataclass
+class BoundingInfo:
+    """Container for mesh bounding information."""
+
+    sphere_center: np.ndarray
+    sphere_radius: float
+    bb_min: np.ndarray
+    bb_max: np.ndarray
+
+    def to_bytes(self) -> bytes:
+        """Convert bounding info to 40-byte binary representation."""
+        data = np.array(
+            [
+                self.sphere_center[0],
+                self.sphere_center[1],
+                self.sphere_center[2],
+                self.sphere_radius,
+                self.bb_min[0],
+                self.bb_min[1],
+                self.bb_min[2],
+                self.bb_max[0],
+                self.bb_max[1],
+                self.bb_max[2],
+            ],
+            dtype=np.float32,
+        )
+        return data.tobytes()
+
+
+def _calculate_bounds(vertices: np.ndarray, flip_coordinates: bool) -> BoundingInfo:
+    if len(vertices) == 0:
+        zero = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+        return BoundingInfo(
+            sphere_center=zero.copy(),
+            sphere_radius=0.0,
+            bb_min=zero.copy(),
+            bb_max=zero.copy(),
+        )
+
+    coords = np.asarray(vertices, dtype=np.float32)
+    if not flip_coordinates:
+        coords = coords[:, [0, 2, 1]]
+
+    bb_min = coords.min(axis=0)
+    bb_max = coords.max(axis=0)
+    center = (bb_min + bb_max) * 0.5
+    radius = float(np.linalg.norm(bb_max - center))
+
+    return BoundingInfo(
+        sphere_center=center,
+        sphere_radius=radius,
+        bb_min=bb_min,
+        bb_max=bb_max,
+    )
 
 
 class MEBWriter:
@@ -209,8 +267,6 @@ class MEBWriter:
             flip_coordinates: Coordinate system flag
             vertices_by_material: Vertex arrays per material for bounding calculation
         """
-        from .meb_geometry import calculate_bounds_from_vertices
-        
         for mat_name, indices, vertices in zip(materials, indices_by_material, vertices_by_material):
             # Material path
             mat_path = f"{material_dir}{mat_name}.mtx".upper()
@@ -250,7 +306,7 @@ class MEBWriter:
             self.write_uint16(int(max_idx))
             
             # Calculate and write bounding info for this material
-            bounds = calculate_bounds_from_vertices(vertices, flip_coordinates)
+            bounds = _calculate_bounds(vertices, flip_coordinates)
             self.write_bounding_info(bounds)
     
     def save(self):
@@ -276,7 +332,7 @@ def write_meb_file(
     material_dir: str = "vehicles/car_name/",
     disable_materials: bool = False,
     bodywork_data: bool = False,
-    w_sections: List[Tuple[int, int]] = None,  # List of (uv_layer_idx, w_section_type)
+    w_sections: Optional[List[Tuple[int, int]]] = None,  # List of (uv_layer_idx, w_section_type)
 ) -> BoundingInfo:
     """Write a complete MEB file.
     
@@ -301,12 +357,10 @@ def write_meb_file(
     Returns:
         BoundingInfo for the entire mesh
     """
-    from .meb_geometry import calculate_bounds_from_vertices
-    
     writer = MEBWriter(output_path)
     
     # Calculate overall bounds
-    bounds = calculate_bounds_from_vertices(vertices, flip_coordinates)
+    bounds = _calculate_bounds(vertices, flip_coordinates)
     
     # Count additional vertex parameters beyond the base 3 (positions, colors, normals)
     param_count = 0
@@ -328,7 +382,7 @@ def write_meb_file(
     print(f"  MEB param count: {param_count} (base 3 + {len(uv_layers)} UV + {2 if tangents is not None else 0} tangent space + {1 if bodywork_data else 0} bodywork)")
     
     # Check color alpha usage
-    has_alpha = np.any(colors[:, 3] != 1.0) if colors.shape[1] >= 4 else False
+    has_alpha = bool(np.any(colors[:, 3] != 1.0)) if colors.shape[1] >= 4 else False
     
     # Write file structure
     writer.write_header()
