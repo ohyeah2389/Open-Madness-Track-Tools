@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-12-07T02:16:35.589326Z",
+  "generatedAt": "2026-01-07T03:42:25.667791Z",
   "sourceRoot": "S:\\Assorted Project Files\\Synced Projects\\AMS2 Track RevEng\\BMT Research\\MTX_Output\\tracks",
   "sourceRoots": [
     "S:\\Assorted Project Files\\Synced Projects\\AMS2 Track RevEng\\BMT Research\\MTX_Output\\tracks"
@@ -45,6 +45,41 @@
             "USE_SPECULAR_MAP",
             "USE_UV2_EMISSIVE1"
           ],
+          "defineOrder": [
+            "USE_SPECULAR_MAP",
+            "USE_NORMAL_MAP",
+            "USE_DIFFUSE2_MAP",
+            "USE_AO_MAP",
+            "USE_DETAIL_MAP",
+            "DISABLE_EMISSIVE_CONTROL",
+            "USE_COLOR_MAP",
+            "USE_ENV_MAP",
+            "USE_EMISSIVE_MAPS",
+            "USE_COLOURISATION",
+            "USE_LOGO_TINT",
+            "USE_ALPHATEST",
+            "USE_ADVANCED_MSAA",
+            "EXCLUDE_FROM_SHADOWS",
+            "USE_DOUBLE_SIDED_SAME",
+            "USE_NEW_LOGO",
+            "SPECULAR_FROM_DIFFUSE_ALPHA",
+            "SPECULAR_POWER_FROM_DIFFUSE_ALPHA",
+            "SPECULAR_FROM_NORMAL_ALPHA",
+            "USE_COLOURISATION_WITH_MASK",
+            "USE_COLOURISATION_EMISSIVE",
+            "USE_FRESNEL",
+            "SPECULAR_POWER_FROM_NORMAL_ALPHA",
+            "SHOW_AO_MAP",
+            "USE_CUSTOMFRESNEL",
+            "ENVMAP_USE_SPECULAR_COLOR",
+            "ENVMAP_SCALED_SPEC_A",
+            "USE_ABSOLUTE_GLOSS_FOR_BLURRING",
+            "ENVMAP_SCALED_NORMAL_A",
+            "ENVMAP_SCALED_DIFFUSE_A",
+            "EMISSIVE_AS_LIGHTMAP",
+            "USE_REFLECTIVE_BOOST",
+            "USE_UV2_EMISSIVE1"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "detailTilingX",
@@ -56,6 +91,48 @@
             "maxSpecPower",
             "minSpecPower",
             "reflectionBlurBias"
+          ],
+          "paramOrder": [
+            "SPECIAL_NORMAL_MAP",
+            "detailTilingX",
+            "detailTilingY",
+            "diffuseMultiplier",
+            "normalMultiplier",
+            "globalSpecularFactor",
+            "minSpecPower",
+            "maxSpecPower",
+            "fresnelFactor",
+            "fresnelCustomF0",
+            "fresnelCustomF90",
+            "envMapFactor",
+            "reflectionBlurBias",
+            "reflectiveBoost",
+            "emissiveScale",
+            "specularTexture",
+            "tintAlpha0",
+            "diffuse1Texture",
+            "detailTexture",
+            "tintColour0",
+            "normalTexture",
+            "diffuse2Texture",
+            "tintColour",
+            "tintColour1",
+            "aoTexture",
+            "tintAlpha",
+            "tintMaskFromR1",
+            "tintForeground",
+            "colorTexture",
+            "tintColour2",
+            "emissive1Texture",
+            "tintMaskFromR",
+            "tintMaskFromR2",
+            "emissive2Texture",
+            "tintColour3",
+            "tintMaskFromR3",
+            "logoTexture",
+            "logo1Texture",
+            "logo2Texture",
+            "logo3Texture"
           ],
           "parameters": {
             "SPECIAL_NORMAL_MAP": {
@@ -1071,6 +1148,30 @@
             "USE_SPECULAR_MAP",
             "USE_UV2_EMISSIVE1"
           ],
+          "defineOrder": [
+            "USE_SPECULAR_MAP",
+            "USE_NORMAL_MAP",
+            "USE_AO_MAP",
+            "USE_EMISSIVE_MAPS",
+            "USE_ALPHATEST",
+            "USE_COLOURISATION",
+            "USE_ENV_MAP",
+            "USE_COLOURISATION_WITH_MASK",
+            "SPECULAR_FROM_NORMAL_ALPHA",
+            "EXCLUDE_FROM_SHADOWS",
+            "SPECULAR_POWER_FROM_NORMAL_ALPHA",
+            "USE_DOUBLE_SIDED_SAME",
+            "SPECULAR_POWER_FROM_DIFFUSE_ALPHA",
+            "USE_FRESNEL",
+            "ENVMAP_USE_SPECULAR_COLOR",
+            "SPECULAR_FROM_DIFFUSE_ALPHA",
+            "ENVMAP_SCALED_SPEC_A",
+            "USE_CUSTOMFRESNEL",
+            "ENVMAP_SCALED_NORMAL_A",
+            "ENVMAP_SCALED_DIFFUSE_A",
+            "EMISSIVE_AS_LIGHTMAP",
+            "USE_UV2_EMISSIVE1"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "detailTilingX",
@@ -1082,6 +1183,28 @@
             "maxSpecPower",
             "minSpecPower",
             "reflectionBlurBias"
+          ],
+          "paramOrder": [
+            "SPECIAL_NORMAL_MAP",
+            "detailTilingX",
+            "detailTilingY",
+            "diffuseMultiplier",
+            "normalMultiplier",
+            "globalSpecularFactor",
+            "minSpecPower",
+            "maxSpecPower",
+            "fresnelFactor",
+            "reflectionBlurBias",
+            "envMapFactor",
+            "fresnelCustomF0",
+            "emissiveScale",
+            "fresnelCustomF90",
+            "diffuse1Texture",
+            "specularTexture",
+            "normalTexture",
+            "emissive1Texture",
+            "aoTexture",
+            "emissive2Texture"
           ],
           "parameters": {
             "SPECIAL_NORMAL_MAP": {
@@ -1560,9 +1683,66 @@
             "USE_SPECULAR",
             "USE_TODEMISSIVE_TEXTURE_CONTROL"
           ],
+          "defineOrder": [
+            "USE_ANISO",
+            "USE_COLOURISATION",
+            "USE_ALPHATEST",
+            "EXCLUDE_FROM_SHADOWS",
+            "RENDER_AFTER_DISTANTB",
+            "USE_SPECULAR",
+            "DETAIL_MAPPING",
+            "NORMAL_MAPPING",
+            "USE_FRESNEL",
+            "ENV_MAPPING",
+            "USE_LIGHT_CONTROL",
+            "USE_LOGO_TINT",
+            "USE_AO_MAP",
+            "USE_SELF_ILLUMINATION",
+            "USE_DOUBLE_SIDED_SAME",
+            "USE_TODEMISSIVE_TEXTURE_CONTROL",
+            "RELFECTION_MAPPING",
+            "ENVMAP_SCALED_SPEC_A",
+            "CLAMP_DIFFUSE",
+            "NEW_LOGO_TINT",
+            "USE_REFLECTIVE_BOOST"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "diffuseTexture"
+          ],
+          "paramOrder": [
+            "specialNormalMap",
+            "detailMapScale",
+            "fresnelFactor",
+            "minSpecPower",
+            "maxSpecPower",
+            "emissiveTexture",
+            "detailTexture",
+            "emissive_scale",
+            "globalSpecularFactor",
+            "tintColour",
+            "tintAlpha0",
+            "diffuseTexture",
+            "globalEMapFactor",
+            "tintAlpha",
+            "tintColour0",
+            "specularTexture",
+            "tintForeground",
+            "reflectiveBoost",
+            "tintColour1",
+            "normalTexture",
+            "emissiveTexture2",
+            "tintMaskFromR",
+            "tintMaskFromR1",
+            "AOTexture",
+            "tintColour2",
+            "tintMaskFromR2",
+            "tintColour3",
+            "logoTexture",
+            "tintMaskFromR3",
+            "logoTexture1",
+            "logoTexture2",
+            "logoTexture3"
           ],
           "parameters": {
             "specialNormalMap": {
@@ -2422,9 +2602,34 @@
             "USE_FRESNEL",
             "USE_SPECULAR"
           ],
+          "defineOrder": [
+            "USE_ALPHATEST",
+            "EXCLUDE_FROM_SHADOWS",
+            "USE_ANISO",
+            "USE_COLOURISATION",
+            "USE_SPECULAR",
+            "USE_DOUBLE_SIDED_SAME",
+            "NORMAL_MAPPING",
+            "ENV_MAPPING",
+            "USE_FRESNEL",
+            "USE_AO_MAP",
+            "ENVMAP_SCALED_SPEC_A"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "diffuseTexture"
+          ],
+          "paramOrder": [
+            "specialNormalMap",
+            "diffuseTexture",
+            "fresnelFactor",
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor",
+            "globalEMapFactor",
+            "specularTexture",
+            "normalTexture",
+            "AOTexture"
           ],
           "parameters": {
             "specialNormalMap": {
@@ -2682,9 +2887,39 @@
             "USE_SELF_ILLUMINATION",
             "USE_SPECULAR"
           ],
+          "defineOrder": [
+            "USE_ANISO",
+            "USE_COLOURISATION",
+            "USE_ALPHATEST",
+            "RENDER_AFTER_DISTANTB",
+            "EXCLUDE_FROM_SHADOWS",
+            "USE_SPECULAR",
+            "NORMAL_MAPPING",
+            "USE_FRESNEL",
+            "ENV_MAPPING",
+            "USE_AO_MAP",
+            "USE_SELF_ILLUMINATION",
+            "ENVMAP_SCALED_SPEC_A",
+            "USE_REFLECTIVE_BOOST"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "diffuseTexture"
+          ],
+          "paramOrder": [
+            "specialNormalMap",
+            "fresnelFactor",
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor",
+            "diffuseTexture",
+            "globalEMapFactor",
+            "specularTexture",
+            "reflectiveBoost",
+            "normalTexture",
+            "AOTexture",
+            "emissiveTexture",
+            "emissiveTexture2"
           ],
           "parameters": {
             "specialNormalMap": {
@@ -3002,9 +3237,36 @@
             "USE_REFLECTIVE_BOOST",
             "USE_SPECULAR"
           ],
+          "defineOrder": [
+            "USE_ANISO",
+            "USE_ALPHATEST",
+            "EXCLUDE_FROM_SHADOWS",
+            "USE_COLOURISATION",
+            "USE_SPECULAR",
+            "NORMAL_MAPPING",
+            "ENV_MAPPING",
+            "USE_FRESNEL",
+            "ENVMAP_SCALED_SPEC_A",
+            "USE_AO_MAP",
+            "USE_DOUBLE_SIDED_SAME",
+            "USE_REFLECTIVE_BOOST"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "diffuseTexture"
+          ],
+          "paramOrder": [
+            "specialNormalMap",
+            "fresnelFactor",
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor",
+            "diffuseTexture",
+            "globalEMapFactor",
+            "reflectiveBoost",
+            "specularTexture",
+            "normalTexture",
+            "AOTexture"
           ],
           "parameters": {
             "fresnelFactor": {
@@ -3269,6 +3531,15 @@
             "USE_FRESNEL",
             "USE_SPECULAR"
           ],
+          "defineOrder": [
+            "USE_ANISO",
+            "USE_COLOURISATION",
+            "USE_ALPHATEST",
+            "USE_SPECULAR",
+            "NORMAL_MAPPING",
+            "ENV_MAPPING",
+            "USE_FRESNEL"
+          ],
           "baseDefines": [
             "NORMAL_MAPPING",
             "USE_ANISO",
@@ -3282,6 +3553,17 @@
             "normalTexture",
             "specialNormalMap",
             "specularTexture"
+          ],
+          "paramOrder": [
+            "specialNormalMap",
+            "minSpecPower",
+            "fresnelFactor",
+            "maxSpecPower",
+            "globalSpecularFactor",
+            "diffuseTexture",
+            "specularTexture",
+            "globalEMapFactor",
+            "normalTexture"
           ],
           "parameters": {
             "specialNormalMap": {
@@ -3495,6 +3777,21 @@
             "USE_UV2_DIFFUSE2",
             "USE_UV5_PUDDLE1"
           ],
+          "defineOrder": [
+            "DEFAULTLIVETRACKRENDERING",
+            "APPLYLIVETRACKMASKS",
+            "USESURFACECAMERAFACINGNORMALBIAS",
+            "USE_TERRAIN_BLEND",
+            "USE_DIFFUSE2",
+            "USE_ROAD_RACING_LINE",
+            "USE_DIFFUSE3",
+            "BLEND_DIFFUSE_WITH_PUDDLE_MAP",
+            "USE_UV2_DIFFUSE1",
+            "USE_UV2_DIFFUSE2",
+            "USE_UV5_PUDDLE1",
+            "USE_FRESNEL",
+            "FULL_TANGENT"
+          ],
           "baseDefines": [
             "FULL_TANGENT",
             "USESURFACECAMERAFACINGNORMALBIAS",
@@ -3517,6 +3814,29 @@
             "puddle2TilingX",
             "puddle2TilingY",
             "specularPower"
+          ],
+          "paramOrder": [
+            "roadRacingLineMult",
+            "detailTilingX",
+            "detailTilingY",
+            "diffuse3TilingX",
+            "diffuse3TilingY",
+            "puddle1TilingX",
+            "puddle1TilingY",
+            "puddle2TilingX",
+            "puddle2TilingY",
+            "globalSpecularFactor",
+            "specularPower",
+            "fresnelFactor",
+            "detailTexture",
+            "normalTexture",
+            "diffuse1Texture",
+            "diffuse2Texture",
+            "puddle1Texture",
+            "diffuse3Texture",
+            "puddle2Texture",
+            "terrainBlendTexture",
+            "roadRacingLineTexture"
           ],
           "parameters": {
             "detailTilingX": {
@@ -4041,6 +4361,23 @@
             "USE_UV2_NORMAL",
             "USE_UV5_PUDDLE1"
           ],
+          "defineOrder": [
+            "KERBLIVETRACKRENDERING",
+            "DEFAULTLIVETRACKRENDERING",
+            "APPLYLIVETRACKMASKS",
+            "USESURFACECAMERAFACINGNORMALBIAS",
+            "USE_TERRAIN_BLEND",
+            "BLEND_DIFFUSE_WITH_PUDDLE_MAP",
+            "USE_ROAD_RACING_LINE",
+            "USE_DETAIL",
+            "USEBUMPDEFORMATION",
+            "USE_UV2_DIFFUSE1",
+            "USE_UV2_DIFFUSE2",
+            "USE_UV2_NORMAL",
+            "USE_UV5_PUDDLE1",
+            "USE_FRESNEL",
+            "FULL_TANGENT"
+          ],
           "baseDefines": [
             "FULL_TANGENT",
             "USE_FRESNEL"
@@ -4063,6 +4400,29 @@
             "puddle2TilingX",
             "puddle2TilingY",
             "specularPower"
+          ],
+          "paramOrder": [
+            "maxSpecPower",
+            "roadRacingLineMult",
+            "detailTilingX",
+            "detailTilingY",
+            "diffuseOptTilingX",
+            "diffuseOptTilingY",
+            "puddle1TilingX",
+            "puddle1TilingY",
+            "puddle2TilingX",
+            "puddle2TilingY",
+            "globalSpecularFactor",
+            "specularPower",
+            "fresnelFactor",
+            "diffuse1Texture",
+            "diffuse2Texture",
+            "normalTexture",
+            "puddle1Texture",
+            "puddle2Texture",
+            "detailTexture",
+            "terrainBlendTexture",
+            "roadRacingLineTexture"
           ],
           "parameters": {
             "maxSpecPower": {
@@ -4571,6 +4931,17 @@
             "USE_ANISO",
             "USE_RANDOM_COLOR_TINT_BY_WPOS"
           ],
+          "defineOrder": [
+            "LOCK_Z",
+            "USE_ANISO",
+            "CUSTOM_SWAY_PARAMS",
+            "NORMAL_MAPPING",
+            "TINT_USE_TINT",
+            "TINT_USE_MASK_SATURATE",
+            "TINT_USE_MASK_NORM",
+            "TINT_USE_SIMPLE",
+            "USE_RANDOM_COLOR_TINT_BY_WPOS"
+          ],
           "baseDefines": [
             "LOCK_Z",
             "NORMAL_MAPPING",
@@ -4604,6 +4975,34 @@
             "tint_tintB",
             "tint_tintG",
             "tint_tintR"
+          ],
+          "paramOrder": [
+            "specialNormalMap",
+            "minSwayDist",
+            "tint_tintR",
+            "maxSwayDist",
+            "tint_tintG",
+            "minSwaySpeed",
+            "tint_tintB",
+            "maxSwaySpeed",
+            "tabWPosColour00",
+            "tabWPosColour01",
+            "tabWPosColour02",
+            "tabWPosColour03",
+            "tabWPosColour04",
+            "tabWPosColour05",
+            "tabWPosColour06",
+            "tabWPosColour07",
+            "tabWPosColour08",
+            "tabWPosColour09",
+            "tabWPosColour10",
+            "tabWPosColour11",
+            "tabWPosColour12",
+            "tabWPosColour13",
+            "tabWPosColour14",
+            "diffuseTexture",
+            "normalTexture",
+            "tint_maskTexture"
           ],
           "parameters": {
             "specialNormalMap": {
@@ -5543,6 +5942,31 @@
             "USE_UV2_PUDDLE1",
             "USE_UV2_PUDDLE2"
           ],
+          "defineOrder": [
+            "USE_TERRAIN_BLEND",
+            "USE_BROAD",
+            "USE_NORMAL3",
+            "USE_NORMAL4",
+            "USE_PUDDLE2",
+            "USE_UV2_NORMAL2",
+            "USE_UV2_DIFFUSE4",
+            "USE_UV2_DIFFUSE2",
+            "FULL_TANGENT",
+            "USE_UV2_PUDDLE2",
+            "USE_UV2_NORMAL4",
+            "USE_UV2_DIFFUSE1",
+            "USE_UV2_DIFFUSE3",
+            "USE_FRESNEL",
+            "USE_UV2_PUDDLE1",
+            "USESURFACECAMERAFACINGNORMALBIAS",
+            "USE_UV2_NORMAL3",
+            "USE_UV2_NORMAL1",
+            "GRASSLIVETRACKRENDERING",
+            "APPLYLIVETRACKMASKS",
+            "USEBUMPDEFORMATION",
+            "DEFAULTLIVETRACKRENDERING",
+            "GRAVELLIVETRACKRENDERING"
+          ],
           "baseDefines": [
             "APPLYLIVETRACKMASKS",
             "USE_FRESNEL"
@@ -5573,6 +5997,38 @@
             "variationTexture",
             "variationTilingX",
             "variationTilingY"
+          ],
+          "paramOrder": [
+            "diffuse1TilingX",
+            "diffuse1TilingY",
+            "diffuse2TilingX",
+            "diffuse2TilingY",
+            "diffuse3TilingX",
+            "diffuse3TilingY",
+            "diffuse4TilingX",
+            "diffuse4TilingY",
+            "variationTilingX",
+            "variationTilingY",
+            "puddle1TilingX",
+            "puddle1TilingY",
+            "puddle2TilingX",
+            "puddle2TilingY",
+            "globalSpecularFactor",
+            "specularPower",
+            "fresnelFactor",
+            "diffuse1Texture",
+            "diffuse2Texture",
+            "diffuse3Texture",
+            "diffuse4Texture",
+            "normal1Texture",
+            "normal2Texture",
+            "normal3Texture",
+            "normal4Texture",
+            "broadTexture",
+            "variationTexture",
+            "puddle1Texture",
+            "puddle2Texture",
+            "terrainBlendTexture"
           ],
           "parameters": {
             "diffuse1TilingX": {
@@ -6288,12 +6744,19 @@
           "defines": [
             "TRACKSIDE_LIGHT"
           ],
+          "defineOrder": [
+            "TRACKSIDE_LIGHT"
+          ],
           "baseDefines": [
             "TRACKSIDE_LIGHT"
           ],
           "baseParameters": [
             "diffuseTexture",
             "distanceScale"
+          ],
+          "paramOrder": [
+            "distanceScale",
+            "diffuseTexture"
           ],
           "parameters": {
             "distanceScale": {
@@ -6362,12 +6825,37 @@
             "USE_FRESNEL",
             "UVSCALEFORWETMASKS"
           ],
+          "defineOrder": [
+            "BROAD_NORMAL_MAPPING",
+            "NORMAL_MAPPING",
+            "USE_FRESNEL",
+            "GRAVELLIVETRACKRENDERING",
+            "DEFAULTLIVETRACKRENDERING",
+            "APPLYLIVETRACKMASKS",
+            "UVSCALEFORWETMASKS",
+            "USESURFACECAMERAFACINGNORMALBIAS",
+            "USEVERTEXDEFORMATION",
+            "FULL_TANGENT",
+            "COLOURED_DETAIL"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "baseDSTexture",
             "detailDSTexture",
             "globalSpecularFactor",
             "specularPower"
+          ],
+          "paramOrder": [
+            "broadNormalStrength",
+            "globalSpecularFactor",
+            "specularPower",
+            "fresnelFactor",
+            "uvScaleForWetMasks",
+            "baseDSTexture",
+            "broadNormalTexture",
+            "detailDSTexture",
+            "detailNormalTexture",
+            "puddleTexture"
           ],
           "parameters": {
             "broadNormalStrength": {
@@ -6623,10 +7111,29 @@
             "USE_FRESNEL",
             "USE_SPECULAR"
           ],
+          "defineOrder": [
+            "USE_SPECULAR",
+            "NORMAL_MAPPING",
+            "USE_FRESNEL",
+            "DEFAULTLIVETRACKRENDERING",
+            "GRAVELLIVETRACKRENDERING",
+            "USESURFACECAMERAFACINGNORMALBIAS",
+            "USE_COLOUR_FROM_BLEND_MAP"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "blendTexture",
             "diffuseTexture"
+          ],
+          "paramOrder": [
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor",
+            "fresnelFactor",
+            "diffuseTexture",
+            "blendTexture",
+            "specularTexture",
+            "normalTexture"
           ],
           "parameters": {
             "minSpecPower": {
@@ -6832,6 +7339,14 @@
             "USE_FRESNEL",
             "USE_SPECULAR"
           ],
+          "defineOrder": [
+            "USE_SPECULAR",
+            "NORMAL_MAPPING",
+            "USE_FRESNEL",
+            "GRASSLIVETRACKRENDERING",
+            "GRAVELLIVETRACKRENDERING",
+            "USESURFACECAMERAFACINGNORMALBIAS"
+          ],
           "baseDefines": [
             "USESURFACECAMERAFACINGNORMALBIAS",
             "USE_FRESNEL",
@@ -6845,6 +7360,16 @@
             "maxSpecPower",
             "minSpecPower",
             "specularTexture"
+          ],
+          "paramOrder": [
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor",
+            "fresnelFactor",
+            "diffuseTexture",
+            "blendTexture",
+            "specularTexture",
+            "normalTexture"
           ],
           "parameters": {
             "minSpecPower": {
@@ -7033,6 +7558,11 @@
             "USE_FRESNEL",
             "USE_SPECULAR"
           ],
+          "defineOrder": [
+            "USE_SPECULAR",
+            "NORMAL_MAPPING",
+            "USE_FRESNEL"
+          ],
           "baseDefines": [
             "NORMAL_MAPPING",
             "USE_FRESNEL",
@@ -7047,6 +7577,16 @@
             "minSpecPower",
             "normalTexture",
             "specularTexture"
+          ],
+          "paramOrder": [
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor",
+            "fresnelFactor",
+            "diffuseTexture",
+            "blendTexture",
+            "specularTexture",
+            "normalTexture"
           ],
           "parameters": {
             "minSpecPower": {
@@ -7230,6 +7770,19 @@
             "USE_UV1_SCALE",
             "USE_UV2_FOR_NORMAL"
           ],
+          "defineOrder": [
+            "USE_TERRAIN_BLEND_MAP",
+            "USE_DETAIL_MAP",
+            "USE_ROAD_RACING_LINE",
+            "NORMAL_MAPPING",
+            "USE_FRESNEL",
+            "USE_UV2_FOR_NORMAL",
+            "USE_EXTRA_REFLECTIONS",
+            "USE_UV1_SCALE",
+            "DEFAULTLIVETRACKRENDERING",
+            "GRASSLIVETRACKRENDERING",
+            "USESURFACECAMERAFACINGNORMALBIAS"
+          ],
           "baseDefines": [
             "NORMAL_MAPPING"
           ],
@@ -7239,6 +7792,21 @@
             "maxSpecPower",
             "minSpecPower",
             "normalTexture"
+          ],
+          "paramOrder": [
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor",
+            "fresnelFactor",
+            "detailGain",
+            "diffuseTexture",
+            "extraReflectionsGradient",
+            "terrainBlendTexture",
+            "extraReflectionsIntensity",
+            "uv1Scale",
+            "normalTexture",
+            "detailTexture",
+            "roadRacingLineTexture"
           ],
           "parameters": {
             "minSpecPower": {
@@ -7553,6 +8121,14 @@
             "USE_TERRAIN_BLEND_MAP",
             "USE_UV2_FOR_NORMAL"
           ],
+          "defineOrder": [
+            "USE_TERRAIN_BLEND_MAP",
+            "NORMAL_MAPPING",
+            "USE_FRESNEL",
+            "USE_UV2_FOR_NORMAL",
+            "GRASSLIVETRACKRENDERING",
+            "USESURFACECAMERAFACINGNORMALBIAS"
+          ],
           "baseDefines": [
             "GRASSLIVETRACKRENDERING",
             "NORMAL_MAPPING",
@@ -7569,6 +8145,15 @@
             "minSpecPower",
             "normalTexture",
             "terrainBlendTexture"
+          ],
+          "paramOrder": [
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor",
+            "fresnelFactor",
+            "diffuseTexture",
+            "terrainBlendTexture",
+            "normalTexture"
           ],
           "parameters": {
             "minSpecPower": {
@@ -7725,6 +8310,17 @@
             "USE_TERRAIN_BLEND_MAP",
             "USE_UV2_FOR_NORMAL"
           ],
+          "defineOrder": [
+            "USE_ROAD_RACING_LINE",
+            "USE_TERRAIN_BLEND_MAP",
+            "NORMAL_MAPPING",
+            "USE_FRESNEL",
+            "USE_UV2_FOR_NORMAL",
+            "GRASSLIVETRACKRENDERING",
+            "USE_EXTRA_REFLECTIONS",
+            "DEFAULTLIVETRACKRENDERING",
+            "USESURFACECAMERAFACINGNORMALBIAS"
+          ],
           "baseDefines": [
             "NORMAL_MAPPING",
             "USESURFACECAMERAFACINGNORMALBIAS",
@@ -7735,6 +8331,18 @@
             "globalSpecularFactor",
             "maxSpecPower",
             "minSpecPower",
+            "normalTexture"
+          ],
+          "paramOrder": [
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor",
+            "fresnelFactor",
+            "extraReflectionsGradient",
+            "terrainBlendTexture",
+            "extraReflectionsIntensity",
+            "diffuseTexture",
+            "roadRacingLineTexture",
             "normalTexture"
           ],
           "parameters": {
@@ -7975,6 +8583,16 @@
             "USE_UV1_SCALE",
             "useFresnel"
           ],
+          "defineOrder": [
+            "NORMAL_MAPPING",
+            "USE_DETAIL_MAP",
+            "USE_TERRAIN_BLEND_MAP",
+            "USE_ROAD_RACING_LINE",
+            "USE_UV1_SCALE",
+            "useFresnel",
+            "USESURFACECAMERAFACINGNORMALBIAS",
+            "DEFAULTLIVETRACKRENDERING"
+          ],
           "baseDefines": [
             "DEFAULTLIVETRACKRENDERING",
             "NORMAL_MAPPING",
@@ -7998,6 +8616,23 @@
             "roadRacingLineMult",
             "roadRacingLineTexture",
             "uv1Scale"
+          ],
+          "paramOrder": [
+            "uv1Scale",
+            "puddle2TilingX",
+            "puddle2TilingY",
+            "roadRacingLineMult",
+            "detailGain",
+            "globalSpecularFactor",
+            "minSpecPower",
+            "maxSpecPower",
+            "fresnelFactor",
+            "diffuseTexture",
+            "normalTexture",
+            "detailTexture",
+            "puddleTexture",
+            "terrainBlendTexture",
+            "roadRacingLineTexture"
           ],
           "parameters": {
             "uv1Scale": {
@@ -8325,6 +8960,19 @@
             "USE_UV2_FOR_NORMAL",
             "useFresnel"
           ],
+          "defineOrder": [
+            "NORMAL_MAPPING",
+            "USE_DETAIL_MAP",
+            "USE_TERRAIN_BLEND_MAP",
+            "USE_ROAD_RACING_LINE",
+            "USE_UV2_FOR_NORMAL",
+            "USE_UV1_SCALE",
+            "USE_PUDDLE2",
+            "useFresnel",
+            "USESURFACECAMERAFACINGNORMALBIAS",
+            "APPLYLIVETRACKMASKS",
+            "DEFAULTLIVETRACKRENDERING"
+          ],
           "baseDefines": [
             "DEFAULTLIVETRACKRENDERING",
             "USESURFACECAMERAFACINGNORMALBIAS"
@@ -8338,6 +8986,24 @@
             "puddle2TilingY",
             "puddleTexture",
             "uv1Scale"
+          ],
+          "paramOrder": [
+            "uv1Scale",
+            "puddle2TilingX",
+            "puddle2TilingY",
+            "roadRacingLineMult",
+            "detailGain",
+            "globalSpecularFactor",
+            "minSpecPower",
+            "maxSpecPower",
+            "fresnelFactor",
+            "diffuseTexture",
+            "normalTexture",
+            "detailTexture",
+            "puddleTexture",
+            "terrainBlendTexture",
+            "roadRacingLineTexture",
+            "puddle2Texture"
           ],
           "parameters": {
             "uv1Scale": {
@@ -8731,6 +9397,14 @@
             "USE_LIGHT_CONTROL",
             "USE_SPECULAR"
           ],
+          "defineOrder": [
+            "USE_ANISO",
+            "USE_SPECULAR",
+            "USE_LIGHT_CONTROL",
+            "ENV_MAPPING",
+            "USE_FRESNEL",
+            "SCALE_EMISSIVE"
+          ],
           "baseDefines": [
             "SCALE_EMISSIVE",
             "USE_FRESNEL",
@@ -8747,6 +9421,23 @@
             "frameInitialTimeOffset",
             "frameTransitionTime",
             "fresnelFactor"
+          ],
+          "paramOrder": [
+            "fresnelFactor",
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor",
+            "globalEMapFactor",
+            "frameTransitionTime",
+            "frameDisplayTime",
+            "frameInitialTimeOffset",
+            "frameDimX",
+            "frameDimY",
+            "animationMode",
+            "emissive_scale",
+            "diffuseTexture",
+            "specularTexture",
+            "emissiveTexture"
           ],
           "parameters": {
             "fresnelFactor": {
@@ -9107,6 +9798,22 @@
             "USE_SPHERICAL_NORMAL_MAP",
             "VC_SCALES_DIFFUSE"
           ],
+          "defineOrder": [
+            "USE_ADVANCED_BOOST",
+            "LOCK_Z",
+            "USE_ANISO",
+            "USE_SPHERICAL_NORMAL_MAP",
+            "USE_SPHERICAL_NORMALS",
+            "NORMAL_MAPPING",
+            "USE_MIPMAP_BIAS",
+            "USE_BACKLIT",
+            "NO_EXTRA_SPEC_LIGHTING",
+            "TINT_USE_SIMPLE",
+            "USE_RANDOM_COLOR_TINT_BY_WPOS",
+            "ADDITIONAL_LIGHTING_PARAMS",
+            "VC_SCALES_DIFFUSE",
+            "USE_EXTRA_SUN_ANGLE_SCALE"
+          ],
           "baseDefines": [
             "LOCK_Z",
             "NORMAL_MAPPING",
@@ -9118,6 +9825,40 @@
             "mipMapBias",
             "normalTexture",
             "specialNormalMap"
+          ],
+          "paramOrder": [
+            "snPower",
+            "snMinimumDiffuse",
+            "snOriginYOffset",
+            "snMaximumDiffuse",
+            "specialNormalMap",
+            "mipMapBias",
+            "backlitDimming",
+            "tabWPosColour00",
+            "backlitPower",
+            "tabWPosColour01",
+            "backlitExp",
+            "tabWPosColour02",
+            "diffuseTexture",
+            "tabWPosColour03",
+            "specularPower",
+            "sunAngleDiffuseVariation",
+            "normalTexture",
+            "tabWPosColour04",
+            "sphericalNormalTexture",
+            "specularFactor",
+            "tabWPosColour05",
+            "convolveDesaturation",
+            "tabWPosColour06",
+            "specularDesaturation",
+            "tabWPosColour07",
+            "tabWPosColour08",
+            "tabWPosColour09",
+            "tabWPosColour10",
+            "tabWPosColour11",
+            "tabWPosColour12",
+            "tabWPosColour13",
+            "tabWPosColour14"
           ],
           "parameters": {
             "specialNormalMap": {
@@ -10024,6 +10765,9 @@
           "defines": [
             "USE_FOAM_WAVES"
           ],
+          "defineOrder": [
+            "USE_FOAM_WAVES"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "_BumpScale1",
@@ -10062,6 +10806,44 @@
             "environmentTexture",
             "globalEMapFactor",
             "globalSpecularFactor"
+          ],
+          "paramOrder": [
+            "_MinSpecPower",
+            "_MaxSpecPower",
+            "_GroundDiffuse1Mult",
+            "_GroundDiffuse2Mult",
+            "_BumpScale1",
+            "_BumpScale2",
+            "_FlowRate",
+            "_FlowAmount",
+            "_GlobalFlowWave1Speed",
+            "_GlobalFlowWave2Speed",
+            "_FoamFlowSpeed",
+            "_FoamSlowdownStrength",
+            "_WaveFoamInteractionStrength",
+            "_ShoreWavesFadeFactor",
+            "_Waves1TilingAmount",
+            "_Waves2TilingAmount",
+            "_Ground1TilingAmount",
+            "_Ground2TilingAmount",
+            "_FoamTilingAmount",
+            "globalSpecularFactor",
+            "globalEMapFactor",
+            "_ReflectionUpwardBias",
+            "_NormalMapBias",
+            "_Ground1GlossBias",
+            "_Ground2GlossBias",
+            "_GroundDiffuse1Texture",
+            "_GroundDiffuse2Texture",
+            "_GroundNormal1Texture",
+            "_GroundNormal2Texture",
+            "_WaveNormal1Texture",
+            "_WaveNormal2Texture",
+            "_WaveFlowMapTexture",
+            "_GlobalFlowMapTexture",
+            "_FoamDiffuseTexture",
+            "_FoamNormalTexture",
+            "environmentTexture"
           ],
           "parameters": {
             "_MinSpecPower": {
@@ -10913,12 +11695,58 @@
             "USE_REFLECTIVE_BOOST",
             "USE_SPECULAR"
           ],
+          "defineOrder": [
+            "TINT_USE_SIMPLE",
+            "TINT_USE_MASK_SATURATE",
+            "TINT_USE_TINT",
+            "USE_ANISO",
+            "DISABLE_EMISSIVE_CONTROL",
+            "USE_EMISSIVEASLIGHTMAP",
+            "USE_ALPHATEST",
+            "TINT_USE_2X",
+            "USE_SPECULAR",
+            "USE_COLOURISATION",
+            "NORMAL_MAPPING",
+            "ENV_MAPPING",
+            "USE_FRESNEL",
+            "USE_AO_MAP",
+            "DETAIL_MAPPING",
+            "ENVMAP_SCALED_SPEC_A",
+            "USE_AO_UVS",
+            "USE_REFLECTIVE_BOOST",
+            "USE_LOGO_TINT"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "diffuseTexture",
             "emissiveTexture",
             "emissiveTexture2",
             "emissive_scale"
+          ],
+          "paramOrder": [
+            "specialNormalMap",
+            "tint_maskTexture",
+            "fresnelFactor",
+            "detailMapScale",
+            "tint_tintR",
+            "minSpecPower",
+            "tint_tintG",
+            "maxSpecPower",
+            "tint_tintB",
+            "globalSpecularFactor",
+            "globalEMapFactor",
+            "emissive_scale",
+            "reflectiveBoost",
+            "diffuseTexture",
+            "specularTexture",
+            "tintColour",
+            "tintAlpha",
+            "normalTexture",
+            "emissiveTexture",
+            "AOTexture",
+            "emissiveTexture2",
+            "detailTexture",
+            "logoTexture"
           ],
           "parameters": {
             "fresnelFactor": {
@@ -11569,12 +12397,42 @@
             "USE_WIND",
             "VC_SCALES_DIFFUSE"
           ],
+          "defineOrder": [
+            "USE_BACKLIT",
+            "DISALLOW_ALPHA_TO_COVERAGE",
+            "HIGHER_SUN_BACKLIT",
+            "USE_WIND",
+            "USE_DOUBLE_SIDED",
+            "INCLUDE_IN_SHADOWS",
+            "DISABLE_NORMAL_FLIP",
+            "USE_UV2",
+            "ADDITIONAL_LIGHTING_PARAMS",
+            "VC_SCALES_DIFFUSE",
+            "USE_SPHERICAL_NORMALS"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "diffuseTexture",
             "normalTexture",
             "windMult",
             "windRows"
+          ],
+          "paramOrder": [
+            "backlitDimming",
+            "backlitPower",
+            "backlitExp",
+            "windMult",
+            "windRows",
+            "diffuseTexture",
+            "specularPower",
+            "snPower",
+            "normalTexture",
+            "specularFactor",
+            "snOriginYOffset",
+            "convolveDesaturation",
+            "snMinimumDiffuse",
+            "specularDesaturation",
+            "snMaximumDiffuse"
           ],
           "parameters": {
             "windMult": {
@@ -11910,6 +12768,18 @@
             "USE_COLOURISATION",
             "USE_FRESNEL"
           ],
+          "defineOrder": [
+            "NORMAL_MAPPING",
+            "ENV_MAPPING",
+            "TINT_USE_SIMPLE",
+            "USE_COLOURISATION",
+            "TINT_USE_TINT",
+            "TINT_USE_MASK_SATURATE",
+            "TINT_USE_MASK_NORM",
+            "TINT_USE_2X",
+            "USE_FRESNEL",
+            "ENVMAP_SCALED_SPEC_A"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "diffuseTexture",
@@ -11917,6 +12787,21 @@
             "maxSpecPower",
             "minSpecPower",
             "specularTexture"
+          ],
+          "paramOrder": [
+            "diffuseTexture",
+            "specularTexture",
+            "normalTexture",
+            "specialNormalMap",
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor",
+            "globalEMapFactor",
+            "tint_maskTexture",
+            "tint_tintR",
+            "tint_tintG",
+            "tint_tintB",
+            "fresnelFactor"
           ],
           "parameters": {
             "specialNormalMap": {
@@ -12319,6 +13204,7 @@
         "BasicCamScale": {
           "filesSeen": 2,
           "defines": [],
+          "defineOrder": [],
           "baseDefines": [],
           "baseParameters": [
             "diffuseTexture",
@@ -12326,6 +13212,13 @@
             "maxSpecPower",
             "minSpecPower",
             "specularTexture"
+          ],
+          "paramOrder": [
+            "diffuseTexture",
+            "specularTexture",
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor"
           ],
           "parameters": {
             "diffuseTexture": {
@@ -12453,6 +13346,19 @@
             "USE_SPECULAR_2",
             "UVSCALEFORWETMASKS"
           ],
+          "defineOrder": [
+            "USE_COLOURISATION",
+            "USE_SPECULAR_1",
+            "NORMAL_MAPPING_1",
+            "USE_SPECULAR_2",
+            "BROAD_NORMAL_MAP_1",
+            "NORMAL_MAPPING_2",
+            "GRASSLIVETRACKRENDERING",
+            "APPLYLIVETRACKMASKS",
+            "BROAD_NORMAL_MAP_2",
+            "UVSCALEFORWETMASKS",
+            "USESURFACECAMERAFACINGNORMALBIAS"
+          ],
           "baseDefines": [
             "NORMAL_MAPPING_1",
             "USE_SPECULAR_1",
@@ -12477,6 +13383,29 @@
             "normalTexture1",
             "specularTexture1",
             "specularTexture2"
+          ],
+          "paramOrder": [
+            "detailUScale1",
+            "detailVScale1",
+            "detailUScale2",
+            "detailVScale2",
+            "additiveDetail2",
+            "blendInvert",
+            "globalSpecularFactor1",
+            "globalSpecularFactor2",
+            "uvScaleForWetMasks",
+            "broadDiffuseTexture1",
+            "middleDiffuseTexture1",
+            "detailDiffuseTexture1",
+            "specularTexture1",
+            "normalTexture1",
+            "broadDiffuseTexture2",
+            "middleDiffuseTexture2",
+            "detailDiffuseTexture2",
+            "specularTexture2",
+            "normalTexture2",
+            "blendTexture",
+            "puddleTexture"
           ],
           "parameters": {
             "detailUScale1": {
@@ -12967,6 +13896,15 @@
             "USE_FRESNEL",
             "USE_SPECULAR"
           ],
+          "defineOrder": [
+            "USE_COLOURISATION",
+            "USE_ALPHATEST",
+            "USE_SPECULAR",
+            "USE_ANISO",
+            "NORMAL_MAPPING",
+            "USE_FRESNEL",
+            "USE_AO_MAP"
+          ],
           "baseDefines": [
             "USE_FRESNEL"
           ],
@@ -12975,6 +13913,19 @@
             "fresnelFactor",
             "lightMapIntensity",
             "lightMapTexture"
+          ],
+          "paramOrder": [
+            "lightMapIntensity",
+            "specialNormalMap",
+            "fresnelFactor",
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor",
+            "diffuseTexture",
+            "lightMapTexture",
+            "specularTexture",
+            "normalTexture",
+            "AOTexture"
           ],
           "parameters": {
             "lightMapIntensity": {
@@ -13245,6 +14196,17 @@
             "USE_SPECULAR",
             "UVSCALEFORWETMASKS"
           ],
+          "defineOrder": [
+            "USE_COLOURISATION",
+            "USE_SPECULAR",
+            "GRASSLIVETRACKRENDERING",
+            "DEFAULTLIVETRACKRENDERING",
+            "NORMAL_MAPPING",
+            "BROAD_NORMAL_MAP",
+            "APPLYLIVETRACKMASKS",
+            "UVSCALEFORWETMASKS",
+            "USESURFACECAMERAFACINGNORMALBIAS"
+          ],
           "baseDefines": [
             "USE_SPECULAR"
           ],
@@ -13256,6 +14218,18 @@
             "globalSpecularFactor",
             "middleDiffuseTexture",
             "specularTexture"
+          ],
+          "paramOrder": [
+            "detailUScale",
+            "detailVScale",
+            "globalSpecularFactor",
+            "uvScaleForWetMasks",
+            "broadDiffuseTexture",
+            "middleDiffuseTexture",
+            "detailDiffuseTexture",
+            "specularTexture",
+            "normalTexture",
+            "puddleTexture"
           ],
           "parameters": {
             "detailUScale": {
@@ -13502,6 +14476,12 @@
             "USE_COLOURISATION",
             "USE_DOUBLE_SIDED_SAME"
           ],
+          "defineOrder": [
+            "USE_ALPHATEST",
+            "USE_COLOURISATION",
+            "USE_ANISO",
+            "USE_DOUBLE_SIDED_SAME"
+          ],
           "baseDefines": [
             "USE_ALPHATEST",
             "USE_ANISO",
@@ -13511,6 +14491,10 @@
           "baseParameters": [
             "diffuseTexture",
             "treeAmbientMultiplier"
+          ],
+          "paramOrder": [
+            "treeAmbientMultiplier",
+            "diffuseTexture"
           ],
           "parameters": {
             "treeAmbientMultiplier": {
@@ -13577,6 +14561,7 @@
         "Water_Translucent": {
           "filesSeen": 9,
           "defines": [],
+          "defineOrder": [],
           "baseDefines": [],
           "baseParameters": [
             "diffuseTexture",
@@ -13595,6 +14580,24 @@
             "riverbedTexture",
             "riverbedTransmissionCoeff",
             "specularTexture"
+          ],
+          "paramOrder": [
+            "normal1USpeed",
+            "normal1VSpeed",
+            "normal2USpeed",
+            "normal2VSpeed",
+            "riverbedTransmissionCoeff",
+            "fresnelFactor",
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor",
+            "globalEMapFactor",
+            "diffuseTexture",
+            "riverbedTexture",
+            "specularTexture",
+            "normalTexture1",
+            "normalTexture2",
+            "environmentTexture"
           ],
           "parameters": {
             "normal1USpeed": {
@@ -13936,6 +14939,7 @@
         "DistantA": {
           "filesSeen": 2,
           "defines": [],
+          "defineOrder": [],
           "baseDefines": [],
           "baseParameters": [
             "directionTexture",
@@ -13949,6 +14953,19 @@
             "normalTexture",
             "specPower",
             "waterColour"
+          ],
+          "paramOrder": [
+            "normalSpeeds",
+            "waterColour",
+            "foamColour",
+            "extinctionsPlusFresnel",
+            "specPower",
+            "noiseScales",
+            "factorsAndFoamControl",
+            "directionTexture",
+            "normalTexture",
+            "foamTexture",
+            "environmentTexture"
           ],
           "parameters": {
             "normalSpeeds": {
@@ -14298,6 +15315,7 @@
         "DistantB": {
           "filesSeen": 2,
           "defines": [],
+          "defineOrder": [],
           "baseDefines": [],
           "baseParameters": [
             "directionTexture",
@@ -14311,6 +15329,19 @@
             "normalTexture",
             "specPower",
             "waterColour"
+          ],
+          "paramOrder": [
+            "normalSpeeds",
+            "waterColour",
+            "foamColour",
+            "extinctionsPlusFresnel",
+            "specPower",
+            "noiseScales",
+            "factorsAndFoamControl",
+            "directionTexture",
+            "normalTexture",
+            "foamTexture",
+            "environmentTexture"
           ],
           "parameters": {
             "normalSpeeds": {
@@ -14665,6 +15696,15 @@
             "USE_LIGHT_CONTROL",
             "USE_SPECULAR"
           ],
+          "defineOrder": [
+            "USE_ANISO",
+            "USE_SPECULAR",
+            "USE_LIGHT_CONTROL",
+            "USE_EXTRA_WTC_EMISSIVE_SCALER",
+            "ENV_MAPPING",
+            "USE_FRESNEL",
+            "SCALE_EMISSIVE"
+          ],
           "baseDefines": [
             "USE_FRESNEL",
             "USE_LIGHT_CONTROL"
@@ -14680,6 +15720,23 @@
             "frameInitialTimeOffset",
             "frameTransitionTime",
             "fresnelFactor"
+          ],
+          "paramOrder": [
+            "fresnelFactor",
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor",
+            "globalEMapFactor",
+            "frameTransitionTime",
+            "frameDisplayTime",
+            "frameInitialTimeOffset",
+            "frameDimX",
+            "frameDimY",
+            "animationMode",
+            "emissive_scale",
+            "diffuseTexture",
+            "specularTexture",
+            "emissiveTexture"
           ],
           "parameters": {
             "fresnelFactor": {
@@ -15030,6 +16087,12 @@
             "USE_EXTRA_WTC_EMISSIVE_SCALER",
             "USE_LIGHT_CONTROL"
           ],
+          "defineOrder": [
+            "USE_ANISO",
+            "USE_LIGHT_CONTROL",
+            "USE_EXTRA_WTC_EMISSIVE_SCALER",
+            "SCALE_EMISSIVE"
+          ],
           "baseDefines": [
             "SCALE_EMISSIVE",
             "USE_ANISO",
@@ -15046,6 +16109,17 @@
             "frameDisplayTime",
             "frameInitialTimeOffset",
             "frameTransitionTime"
+          ],
+          "paramOrder": [
+            "frameTransitionTime",
+            "frameDisplayTime",
+            "frameInitialTimeOffset",
+            "frameDimX",
+            "frameDimY",
+            "animationMode",
+            "emissive_scale",
+            "diffuseTexture",
+            "emissiveTexture"
           ],
           "parameters": {
             "frameTransitionTime": {
@@ -15244,12 +16318,42 @@
             "USE_WIND",
             "VC_SCALES_DIFFUSE"
           ],
+          "defineOrder": [
+            "USE_BACKLIT",
+            "DISALLOW_ALPHA_TO_COVERAGE",
+            "DISABLE_NORMAL_FLIP",
+            "USE_DOUBLE_SIDED",
+            "HIGHER_SUN_BACKLIT",
+            "USE_WIND",
+            "INCLUDE_IN_SHADOWS",
+            "USE_UV2",
+            "ADDITIONAL_LIGHTING_PARAMS",
+            "USE_SPHERICAL_NORMALS",
+            "VC_SCALES_DIFFUSE"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "diffuseTexture",
             "normalTexture",
             "windMult",
             "windRows"
+          ],
+          "paramOrder": [
+            "backlitDimming",
+            "backlitPower",
+            "backlitExp",
+            "windMult",
+            "windRows",
+            "specularPower",
+            "snPower",
+            "specularFactor",
+            "snOriginYOffset",
+            "convolveDesaturation",
+            "snMinimumDiffuse",
+            "specularDesaturation",
+            "snMaximumDiffuse",
+            "diffuseTexture",
+            "normalTexture"
           ],
           "parameters": {
             "backlitDimming": {
@@ -15592,6 +16696,10 @@
             "ALPHA_FRESNEL",
             "USE_SPECULAR"
           ],
+          "defineOrder": [
+            "ALPHA_FRESNEL",
+            "USE_SPECULAR"
+          ],
           "baseDefines": [
             "ALPHA_FRESNEL",
             "USE_SPECULAR"
@@ -15604,6 +16712,15 @@
             "specularTexture",
             "transmissiveMult",
             "treeDiffuseMultiplier"
+          ],
+          "paramOrder": [
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor",
+            "transmissiveMult",
+            "treeDiffuseMultiplier",
+            "diffuseTexture",
+            "specularTexture"
           ],
           "parameters": {
             "minSpecPower": {
@@ -15767,8 +16884,10 @@
         "locator": {
           "filesSeen": 41,
           "defines": [],
+          "defineOrder": [],
           "baseDefines": [],
           "baseParameters": [],
+          "paramOrder": [],
           "parameters": {}
         }
       }
@@ -15783,11 +16902,22 @@
             "TINT_USE_SIMPLE",
             "USE_ANISO"
           ],
+          "defineOrder": [
+            "LOCK_Z",
+            "USE_ANISO",
+            "NORMAL_MAPPING",
+            "TINT_USE_SIMPLE"
+          ],
           "baseDefines": [
             "LOCK_Z"
           ],
           "baseParameters": [
             "diffuseTexture"
+          ],
+          "paramOrder": [
+            "specialNormalMap",
+            "diffuseTexture",
+            "normalTexture"
           ],
           "parameters": {
             "specialNormalMap": {
@@ -15864,12 +16994,23 @@
             "NORMAL_MAPPING",
             "USE_UV_NORMALS"
           ],
+          "defineOrder": [
+            "NORMAL_MAPPING",
+            "USE_UV_NORMALS"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "diffuseTexture",
             "transmissiveMult",
             "treeAmbientMultiplier",
             "treeDiffuseMultiplier"
+          ],
+          "paramOrder": [
+            "diffuseTexture",
+            "transmissiveMult",
+            "treeAmbientMultiplier",
+            "treeDiffuseMultiplier",
+            "normalTexture"
           ],
           "parameters": {
             "transmissiveMult": {
@@ -16024,6 +17165,7 @@
         "Water": {
           "filesSeen": 2,
           "defines": [],
+          "defineOrder": [],
           "baseDefines": [],
           "baseParameters": [
             "diffuseTexture",
@@ -16042,6 +17184,24 @@
             "riverbedTexture",
             "riverbedTransmissionCoeff",
             "specularTexture"
+          ],
+          "paramOrder": [
+            "normal1USpeed",
+            "normal1VSpeed",
+            "normal2USpeed",
+            "normal2VSpeed",
+            "riverbedTransmissionCoeff",
+            "fresnelFactor",
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor",
+            "globalEMapFactor",
+            "diffuseTexture",
+            "riverbedTexture",
+            "specularTexture",
+            "normalTexture1",
+            "normalTexture2",
+            "environmentTexture"
           ],
           "parameters": {
             "normal1USpeed": {
@@ -16390,6 +17550,28 @@
             "USE_SPECULAR_MAP",
             "USE_UV2_EMISSIVE1"
           ],
+          "defineOrder": [
+            "USE_NORMAL_MAP",
+            "USE_SPECULAR_MAP",
+            "USE_COLOURISATION",
+            "USE_AO_MAP",
+            "SPECULAR_FROM_DIFFUSE_ALPHA",
+            "USE_EMISSIVE_MAPS",
+            "USE_ALPHATEST",
+            "USE_ENV_MAP",
+            "SPECULAR_POWER_FROM_DIFFUSE_ALPHA",
+            "USE_FRESNEL",
+            "USE_COLOURISATION_EMISSIVE",
+            "SPECULAR_FROM_NORMAL_ALPHA",
+            "USE_COLOURISATION_WITH_MASK",
+            "ENVMAP_USE_SPECULAR_COLOR",
+            "SPECULAR_POWER_FROM_NORMAL_ALPHA",
+            "ENVMAP_SCALED_DIFFUSE_A",
+            "USE_CUSTOMFRESNEL",
+            "EMISSIVE_AS_LIGHTMAP",
+            "ENVMAP_SCALED_NORMAL_A",
+            "USE_UV2_EMISSIVE1"
+          ],
           "baseDefines": [
             "USE_FRESNEL"
           ],
@@ -16404,6 +17586,28 @@
             "maxSpecPower",
             "minSpecPower",
             "reflectionBlurBias"
+          ],
+          "paramOrder": [
+            "SPECIAL_NORMAL_MAP",
+            "detailTilingX",
+            "detailTilingY",
+            "diffuseMultiplier",
+            "normalMultiplier",
+            "globalSpecularFactor",
+            "minSpecPower",
+            "maxSpecPower",
+            "fresnelFactor",
+            "reflectionBlurBias",
+            "fresnelCustomF0",
+            "emissiveScale",
+            "fresnelCustomF90",
+            "envMapFactor",
+            "diffuse1Texture",
+            "normalTexture",
+            "specularTexture",
+            "aoTexture",
+            "emissive1Texture",
+            "emissive2Texture"
           ],
           "parameters": {
             "SPECIAL_NORMAL_MAP": {
@@ -16864,6 +18068,17 @@
             "USE_WIND",
             "VC_SCALES_DIFFUSE"
           ],
+          "defineOrder": [
+            "USE_BACKLIT",
+            "DISABLE_NORMAL_FLIP",
+            "HIGHER_SUN_BACKLIT",
+            "USE_WIND",
+            "USE_UV2",
+            "INCLUDE_IN_SHADOWS",
+            "USE_SPHERICAL_NORMALS",
+            "ADDITIONAL_LIGHTING_PARAMS",
+            "VC_SCALES_DIFFUSE"
+          ],
           "baseDefines": [
             "DISABLE_NORMAL_FLIP",
             "USE_BACKLIT"
@@ -16876,6 +18091,23 @@
             "normalTexture",
             "windMult",
             "windRows"
+          ],
+          "paramOrder": [
+            "backlitDimming",
+            "backlitPower",
+            "backlitExp",
+            "windMult",
+            "windRows",
+            "snPower",
+            "snOriginYOffset",
+            "snMinimumDiffuse",
+            "snMaximumDiffuse",
+            "specularPower",
+            "specularFactor",
+            "convolveDesaturation",
+            "specularDesaturation",
+            "diffuseTexture",
+            "normalTexture"
           ],
           "parameters": {
             "backlitDimming": {
@@ -17216,12 +18448,25 @@
             "USE_ANISO",
             "USE_SPECULAR"
           ],
+          "defineOrder": [
+            "USE_ANISO",
+            "DISABLESNOWLTCOLOURING",
+            "USE_SPECULAR"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "diffuseTexture",
             "globalSpecularFactor",
             "maxSpecPower",
             "minSpecPower",
+            "specularTexture"
+          ],
+          "paramOrder": [
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor",
+            "fakeSpecularScale",
+            "diffuseTexture",
             "specularTexture"
           ],
           "parameters": {
@@ -17371,6 +18616,16 @@
             "USE_COLOURISATION",
             "USE_FRESNEL"
           ],
+          "defineOrder": [
+            "NORMAL_MAPPING",
+            "USE_ALPHATEST",
+            "ENV_MAPPING",
+            "TINT_USE_TINT",
+            "TINT_USE_SIMPLE",
+            "USE_COLOURISATION",
+            "USE_FRESNEL",
+            "ENVMAP_SCALED_SPEC_A"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "diffuseTexture",
@@ -17378,6 +18633,21 @@
             "maxSpecPower",
             "minSpecPower",
             "specularTexture"
+          ],
+          "paramOrder": [
+            "diffuseTexture",
+            "specularTexture",
+            "normalTexture",
+            "specialNormalMap",
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor",
+            "globalEMapFactor",
+            "tint_maskTexture",
+            "tint_tintR",
+            "tint_tintG",
+            "tint_tintB",
+            "fresnelFactor"
           ],
           "parameters": {
             "diffuseTexture": {
@@ -17729,6 +18999,7 @@
         "Basic_AlphaTest_VerticalNormal": {
           "filesSeen": 7,
           "defines": [],
+          "defineOrder": [],
           "baseDefines": [],
           "baseParameters": [
             "diffuseTexture",
@@ -17736,6 +19007,13 @@
             "maxSpecPower",
             "minSpecPower",
             "specularTexture"
+          ],
+          "paramOrder": [
+            "diffuseTexture",
+            "specularTexture",
+            "minSpecPower",
+            "maxSpecPower",
+            "globalSpecularFactor"
           ],
           "parameters": {
             "diffuseTexture": {
@@ -17850,8 +19128,13 @@
         "moonrender": {
           "filesSeen": 1,
           "defines": [],
+          "defineOrder": [],
           "baseDefines": [],
           "baseParameters": [
+            "colourTexture",
+            "intensityTexture"
+          ],
+          "paramOrder": [
             "colourTexture",
             "intensityTexture"
           ],
@@ -17907,8 +19190,13 @@
         "textured_skydome": {
           "filesSeen": 1,
           "defines": [],
+          "defineOrder": [],
           "baseDefines": [],
           "baseParameters": [
+            "colourTexture",
+            "intensityTexture"
+          ],
+          "paramOrder": [
             "colourTexture",
             "intensityTexture"
           ],
@@ -17964,8 +19252,17 @@
         "textured_skydome": {
           "filesSeen": 4,
           "defines": [],
+          "defineOrder": [],
           "baseDefines": [],
           "baseParameters": [],
+          "paramOrder": [
+            "colourTextureFrom",
+            "colourTexture",
+            "colourTextureTo",
+            "intensityTexture",
+            "colourTextureFrom1",
+            "colourTextureTo1"
+          ],
           "parameters": {
             "colourTextureFrom": {
               "types": [
@@ -18104,11 +19401,18 @@
         "cloudskydome": {
           "filesSeen": 3,
           "defines": [],
+          "defineOrder": [],
           "baseDefines": [],
           "baseParameters": [
             "colourTextureFrom",
             "colourTextureFrom1",
             "colourTextureTo",
+            "colourTextureTo1"
+          ],
+          "paramOrder": [
+            "colourTextureFrom",
+            "colourTextureTo",
+            "colourTextureFrom1",
             "colourTextureTo1"
           ],
           "parameters": {
@@ -18209,10 +19513,19 @@
             "NO_BILLBOARDS",
             "USE_CLOUD_TRANSMISSIVE_LIGHTING"
           ],
+          "defineOrder": [
+            "NORMAL_MAPPING",
+            "NO_BILLBOARDS",
+            "USE_CLOUD_TRANSMISSIVE_LIGHTING"
+          ],
           "baseDefines": [
             "NORMAL_MAPPING"
           ],
           "baseParameters": [
+            "diffuseTexture",
+            "normalTexture"
+          ],
+          "paramOrder": [
             "diffuseTexture",
             "normalTexture"
           ],
@@ -18275,8 +19588,10 @@
         "BasicBackLight": {
           "filesSeen": 1,
           "defines": [],
+          "defineOrder": [],
           "baseDefines": [],
           "baseParameters": [],
+          "paramOrder": [],
           "parameters": {}
         }
       }
@@ -18286,8 +19601,12 @@
         "Basic": {
           "filesSeen": 2,
           "defines": [],
+          "defineOrder": [],
           "baseDefines": [],
           "baseParameters": [
+            "invertMask"
+          ],
+          "paramOrder": [
             "invertMask"
           ],
           "parameters": {
@@ -18320,8 +19639,10 @@
         "Basic": {
           "filesSeen": 1,
           "defines": [],
+          "defineOrder": [],
           "baseDefines": [],
           "baseParameters": [],
+          "paramOrder": [],
           "parameters": {}
         }
       }
@@ -18331,8 +19652,10 @@
         "Basic_NoDepth": {
           "filesSeen": 1,
           "defines": [],
+          "defineOrder": [],
           "baseDefines": [],
           "baseParameters": [],
+          "paramOrder": [],
           "parameters": {}
         }
       }
@@ -18342,8 +19665,10 @@
         "Basic": {
           "filesSeen": 1,
           "defines": [],
+          "defineOrder": [],
           "baseDefines": [],
           "baseParameters": [],
+          "paramOrder": [],
           "parameters": {}
         },
         "Basic_NoDepth": {
@@ -18351,15 +19676,21 @@
           "defines": [
             "SOBEL_MASK"
           ],
+          "defineOrder": [
+            "SOBEL_MASK"
+          ],
           "baseDefines": [],
           "baseParameters": [],
+          "paramOrder": [],
           "parameters": {}
         },
         "LinearDepthToDepth": {
           "filesSeen": 1,
           "defines": [],
+          "defineOrder": [],
           "baseDefines": [],
           "baseParameters": [],
+          "paramOrder": [],
           "parameters": {}
         }
       }
@@ -18380,10 +19711,36 @@
             "USE_SPECULAR",
             "UV_JUMP"
           ],
+          "defineOrder": [
+            "USE_SPECULAR",
+            "APPLY_DYNAMIC_LIGHTING_SCALERS",
+            "NORMAL_MAPPING",
+            "ENV_MAPPING",
+            "USE_ALPHATEST",
+            "TINT_USE_SIMPLE",
+            "USE_LIGHT_CONTROL",
+            "USE_COLOURISATION",
+            "UV_JUMP",
+            "DISABLE_SSAO"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "colourMultiplier",
             "diffuseTexture"
+          ],
+          "paramOrder": [
+            "diffuseTexture",
+            "specularTexture",
+            "normalTexture",
+            "emissiveTexture",
+            "minSpecPower",
+            "maxSpecPower",
+            "numCellsU",
+            "globalSpecularFactor",
+            "numCellsV",
+            "colourMultiplier",
+            "globalEMapFactor",
+            "jumpSpeed"
           ],
           "parameters": {
             "diffuseTexture": {
@@ -18680,6 +20037,11 @@
             "TINT_USE_TINT",
             "USE_LIGHT_CONTROL"
           ],
+          "defineOrder": [
+            "USE_LIGHT_CONTROL",
+            "TINT_USE_TINT",
+            "TINT_USE_2X"
+          ],
           "baseDefines": [
             "TINT_USE_2X",
             "TINT_USE_TINT",
@@ -18693,6 +20055,15 @@
             "tint_tintB",
             "tint_tintG",
             "tint_tintR"
+          ],
+          "paramOrder": [
+            "diffuseTexture",
+            "emissiveTexture",
+            "tint_maskTexture",
+            "tint_tintR",
+            "tint_tintG",
+            "tint_tintB",
+            "colourMultiplier"
           ],
           "parameters": {
             "diffuseTexture": {
@@ -18907,10 +20278,33 @@
             "USE_SPECULAR",
             "UV_JUMP"
           ],
+          "defineOrder": [
+            "USE_SPECULAR",
+            "USE_LIGHT_CONTROL",
+            "TINT_USE_SIMPLE",
+            "UV_JUMP",
+            "NORMAL_MAPPING",
+            "DISABLE_SSAO",
+            "ENV_MAPPING"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "colourMultiplier",
             "diffuseTexture"
+          ],
+          "paramOrder": [
+            "diffuseTexture",
+            "specularTexture",
+            "emissiveTexture",
+            "minSpecPower",
+            "numCellsU",
+            "maxSpecPower",
+            "numCellsV",
+            "globalEMapFactor",
+            "globalSpecularFactor",
+            "jumpSpeed",
+            "colourMultiplier",
+            "normalTexture"
           ],
           "parameters": {
             "diffuseTexture": {
@@ -19185,9 +20579,21 @@
             "NORMAL_MAPPING",
             "USE_ALPHATESTPARAM"
           ],
+          "defineOrder": [
+            "NORMAL_MAPPING",
+            "USE_ALPHATESTPARAM",
+            "LOCK_YAW_PITCH",
+            "ALLOWSHADEROPTIMISATIONS"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "diffuseTexture"
+          ],
+          "paramOrder": [
+            "specialNormalMap",
+            "diffuseTexture",
+            "alphaTestParam",
+            "normalTexture"
           ],
           "parameters": {
             "specialNormalMap": {
@@ -19287,9 +20693,18 @@
             "ALLOWSHADEROPTIMISATIONS",
             "NORMAL_MAPPING"
           ],
+          "defineOrder": [
+            "NORMAL_MAPPING",
+            "ALLOWSHADEROPTIMISATIONS"
+          ],
           "baseDefines": [],
           "baseParameters": [
             "diffuseTexture"
+          ],
+          "paramOrder": [
+            "specialNormalMap",
+            "diffuseTexture",
+            "normalTexture"
           ],
           "parameters": {
             "specialNormalMap": {
@@ -19379,6 +20794,20 @@
             "USE_SPHERICAL_NORMALS",
             "VC_SCALES_DIFFUSE"
           ],
+          "defineOrder": [
+            "USE_ADVANCED_BOOST",
+            "LOCK_Z",
+            "USE_SPHERICAL_NORMALS",
+            "USE_ANISO",
+            "NORMAL_MAPPING",
+            "USE_MIPMAP_BIAS",
+            "USE_BACKLIT",
+            "ADDITIONAL_LIGHTING_PARAMS",
+            "NO_EXTRA_SPEC_LIGHTING",
+            "VC_SCALES_DIFFUSE",
+            "SPEC_FROM_DIFFUSE",
+            "USE_RANDOM_COLOR_TINT_BY_WPOS"
+          ],
           "baseDefines": [
             "ADDITIONAL_LIGHTING_PARAMS",
             "LOCK_Z",
@@ -19422,6 +20851,38 @@
             "tabWPosColour12",
             "tabWPosColour13",
             "tabWPosColour14"
+          ],
+          "paramOrder": [
+            "snOriginYOffset",
+            "snPower",
+            "snMinimumDiffuse",
+            "snMaximumDiffuse",
+            "specialNormalMap",
+            "mipMapBias",
+            "backlitDimming",
+            "backlitPower",
+            "backlitExp",
+            "specularPower",
+            "specularFactor",
+            "convolveDesaturation",
+            "specularDesaturation",
+            "tabWPosColour00",
+            "tabWPosColour01",
+            "tabWPosColour02",
+            "tabWPosColour03",
+            "tabWPosColour04",
+            "tabWPosColour05",
+            "tabWPosColour06",
+            "tabWPosColour07",
+            "tabWPosColour08",
+            "tabWPosColour09",
+            "tabWPosColour10",
+            "tabWPosColour11",
+            "tabWPosColour12",
+            "tabWPosColour13",
+            "tabWPosColour14",
+            "diffuseTexture",
+            "normalTexture"
           ],
           "parameters": {
             "snOriginYOffset": {
@@ -20251,6 +21712,14 @@
             "USE_CAMERA_DEPENDET_ANIMATION",
             "USE_NORMAL_COLOURING_LERP"
           ],
+          "defineOrder": [
+            "USE_ALPHATESTPARAM",
+            "LOCK_Z",
+            "USE_CAMERA_DEPENDET_ANIMATION",
+            "USE_NORMAL_COLOURING_LERP",
+            "NORMAL_MAPPING",
+            "TINT_USE_SIMPLE"
+          ],
           "baseDefines": [
             "NORMAL_MAPPING",
             "USE_ALPHATESTPARAM",
@@ -20264,6 +21733,14 @@
             "normalTexture",
             "specialNormalMap",
             "treeThickness"
+          ],
+          "paramOrder": [
+            "alphaTestParam",
+            "horizontalFramesNr",
+            "treeThickness",
+            "specialNormalMap",
+            "diffuseTexture",
+            "normalTexture"
           ],
           "parameters": {
             "alphaTestParam": {
@@ -20404,6 +21881,12 @@
             "USE_ALPHATESTPARAM",
             "USE_CAMERA_DEPENDET_ANIMATION"
           ],
+          "defineOrder": [
+            "USE_ALPHATESTPARAM",
+            "USE_CAMERA_DEPENDET_ANIMATION",
+            "NORMAL_MAPPING",
+            "TINT_USE_SIMPLE"
+          ],
           "baseDefines": [
             "NORMAL_MAPPING",
             "TINT_USE_SIMPLE",
@@ -20417,6 +21900,14 @@
             "normalTexture",
             "specialNormalMap",
             "treeThickness"
+          ],
+          "paramOrder": [
+            "alphaTestParam",
+            "horizontalFramesNr",
+            "treeThickness",
+            "specialNormalMap",
+            "diffuseTexture",
+            "normalTexture"
           ],
           "parameters": {
             "alphaTestParam": {
@@ -20551,8 +22042,14 @@
           "defines": [
             "FLIP_DENSITY"
           ],
+          "defineOrder": [
+            "FLIP_DENSITY"
+          ],
           "baseDefines": [],
           "baseParameters": [
+            "densitytexture"
+          ],
+          "paramOrder": [
             "densitytexture"
           ],
           "parameters": {

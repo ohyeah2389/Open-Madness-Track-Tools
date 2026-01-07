@@ -78,6 +78,8 @@ class ShaderDatabaseBuilder:
         # Track per-file presence to compute always-on sets
         params_seen_this_file = set()
         defines_seen_this_file = set()
+        param_order_this_file = []
+        define_order_this_file = []
 
         for shader_param in root.findall("shaderparam"):
             param_name = shader_param.get("name")
@@ -90,12 +92,19 @@ class ShaderDatabaseBuilder:
             value_str = value_elem.get("v", "") if value_elem is not None else ""
             self._record_parameter(tech_entry, param_name, param_type, value_str)
             params_seen_this_file.add(param_name)
+            param_order_this_file.append(param_name)
 
         for define_elem in root.findall("define"):
             define_name = define_elem.get("name")
             if define_name:
                 tech_entry["defines"].add(define_name)
                 defines_seen_this_file.add(define_name)
+                define_order_this_file.append(define_name)
+
+        if define_order_this_file:
+            self._record_define_order(tech_entry, define_order_this_file)
+        if param_order_this_file:
+            self._record_param_order(tech_entry, param_order_this_file)
 
         # Increment counts for always-on detection
         for pname in params_seen_this_file:
@@ -113,6 +122,13 @@ class ShaderDatabaseBuilder:
                 "defines": set(),
                 "paramCounts": {},
                 "defineCounts": {},
+                "defineOrderPairs": {},
+                "defineFirstSeen": {},
+                "defineOrderCounts": {},
+                "defineOrderFirstSeen": {},
+                "defineOrderPositions": {},
+                "paramOrderPositions": {},
+                "paramFirstSeen": {},
             },
         )
 
@@ -210,6 +226,81 @@ class ShaderDatabaseBuilder:
             canon_map[t_norm] = technique_clean
         return canon_map[t_norm]
 
+    def _record_define_order(self, technique_entry: Dict[str, Any], define_order: List[str]) -> None:
+        """Capture the observed define ordering for later reconstruction."""
+        pairs = technique_entry["defineOrderPairs"]
+        first_seen = technique_entry["defineFirstSeen"]
+        order_counts = technique_entry["defineOrderCounts"]
+        order_first_seen = technique_entry["defineOrderFirstSeen"]
+        order_positions = technique_entry["defineOrderPositions"]
+
+        for define_name in define_order:
+            if define_name not in first_seen:
+                first_seen[define_name] = len(first_seen)
+
+        order_key = tuple(define_order)
+        if order_key not in order_counts:
+            order_first_seen[order_key] = len(order_first_seen)
+        order_counts[order_key] = order_counts.get(order_key, 0) + 1
+
+        for i, before_name in enumerate(define_order):
+            before_map = pairs.setdefault(before_name, {})
+            for after_name in define_order[i + 1 :]:
+                before_map[after_name] = before_map.get(after_name, 0) + 1
+            order_positions.setdefault(before_name, []).append(i)
+
+    def _record_param_order(self, technique_entry: Dict[str, Any], param_order: List[str]) -> None:
+        """Capture the observed parameter ordering for later reconstruction."""
+        first_seen = technique_entry["paramFirstSeen"]
+        order_positions = technique_entry["paramOrderPositions"]
+
+        for name in param_order:
+            if name not in first_seen:
+                first_seen[name] = len(first_seen)
+
+        for i, name in enumerate(param_order):
+            order_positions.setdefault(name, []).append(i)
+
+    @staticmethod
+    def _median_index(indices: List[int]) -> float:
+        if not indices:
+            return math.inf
+        ordered = sorted(indices)
+        mid = len(ordered) // 2
+        if len(ordered) % 2 == 1:
+            return float(ordered[mid])
+        return (ordered[mid - 1] + ordered[mid]) / 2.0
+
+    def _resolve_define_order(self, technique_entry: Dict[str, Any]) -> List[str]:
+        """Derive a stable define ordering using observed per-file sequences."""
+        defines = list(technique_entry["defines"])
+        if not defines:
+            return []
+
+        first_seen = technique_entry.get("defineFirstSeen", {})
+        order_positions = technique_entry.get("defineOrderPositions", {})
+
+        def _sort_key(name: str):
+            median_pos = self._median_index(order_positions.get(name, []))
+            return (median_pos, first_seen.get(name, math.inf), name.lower())
+
+        return sorted(defines, key=_sort_key)
+
+    def _resolve_param_order(self, technique_entry: Dict[str, Any]) -> List[str]:
+        """Derive a stable parameter ordering using observed per-file sequences."""
+        params = list(technique_entry["parameters"].keys())
+        if not params:
+            return []
+
+        first_seen = technique_entry.get("paramFirstSeen", {})
+        order_positions = technique_entry.get("paramOrderPositions", {})
+
+        def _sort_key(name: str):
+            median_pos = self._median_index(order_positions.get(name, []))
+            return (median_pos, first_seen.get(name, math.inf), name.lower())
+
+        return sorted(params, key=_sort_key)
+
     def _serialize(self) -> Dict[str, Any]:
         source_roots = [str(r) for r in self.mtx_roots]
 
@@ -280,12 +371,14 @@ class ShaderDatabaseBuilder:
                 techniques_out[technique] = {
                     "filesSeen": technique_data["filesSeen"],
                     "defines": sorted(technique_data["defines"]),
+                    "defineOrder": self._resolve_define_order(technique_data),
                     "baseDefines": sorted(
                         d for d, count in technique_data["defineCounts"].items() if count == technique_data["filesSeen"]
                     ),
                     "baseParameters": sorted(
                         p for p, count in technique_data["paramCounts"].items() if count == technique_data["filesSeen"]
                     ),
+                    "paramOrder": self._resolve_param_order(technique_data),
                     "parameters": params_out,
                 }
 

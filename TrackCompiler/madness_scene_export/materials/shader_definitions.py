@@ -469,11 +469,24 @@ def _normalize_loaded_database(db_dict):
 
         for technique, technique_data in tech_map.items():
             raw_params = technique_data.get("parameters", {})
+            ordered_param_names = []
+            seen_params = set()
+            if technique_data.get("paramOrder"):
+                for name in technique_data["paramOrder"]:
+                    if name in raw_params and name not in seen_params:
+                        seen_params.add(name)
+                        ordered_param_names.append(name)
+            for name in sorted(raw_params.keys()):
+                if name not in seen_params:
+                    seen_params.add(name)
+                    ordered_param_names.append(name)
+
             param_list = []
             defaults_for_tech = {}
             metadata_for_tech = {}
 
-            for param_name, param_details in raw_params.items():
+            for param_name in ordered_param_names:
+                param_details = raw_params.get(param_name)
                 # Support either a single type string or a list of types (pick the first)
                 param_type = None
                 float_avg = None
@@ -518,14 +531,23 @@ def _normalize_loaded_database(db_dict):
                     "vec4Median": tuple(vec4_median) if vec4_median is not None else None,
                 }
 
-            # Keep parameter order deterministic for UI lists and writing
-            param_list.sort(key=lambda item: item[0].lower())
             params_by_tech[technique] = param_list
             default_values_by_tech[technique] = defaults_for_tech
             metadata_by_tech[technique] = metadata_for_tech
 
-            define_list = technique_data.get("defines", [])
-            defines_by_tech[technique] = sorted(set(define_list))
+            define_list = technique_data.get("defineOrder") or technique_data.get("defines", [])
+            seen_defines = set()
+            ordered_defines = []
+            for define_name in define_list:
+                if define_name not in seen_defines:
+                    seen_defines.add(define_name)
+                    ordered_defines.append(define_name)
+            if technique_data.get("defines"):
+                for define_name in sorted(set(technique_data["defines"])):
+                    if define_name not in seen_defines:
+                        seen_defines.add(define_name)
+                        ordered_defines.append(define_name)
+            defines_by_tech[technique] = ordered_defines
 
             base_params_by_tech[technique] = set(technique_data.get("baseParameters", []))
             base_defines_by_tech[technique] = set(technique_data.get("baseDefines", []))
