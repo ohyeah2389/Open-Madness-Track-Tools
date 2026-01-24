@@ -290,6 +290,10 @@ class MTX_PT_material_settings(bpy.types.Panel):
 
         mtx = material.mtx_settings
 
+        row = layout.row()
+        row.operator("mtx.load_mtx", text="Load MTX")
+        row.operator("mtx.save_mtx", text="Save MTX")
+
         # Basic settings
         box = layout.box()
         box.label(text="Basic Settings", icon="MATERIAL")
@@ -994,24 +998,6 @@ class MTX_OT_copy_define_to_selected(bpy.types.Operator):
         return {"FINISHED"}
 
 
-class MTX_PT_operations(bpy.types.Panel):
-    """MTX Operations Panel"""
-
-    bl_label = "MTX Operations"
-    bl_idname = "MTX_PT_operations"
-    bl_space_type = "PROPERTIES"
-    bl_region_type = "WINDOW"
-    bl_context = "material"
-    bl_parent_id = "MTX_PT_material_settings"
-
-    def draw(self, context):
-        layout = self.layout
-
-        row = layout.row()
-        row.operator("mtx.load_mtx", text="Load MTX")
-        row.operator("mtx.save_mtx", text="Save MTX")
-
-
 def register():
     bpy.utils.register_class(MTXShaderParam)
     bpy.utils.register_class(MTXDefine)
@@ -1021,7 +1007,6 @@ def register():
     bpy.utils.register_class(MTX_PT_material_settings)
     bpy.utils.register_class(MTX_PT_shader_parameters)
     bpy.utils.register_class(MTX_PT_shader_defines)
-    bpy.utils.register_class(MTX_PT_operations)
     bpy.utils.register_class(MTX_OT_load_mtx)
     bpy.utils.register_class(MTX_OT_save_mtx)
     bpy.utils.register_class(MTX_OT_pick_texture)
@@ -1042,7 +1027,6 @@ def unregister():
     bpy.utils.unregister_class(MTX_OT_pick_texture)
     bpy.utils.unregister_class(MTX_OT_save_mtx)
     bpy.utils.unregister_class(MTX_OT_load_mtx)
-    bpy.utils.unregister_class(MTX_PT_operations)
     bpy.utils.unregister_class(MTX_PT_shader_defines)
     bpy.utils.unregister_class(MTX_PT_shader_parameters)
     bpy.utils.unregister_class(MTX_PT_material_settings)
