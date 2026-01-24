@@ -654,7 +654,22 @@ def update_shader_params(self, context):
     
     # Add parameters for current shader/technique combination
     if shader in SHADER_PARAMETERS and technique in SHADER_PARAMETERS[shader]:
-        for param_name, param_type in SHADER_PARAMETERS[shader][technique]:
+        param_entries = list(SHADER_PARAMETERS[shader][technique])
+        type_order = {
+            "EPT_TEXTURE": 0,
+            "EPT_F32": 1,
+            "EPT_VEC4": 2,
+            "EPT_BOOL": 3,
+        }
+        param_entries.sort(
+            key=lambda item: (
+                type_order.get(item[1], 4),
+                0 if is_param_required(shader, technique, item[0]) else 1,
+                item[0].lower(),
+            )
+        )
+
+        for param_name, param_type in param_entries:
             param = mtx_settings.shader_params.add()
             param.name = param_name
             param.param_type = param_type
