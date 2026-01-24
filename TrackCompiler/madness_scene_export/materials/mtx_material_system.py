@@ -17,55 +17,6 @@ from .shader_definitions import (
 from ..utils import sanitize
 
 
-def validate_override_path(path_str):
-    """Validate an override path for MTX/BMT files.
-    
-    Args:
-        path_str: The file path string to validate
-        
-    Returns:
-        tuple: (is_valid, file_type, error_message, target_extension) where:
-               - is_valid: Boolean indicating if path is valid
-               - file_type: "MTX", "BMT", or "UNKNOWN"
-               - error_message: Error description if not valid, None if valid
-               - target_extension: The extension to use in MEB references (.mtx)
-    """
-    if not path_str:
-        return False, "UNKNOWN", "No path specified", None
-    
-    path = Path(path_str)
-    
-    if not path.exists():
-        return False, "UNKNOWN", f"File not found: {path}", None
-    
-    file_ext = path.suffix.lower()
-    
-    # Accept both .mtx and .bmt extensions
-    if file_ext not in ['.mtx', '.bmt']:
-        return False, "UNKNOWN", f"File must have .mtx or .bmt extension, got {file_ext}", None
-    
-    # Try to determine file type by extension first, then by content
-    if file_ext == '.bmt':
-        # BMT file - will be referenced as .mtx in MEB
-        return True, "BMT", None, ".mtx"
-    elif file_ext == '.mtx':
-        # Could be either MTX or BMT, check content to be sure
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                content = f.read(1024)  # Read first 1KB to check
-                if 'BMT' in content.upper() or '<bmt' in content.lower():
-                    return True, "BMT", None, ".mtx"
-                elif '<material' in content.lower():
-                    return True, "MTX", None, ".mtx"
-                else:
-                    # Assume MTX for .mtx files with unknown content
-                    return True, "MTX", None, ".mtx"
-        except Exception as e:
-            return False, "UNKNOWN", f"Could not read file: {e}", None
-    
-    return False, "UNKNOWN", "Unexpected file type", None
-
-
 def resolve_texture_path(texture_path_str, context=None):
     """Resolve a texture path, handling absolute and relative paths.
 
@@ -187,27 +138,6 @@ class MTXMaterialSettings(bpy.types.PropertyGroup):
         get=lambda self: (
             sanitize(bpy.context.material.name).upper() if bpy.context.material else ""
         ),
-    )  # type: ignore
-
-    # Export format
-    export_as_bmt: BoolProperty(
-        name="Export as BMT",
-        description="Export material as binary BMT format instead of XML MTX",
-        default=False
-    )  # type: ignore
-
-    # Override path functionality
-    use_override_path: BoolProperty(
-        name="Use Override Path",
-        description="Use a premade MTX or BMT file instead of generating from UI settings",
-        default=False
-    )  # type: ignore
-
-    override_path: StringProperty(
-        name="Override File Path",
-        description="Path to premade MTX or BMT file (BMT paths must end with .mtx)",
-        subtype="FILE_PATH",
-        default=""
     )  # type: ignore
 
     shader_path: EnumProperty(
@@ -369,56 +299,26 @@ class MTX_PT_material_settings(bpy.types.Panel):
         row.label(text="MTX Name:")
         row.label(text=mtx.material_name)
 
-        # Export format option
-        box.prop(mtx, "export_as_bmt")
+        box.prop(mtx, "shader_path")
+        box.prop(mtx, "technique")
 
-        # Override path settings
-        override_box = box.box()
-        override_box.prop(mtx, "use_override_path")
-        if mtx.use_override_path:
-            col = override_box.column()
-            
-            # File path input
-            col.prop(mtx, "override_path", text="File Path")
-            
-            # Show validation and status info
-            if mtx.override_path:
-                is_valid, file_type, error_msg, target_ext = validate_override_path(mtx.override_path)
-                
-                if is_valid:
-                    if file_type == "BMT":
-                        col.label(text="BMT file", icon="CHECKMARK")
-                    elif file_type == "MTX":
-                        col.label(text="MTX file", icon="CHECKMARK")
-                    else:
-                        col.label(text="Valid file", icon="CHECKMARK")
-                else:
-                    col.label(text=f"{error_msg}", icon="ERROR")
-            else:
-                col.label(text="Please select an MTX or BMT file", icon="INFO")
-        else:
-            # Only show shader settings when not using override
-            box.prop(mtx, "shader_path")
-            box.prop(mtx, "technique")
+        # Material flags
+        col = box.column()
+        col.prop(mtx, "supports_specialised_lighting")
+        col.prop(mtx, "fog")
+        col.prop(mtx, "antialias")
+        col.prop(mtx, "cull_mode")
 
-        # Material flags (only show when not using override)
-        if not mtx.use_override_path:
-            col = box.column()
-            col.prop(mtx, "supports_specialised_lighting")
-            col.prop(mtx, "fog")
-            col.prop(mtx, "antialias")
-            col.prop(mtx, "cull_mode")
+        # Depth and alpha settings
+        row = box.row()
+        subcol = row.column()
+        subcol.label(text="Depth:")
+        subcol.prop(mtx, "depth_enabled")
+        subcol.prop(mtx, "depth_write_enabled")
 
-            # Depth and alpha settings
-            row = box.row()
-            subcol = row.column()
-            subcol.label(text="Depth:")
-            subcol.prop(mtx, "depth_enabled")
-            subcol.prop(mtx, "depth_write_enabled")
-
-            subcol = row.column()
-            subcol.label(text="Alpha:")
-            subcol.prop(mtx, "alpha_blend_enabled")
+        subcol = row.column()
+        subcol.label(text="Alpha:")
+        subcol.prop(mtx, "alpha_blend_enabled")
 
 
 class MTX_PT_shader_parameters(bpy.types.Panel):
@@ -435,7 +335,7 @@ class MTX_PT_shader_parameters(bpy.types.Panel):
     def poll(cls, context):
         if not context.material or not hasattr(context.material, "mtx_settings"):
             return False
-        return not context.material.mtx_settings.use_override_path
+        return True
 
     def draw(self, context):
         layout = self.layout
@@ -553,7 +453,7 @@ class MTX_PT_shader_defines(bpy.types.Panel):
     def poll(cls, context):
         if not context.material or not hasattr(context.material, "mtx_settings"):
             return False
-        return not context.material.mtx_settings.use_override_path
+        return True
 
     def draw(self, context):
         layout = self.layout

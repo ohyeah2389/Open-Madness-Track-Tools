@@ -334,8 +334,8 @@ def export_madness_scene(
                 unique_materials, output_dir, texture_export_dir, track_name, context
             )
         
-        # Generate MTX/BMT files (passes texture_mapping for correct paths)
-        print("Generating MTX/BMT files...")
+        # Generate MTX files (passes texture_mapping for correct paths)
+        print("Generating MTX files...")
         prepare_mtx_files_from_materials(
             unique_materials, output_dir, context, track_name, texture_mapping
         )
