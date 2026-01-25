@@ -454,6 +454,8 @@ def create_relative_texture_path(
     track_name: str
 ) -> str:
     """Create the correct relative texture path for MTX files."""
+    if mtx_dir.parent.name.lower() == "tracks":
+        return f"tracks\\textures\\{track_name}\\{texture_name}"
     try:
         rel_path = texture_dir.relative_to(mtx_dir.parent)
         return str(rel_path / texture_name).replace("/", "\\")
