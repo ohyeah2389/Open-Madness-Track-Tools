@@ -354,26 +354,9 @@ def export_madness_scene(
 
 
 def determine_texture_export_path(output_dir: Path, track_name: str) -> Path:
-    """Determine where to export textures based on SGX location and path structure."""
-    # Check if "tracks" is in the path
-    path_parts = output_dir.parts
-    
-    # Look for "tracks" in the path
-    tracks_index = -1
-    for i, part in enumerate(path_parts):
-        if part.lower() == "tracks":
-            tracks_index = i
-            break
-    
-    if tracks_index >= 0:
-        # If "tracks" is found, export to tracks/textures/track_name
-        # Navigate up to the parent of "tracks" and then down to tracks/textures/track_name
-        tracks_parent = Path(*path_parts[:tracks_index])
-        texture_dir = tracks_parent / "tracks" / "textures" / track_name
-    else:
-        # If no "tracks" in path, export to textures/track_name relative to SGX
-        texture_dir = output_dir / "textures" / track_name
-    
+    """Determine where to export textures based on SGX location."""
+    # Always place textures one level above the SGX directory.
+    texture_dir = output_dir.parent / "textures" / track_name
     print(f"Texture export directory: {texture_dir}")
     return texture_dir
 
@@ -470,36 +453,13 @@ def create_relative_texture_path(
     texture_name: str, 
     track_name: str
 ) -> str:
-    """Create the correct relative texture path for MTX files based on export structure."""
-    # Check if we're in a tracks-based structure
-    mtx_parts = mtx_dir.parts
-    texture_parts = texture_dir.parts
-    
-    # Look for "tracks" in both paths
-    mtx_tracks_index = -1
-    texture_tracks_index = -1
-    
-    for i, part in enumerate(mtx_parts):
-        if part.lower() == "tracks":
-            mtx_tracks_index = i
-            break
-    
-    for i, part in enumerate(texture_parts):
-        if part.lower() == "tracks":
-            texture_tracks_index = i
-            break
-    
-    if mtx_tracks_index >= 0 and texture_tracks_index >= 0:
-        # Both are in tracks structure, use tracks/textures/track_name/texture
-        return f"tracks\\textures\\{track_name}\\{texture_name}"
-    else:
-        # Not in tracks structure, use relative path
-        try:
-            rel_path = texture_dir.relative_to(mtx_dir.parent)
-            return str(rel_path / texture_name).replace("/", "\\")
-        except ValueError:
-            # Fallback if paths are not related
-            return f"textures\\{track_name}\\{texture_name}"
+    """Create the correct relative texture path for MTX files."""
+    try:
+        rel_path = texture_dir.relative_to(mtx_dir.parent)
+        return str(rel_path / texture_name).replace("/", "\\")
+    except ValueError:
+        # Fallback if paths are not related
+        return f"textures\\{track_name}\\{texture_name}"
 
 
 def copy_meb_file_to_export(
