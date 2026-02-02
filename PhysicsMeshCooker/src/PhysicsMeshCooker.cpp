@@ -337,12 +337,13 @@ int main(int argc,char** argv)
         ++grpId;
     }
 
-    // Write the complete CSM file: [chunk_count:4][chunk1][chunk2]...
+    // Write the complete CSM file: [version:4][chunk1][chunk2]...
     uint32_t chunkCount = static_cast<uint32_t>(chunks.size());
+    const uint32_t csmVersion = 330;
     
-    // Write chunk count first
+    // Write version first
     std::vector<uint8_t> header(4);
-    std::memcpy(header.data(), &chunkCount, 4);
+    std::memcpy(header.data(), &csmVersion, 4);
     if(!dump(outPath, header, /*append*/false)) return 1;
     
     // Write all chunks
