@@ -4,14 +4,32 @@ Exports geometry node attributes to Madness LiveTrack raster format
 """
 
 import bpy # type: ignore
-import bmesh # type: ignore
-from bpy.props import StringProperty, FloatProperty, IntProperty # type: ignore
+from bpy.props import StringProperty, BoolProperty # type: ignore
 from bpy_extras.io_utils import ExportHelper # type: ignore
 import struct
-import numpy as np
+import os
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 import mathutils # type: ignore
+
+# Constants
+REQUIRED_ATTRS = ['friction', 'height', 'grip', 'flag_0', 'flag_1', 'mask']
+INIT_CELLS = [
+    (112, 0, 0.000, 0.000, 0.000, 0x00),
+    (0, 1, 0.753, 0.024, 0.000, 0x00),
+    (0, 1, 0.000, 0.000, 0.078, 0xE2),
+    (22, 1, 0.000, 0.000, 0.000, 0x00)
+]
+HEADER_SIZE = 0x70
+CELL_SIZE = 6
+
+# Logging control
+_verbose_logging = False
+
+def _log(message: str):
+    """Print message only if verbose logging is enabled"""
+    if _verbose_logging:
+        print(message)
 
 class LiveTrackMRDFExporter(bpy.types.Operator, ExportHelper):
     """Export LiveTrack MRDF from Geometry Nodes attributes"""
@@ -26,33 +44,28 @@ class LiveTrackMRDFExporter(bpy.types.Operator, ExportHelper):
         maxlen=255,
     ) # type: ignore
     
+    verbose: BoolProperty(
+        name="Verbose Logging",
+        description="Enable detailed logging output",
+        default=False,
+    ) # type: ignore
+    
     def execute(self, context):
+        global _verbose_logging
+        _verbose_logging = self.verbose
+        
         try:
-            # Get active object
             obj = context.active_object
             if not obj or obj.type != 'MESH':
                 self.report({'ERROR'}, "Please select a mesh object")
                 return {'CANCELLED'}
             
-            # Check for required attributes
-            mesh = obj.data
-            required_attrs = ['friction', 'height', 'grip', 'flag_0', 'flag_1', 'mask']
-            missing_attrs = []
-            
-            for attr_name in required_attrs:
-                if attr_name not in mesh.attributes:
-                    missing_attrs.append(attr_name)
-            
-            if missing_attrs:
-                self.report({'ERROR'}, f"Missing required attributes: {', '.join(missing_attrs)}")
+            missing = [attr for attr in REQUIRED_ATTRS if attr not in obj.data.attributes]
+            if missing:
+                self.report({'ERROR'}, f"Missing required attributes: {', '.join(missing)}")
                 return {'CANCELLED'}
             
-            export_livetrack_mrdf(
-                obj=obj,
-                filepath=self.filepath,
-                context=context
-            )
-            
+            export_livetrack_mrdf(obj, self.filepath, context)
             self.report({'INFO'}, f"LiveTrack MRDF exported: {self.filepath}")
             return {'FINISHED'}
             
@@ -61,504 +74,282 @@ class LiveTrackMRDFExporter(bpy.types.Operator, ExportHelper):
             return {'CANCELLED'}
 
 def get_grid_dimensions_and_bounds(obj) -> Tuple[int, int, Tuple[float, float, float, float], float]:
-    """Analyze mesh to determine grid dimensions, world bounds, and calculate cell size"""
-    # Get evaluated mesh with modifiers applied
+    """Analyze mesh to determine grid dimensions, world bounds, and cell size"""
     depsgraph = bpy.context.evaluated_depsgraph_get()
     eval_obj = obj.evaluated_get(depsgraph)
     mesh = eval_obj.data
     
-    # Get vertex positions in world space
+    if not mesh.vertices:
+        raise ValueError("Mesh has no vertices")
+    
     world_matrix = obj.matrix_world
     vertices = [(world_matrix @ v.co).xyz for v in mesh.vertices]
     
-    if not vertices:
-        raise ValueError("Mesh has no vertices")
-    
-    # Find unique X and Y coordinates to determine grid dimensions
     x_coords = sorted(set(v[0] for v in vertices))
     y_coords = sorted(set(v[1] for v in vertices))
-    
-    width = len(x_coords)
-    height = len(y_coords)
+    width, height = len(x_coords), len(y_coords)
     
     if width < 2 or height < 2:
-        raise ValueError(f"Grid too small: {width} × {height}. Need at least 2×2 grid.")
+        raise ValueError(f"Grid too small: {width}×{height}. Need at least 2×2.")
     
-    # Use object's actual bounding box in world space for bounds
     bbox_corners = [world_matrix @ mathutils.Vector(corner) for corner in obj.bound_box]
-    bbox_x_coords = [corner.x for corner in bbox_corners]
-    bbox_y_coords = [corner.y for corner in bbox_corners]
+    min_x = min(c.x for c in bbox_corners)
+    max_x = max(c.x for c in bbox_corners)
+    min_y = min(c.y for c in bbox_corners)
+    max_y = max(c.y for c in bbox_corners)
     
-    min_x, max_x = min(bbox_x_coords), max(bbox_x_coords)
-    min_y, max_y = min(bbox_y_coords), max(bbox_y_coords)
-    
-    # Calculate cell size automatically based on grid dimensions and world bounds
-    world_width = max_x - min_x
-    world_height = max_y - min_y
-    
-    # Use the smaller of the two cell sizes to maintain square cells
-    cell_size_x = world_width / (width - 1) if width > 1 else world_width
-    cell_size_y = world_height / (height - 1) if height > 1 else world_height
+    cell_size_x = (max_x - min_x) / (width - 1) if width > 1 else (max_x - min_x)
+    cell_size_y = (max_y - min_y) / (height - 1) if height > 1 else (max_y - min_y)
     cell_size = min(cell_size_x, cell_size_y)
     
-    print(f"Grid dimensions: {width} × {height}")
-    print(f"Object bounding box: ({min_x:.3f}, {min_y:.3f}) to ({max_x:.3f}, {max_y:.3f})")
-    print(f"World size: {world_width:.3f} × {world_height:.3f}")
-    print(f"Auto-calculated cell size: {cell_size:.3f}")
+    _log(f"Grid: {width}×{height}, Bounds: ({min_x:.3f},{min_y:.3f})-({max_x:.3f},{max_y:.3f}), Cell size: {cell_size:.3f}")
     
     return width, height, (min_x, min_y, max_x, max_y), cell_size
 
 def extract_grid_data(obj) -> List[Tuple[int, int, float, float, float, int]]:
-    """Extract grid cell data from mesh attributes"""
-    # Get evaluated mesh with modifiers applied
+    """Extract grid cell data from mesh attributes (masked cells only)"""
     depsgraph = bpy.context.evaluated_depsgraph_get()
     eval_obj = obj.evaluated_get(depsgraph)
     mesh = eval_obj.data
-    
-    # Get attribute data
-    friction_attr = mesh.attributes['friction']
-    height_attr = mesh.attributes['height']
-    grip_attr = mesh.attributes['grip']
-    flag_0_attr = mesh.attributes['flag_0']
-    flag_1_attr = mesh.attributes['flag_1']
-    mask_attr = mesh.attributes['mask']
-    
-    # Get vertex positions in world space
     world_matrix = obj.matrix_world
-    x_coords = []
-    y_coords = []
     
-    for i, vertex in enumerate(mesh.vertices):
-        world_pos = world_matrix @ vertex.co
-        x, y = world_pos.x, world_pos.y
-        x_coords.append(x)
-        y_coords.append(y)
+    attrs = {name: mesh.attributes[name] for name in REQUIRED_ATTRS}
     
-    # Get unique coordinates for grid indexing
-    unique_x = sorted(set(x_coords))
-    unique_y = sorted(set(y_coords))
-    
-    # Create coordinate to grid index mapping
+    # Build grid coordinate mapping
+    vertices = [(world_matrix @ v.co).xyz for v in mesh.vertices]
+    unique_x = sorted(set(v[0] for v in vertices))
+    unique_y = sorted(set(v[1] for v in vertices))
     x_to_grid = {x: i for i, x in enumerate(unique_x)}
     y_to_grid = {y: i for i, y in enumerate(unique_y)}
     
-    # Extract cell data (only for masked cells)
     cells = []
-    total_vertices = len(mesh.vertices)
-    masked_count = 0
-    
-    for vert_idx, vertex in enumerate(mesh.vertices):
-        # Check mask first
-        is_masked = mask_attr.data[vert_idx].value
-        if not is_masked:
-            continue  # Skip unmasked cells
-        
-        masked_count += 1
+    for idx, vertex in enumerate(mesh.vertices):
+        if not attrs['mask'].data[idx].value:
+            continue
         
         world_pos = world_matrix @ vertex.co
-        x, y = world_pos.x, world_pos.y
-        grid_x = x_to_grid[x]
-        grid_y = y_to_grid[y]
+        grid_x = x_to_grid[world_pos.x]
+        grid_y = y_to_grid[world_pos.y]
         
-        # Get attribute values
-        friction = friction_attr.data[vert_idx].value
-        height = height_attr.data[vert_idx].value
-        grip = grip_attr.data[vert_idx].value
-        flag_0 = flag_0_attr.data[vert_idx].value
-        flag_1 = flag_1_attr.data[vert_idx].value
+        friction = attrs['friction'].data[idx].value
+        height = attrs['height'].data[idx].value
+        grip = attrs['grip'].data[idx].value
         
-        # Pack surface flags (use bits 0 and 1 for the boolean flags)
         surface_flags = 0
-        if flag_0:
-            surface_flags |= 0x01  # Set bit 0
-        if flag_1:
-            surface_flags |= 0x02  # Set bit 1
+        if attrs['flag_0'].data[idx].value:
+            surface_flags |= 0x01
+        if attrs['flag_1'].data[idx].value:
+            surface_flags |= 0x02
         
         cells.append((grid_x, grid_y, friction, height, grip, surface_flags))
     
-    print(f"Extracted {len(cells)} grid cells from {masked_count} masked vertices ({total_vertices} total)")
-    if masked_count != len(cells):
-        print(f"Warning: Masked count ({masked_count}) doesn't match extracted cells ({len(cells)})")
-    
+    _log(f"Extracted {len(cells)} cells from {len(mesh.vertices)} vertices")
     return cells
 
-def create_row_offsets(cells: List[Tuple[int, int, float, float, float, int]], height: int) -> List[int]:
-    """Create row offset table for binary search
-    
-    CRITICAL: The initialization cells must appear at specific indices in the sorted array:
-    - Index 0: X=112, Y=0 (initialization marker)
-    - Index 1: X=0, Y=1 (first calibration point)  
-    - Index 2: X=0, Y=1 (second calibration point)
-    - Index 3: X=22, Y=1 (third calibration point)
-    """
-    
-    # Separate initialization cells from user cells
-    init_cells = []
+def create_row_offsets(cells: List[Tuple[int, int, float, float, float, int]], height: int) -> Tuple[List[int], List[Tuple[int, int, float, float, float, int]]]:
+    """Create row offset table with initialization cells at specific indices"""
+    init_positions = [(112, 0), (0, 1), (0, 1), (22, 1)]
+    init_cells_map = {}
     user_cells = []
     
-    # Define the required initialization cells with their expected indices
-    required_init_positions = [
-        (112, 0),  # Index 0
-        (0, 1),    # Index 1  
-        (0, 1),    # Index 2 (duplicate X=0, Y=1)
-        (22, 1)    # Index 3
-    ]
-    
     for cell in cells:
-        x, y = cell[0], cell[1]
-        if (x, y) in required_init_positions:
-            init_cells.append(cell)
+        pos = (cell[0], cell[1])
+        if pos in init_positions:
+            init_cells_map.setdefault(pos, []).append(cell)
         else:
             user_cells.append(cell)
     
-    # Sort user cells by Y coordinate, then X coordinate
-    user_cells_sorted = sorted(user_cells, key=lambda c: (c[1], c[0]))
-    
-    # Create final sorted list with initialization cells at the beginning
-    # This ensures they appear at indices 0, 1, 2, 3 as required
     sorted_cells = []
-    
-    # Add initialization cells first (these MUST be at the beginning)
-    init_cells_by_position = {}
-    for cell in init_cells:
-        key = (cell[0], cell[1])
-        if key not in init_cells_by_position:
-            init_cells_by_position[key] = []
-        init_cells_by_position[key].append(cell)
-    
-    # Add init cells in the exact order required
-    for pos in required_init_positions:
-        if pos in init_cells_by_position and init_cells_by_position[pos]:
-            sorted_cells.append(init_cells_by_position[pos].pop(0))
+    for pos in init_positions:
+        if pos in init_cells_map and init_cells_map[pos]:
+            sorted_cells.append(init_cells_map[pos].pop(0))
         else:
-            # If missing, add a default initialization cell
+            # Add default initialization cells if missing
             if pos == (112, 0):
-                sorted_cells.append((112, 0, 0.000, 0.000, 0.000, 0x00))
+                sorted_cells.append((112, 0, 0.0, 0.0, 0.0, 0x00))
             elif pos == (0, 1):
-                if len([c for c in sorted_cells if c[0] == 0 and c[1] == 1]) == 0:
-                    sorted_cells.append((0, 1, 0.753, 0.024, 0.000, 0x00))
+                if not any(c[0] == 0 and c[1] == 1 for c in sorted_cells):
+                    sorted_cells.append((0, 1, 0.753, 0.024, 0.0, 0x00))
                 else:
-                    sorted_cells.append((0, 1, 0.000, 0.000, 0.078, 0xE2))
+                    sorted_cells.append((0, 1, 0.0, 0.0, 0.078, 0xE2))
             elif pos == (22, 1):
-                sorted_cells.append((22, 1, 0.000, 0.000, 0.000, 0x00))
+                sorted_cells.append((22, 1, 0.0, 0.0, 0.0, 0x00))
     
-    # Add remaining user cells
-    sorted_cells.extend(user_cells_sorted)
+    sorted_cells.extend(sorted(user_cells, key=lambda c: (c[1], c[0])))
     
-    # Build row offset table - must have exactly height + 1 entries
-    row_offsets = [0] * (height + 1)
-    
-    # Initialize all row offsets to point to end of data (no cells)
-    for i in range(height + 1):
-        row_offsets[i] = len(sorted_cells)
-    
-    # Set the first row offset
+    row_offsets = [len(sorted_cells)] * (height + 1)
     row_offsets[0] = 0
     
-    # Find the start of each row
     current_row = 0
-    for i, (grid_x, grid_y, _, _, _, _) in enumerate(sorted_cells):
-        # If we've moved to a new row, update all intermediate row offsets
-        while current_row < grid_y and current_row < height:
+    for i, cell in enumerate(sorted_cells):
+        while current_row < cell[1] and current_row < height:
             current_row += 1
             row_offsets[current_row] = i
-        
-        # Update current row to match the cell's row
-        if grid_y < height:
-            current_row = max(current_row, grid_y)
+        if cell[1] < height:
+            current_row = max(current_row, cell[1])
     
-    # Ensure the final offset points to the end
     row_offsets[height] = len(sorted_cells)
     
-    print(f"Created row offset table with {len(row_offsets)} entries for {height} rows")
-    print(f"Row offset range: {row_offsets[0]} to {row_offsets[-1]}")
-    print(f"First 8 cells in sorted array:")
-    for i in range(min(8, len(sorted_cells))):
-        cell = sorted_cells[i]
-        print(f"  Index {i}: X={cell[0]}, Y={cell[1]}, friction={cell[2]:.3f}, flags=0x{cell[5]:02X}")
+    _log(f"Row offsets: {len(row_offsets)} entries, {len(sorted_cells)} cells")
+    if _verbose_logging and len(sorted_cells) >= 4:
+        for i in range(min(4, len(sorted_cells))):
+            c = sorted_cells[i]
+            _log(f"  Init cell {i}: X={c[0]}, Y={c[1]}, friction={c[2]:.3f}, flags=0x{c[5]:02X}")
     
     return row_offsets, sorted_cells
 
-def add_required_initialization_cells(cells: List[Tuple[int, int, float, float, float, int]], width: int, height: int) -> List[Tuple[int, int, float, float, float, int]]:
-    """Add required initialization cells that the game expects to find"""
-    
-    # Define the required initialization cells based on stock MRDF analysis
-    required_cells = [
-        (112, 0, 0.000, 0.000, 0.000, 0x00),  # Index 0: Init marker in row 0
-        (0, 1, 0.753, 0.024, 0.000, 0x00),    # Index 1: Calibration with friction
-        (0, 1, 0.000, 0.000, 0.078, 0xE2),    # Index 2: Calibration with grip + flags  
-        (22, 1, 0.000, 0.000, 0.000, 0x00)    # Index 3: Additional calibration
-    ]
-    
-    # Check for conflicts with existing cells
+def add_required_initialization_cells(cells: List[Tuple[int, int, float, float, float, int]]) -> List[Tuple[int, int, float, float, float, int]]:
+    """Add required initialization cells, removing conflicts if present"""
     existing_positions = {(x, y) for x, y, _, _, _, _ in cells}
     
-    for req_x, req_y, _, _, _, _ in required_cells:
-        if (req_x, req_y) in existing_positions:
-            print(f"Warning: Removing existing cell at ({req_x},{req_y}) to make room for required initialization cell")
-            cells = [(x, y, f, h, g, s) for x, y, f, h, g, s in cells if not (x == req_x and y == req_y)]
+    filtered_cells = []
+    for cell in cells:
+        pos = (cell[0], cell[1])
+        if pos not in [(112, 0), (0, 1), (22, 1)]:
+            filtered_cells.append(cell)
+        elif _verbose_logging:
+            _log(f"Removed conflicting cell at {pos}")
     
-    # Add required cells
-    all_cells = list(required_cells) + cells
-    
-    print(f"Added {len(required_cells)} required initialization cells")
-    return all_cells
+    return list(INIT_CELLS) + filtered_cells
 
 def write_mrdf_file(filepath: str, width: int, height: int, world_bounds: Tuple[float, float, float, float], 
                    cell_size: float, cells: List[Tuple[int, int, float, float, float, int]]):
-    """Write MRDF file in the correct binary format matching game requirements"""
+    """Write MRDF file in binary format
     
-    # Add required initialization cells that the game expects
-    cells_with_init = add_required_initialization_cells(cells, width, height)
+    Format: MRDF container with three sections:
+    - PRIMARY_DATA (0x01): Grid metadata + cell data + row offset table
+    - POINTER_RELOCATION (0x10): Pointers requiring game engine relocation
+    - RASTER_CELLS (0x50): Material type definitions
+    """
+    from io import BytesIO
     
-    # Create row offsets and sort cells
+    cells_with_init = add_required_initialization_cells(cells)
     row_offsets, sorted_cells = create_row_offsets(cells_with_init, height)
     
-    print(f"Debug: Writing {len(sorted_cells)} total cells ({len(cells)} user + {len(cells_with_init) - len(cells)} initialization)")
+    _log(f"Writing {len(sorted_cells)} cells ({len(cells)} user + {len(sorted_cells) - len(cells)} init)")
     
-    # Debug: verify the first few cells in the binary output
-    print("Debug: First 8 cells that will be written to binary:")
-    for i in range(min(8, len(sorted_cells))):
-        grid_x, grid_y, friction, height_val, grip, surface_flags = sorted_cells[i]
-        friction_uint8 = max(0, min(255, int(friction * 255)))
-        height_uint8 = max(0, min(255, int(height_val * 255)))
-        grip_uint8 = max(0, min(255, int(grip * 255)))
-        print(f"  Binary cell {i}: X={grid_x} (0x{grid_x:04X}), "
-              f"friction={friction_uint8} (0x{friction_uint8:02X}), "
-              f"height={height_uint8} (0x{height_uint8:02X}), "
-              f"grip={grip_uint8} (0x{grip_uint8:02X}), "
-              f"flags=0x{surface_flags:02X}")
-    
-    # Write to temporary buffers to calculate exact sizes
-    import io
-    
-    # PRIMARY_DATA section (0x01)
-    primary_buffer = io.BytesIO()
+    # PRIMARY_DATA section (0x01): Grid metadata (0x70 bytes header)
+    primary_buffer = BytesIO()
     min_x, min_y, max_x, max_y = world_bounds
     
-    # Grid metadata (0x58 bytes) - matching working writer structure
-    # Offset 0x00-0x08: Header prefix (8 bytes)
-    # These may be flags or version identifiers - using safe defaults
-    primary_buffer.write(b'\x00' * 8)
+    # Grid metadata structure:
+    primary_buffer.write(b'\x00' * 8)                                    # 0x00: Header prefix (flags/version)
+    primary_buffer.write(struct.pack('<4f', min_x, min_y, max_x, max_y)) # 0x08: World bounds (4 floats)
+    primary_buffer.write(struct.pack('<2I', width, height))              # 0x18: Grid dimensions (2 uint32)
+    primary_buffer.write(struct.pack('<If', 0, cell_size))               # 0x20: Unknown + cell_size (uint32, float)
+    primary_buffer.write(struct.pack('<I', len(sorted_cells)))           # 0x28: Total cell count (uint32)
+    primary_buffer.write(struct.pack('<f', cell_size))                   # 0x2C: Cell size duplicate (float)
+    primary_buffer.write(b'\x00' * 40)                                   # 0x30: Padding
     
-    # Offset 0x08-0x18: World bounds (4 floats = 16 bytes)
-    primary_buffer.write(struct.pack('<4f', min_x, min_y, max_x, max_y))
-    
-    # Offset 0x18-0x20: Grid dimensions (2 uint32 = 8 bytes)
-    primary_buffer.write(struct.pack('<2I', width, height))
-    
-    # Offset 0x20-0x28: Unknown field (uint32) + cell_size_scale (float) = 8 bytes
-    primary_buffer.write(struct.pack('<I', 0))  # Unknown field (purpose unclear, 0 works)
-    primary_buffer.write(struct.pack('<f', cell_size))  # Cell size/scale factor
-    
-    # Offset 0x28-0x2C: Total cell count (uint32 = 4 bytes)
-    primary_buffer.write(struct.pack('<I', len(sorted_cells)))
-    
-    # Offset 0x2C-0x30: Cell size float (duplicate for compatibility)
-    primary_buffer.write(struct.pack('<f', cell_size))
-    
-    # Offset 0x30-0x58: Padding (40 bytes)
-    primary_buffer.write(b'\x00' * 40)
-    
-    # Calculate offsets for pointers (header is 0x70 bytes)
-    header_size = 0x70
-    cell_data_offset = header_size  # Cell data starts after header
-    cell_data_size = len(sorted_cells) * 6
+    # Calculate pointers (relocated by game at runtime)
+    cell_data_offset = HEADER_SIZE
+    cell_data_size = len(sorted_cells) * CELL_SIZE
     padding_needed = (4 - (cell_data_size % 4)) % 4
     row_table_offset = cell_data_offset + cell_data_size + padding_needed
     
-    # Offset 0x58-0x60: Pointer to cell data array (8 bytes)
-    # This will be relocated by the game to point to cell data
-    primary_buffer.write(struct.pack('<Q', cell_data_offset))
+    primary_buffer.write(struct.pack('<Q', cell_data_offset))  # 0x58: Pointer to cell data (uint64)
+    primary_buffer.write(b'\x00' * 8)                          # 0x60: Padding
+    primary_buffer.write(struct.pack('<Q', row_table_offset))  # 0x68: Pointer to row offset table (uint64)
     
-    # Offset 0x60-0x68: Padding (8 bytes)
-    primary_buffer.write(b'\x00' * 8)
-    
-    # Offset 0x68-0x70: Pointer to row offset table (8 bytes)
-    # This will be relocated by the game to point to row table
-    primary_buffer.write(struct.pack('<Q', row_table_offset))
-    
-    print(f"Debug: PRIMARY_DATA header structure:")
-    print(f"  0x18: width = {width}")
-    print(f"  0x1c: height = {height}")
-    print(f"  0x28: cell_count = {len(sorted_cells)}")
-    print(f"  0x2c: cell_size = {cell_size}")
-    print(f"  0x58: cell_data_ptr = 0x{cell_data_offset:X} (will be relocated)")
-    print(f"  0x68: row_table_ptr = 0x{row_table_offset:X} (will be relocated)")
-    print(f"  Header size: 0x{header_size:X} bytes")
-    print(f"  Cell data starts at: 0x{header_size:X}")
-    print(f"  Cell data size: {cell_data_size} bytes ({len(sorted_cells)} cells * 6)")
-    print(f"  Padding before row table: {padding_needed} bytes")
-    print(f"  Row table starts at: 0x{row_table_offset:X}")
-    
-    # Write grid cell data (6 bytes per cell)
-    print("Debug: Writing cell data to binary buffer...")
+    # Cell data array (6 bytes per cell): sorted by Y then X for binary search
+    # Format: X (uint16) + friction (uint8) + height (uint8) + grip (uint8) + flags (uint8)
     for i, (grid_x, grid_y, friction, height_val, grip, surface_flags) in enumerate(sorted_cells):
-        friction_uint8 = max(0, min(255, int(friction * 255)))
-        height_uint8 = max(0, min(255, int(height_val * 255)))
-        grip_uint8 = max(0, min(255, int(grip * 255)))
+        friction_u8 = max(0, min(255, int(friction * 255)))
+        height_u8 = max(0, min(255, int(height_val * 255)))
+        grip_u8 = max(0, min(255, int(grip * 255)))
         
-        if i < 8:  # Debug first 8 cells
-            print(f"  Writing cell {i}: X={grid_x:04X} friction={friction_uint8:02X} height={height_uint8:02X} grip={grip_uint8:02X} flags={surface_flags:02X}")
-            
-            # Show exact bytes being written
-            x_bytes = struct.pack('<H', grid_x)
-            cell_bytes = x_bytes + bytes([friction_uint8, height_uint8, grip_uint8, surface_flags])
-            print(f"    Bytes: {' '.join(f'{b:02X}' for b in cell_bytes)}")
+        if _verbose_logging and i < 4:
+            _log(f"  Cell {i}: X={grid_x:04X} F={friction_u8:02X} H={height_u8:02X} G={grip_u8:02X} Flags={surface_flags:02X}")
         
-        primary_buffer.write(struct.pack('<H', grid_x))  # X coordinate (uint16)
-        primary_buffer.write(bytes([friction_uint8]))  # Friction (uint8)
-        primary_buffer.write(bytes([height_uint8]))  # Height (uint8)
-        primary_buffer.write(bytes([grip_uint8]))  # Grip (uint8)
-        primary_buffer.write(bytes([surface_flags]))  # Surface flags (uint8)
+        primary_buffer.write(struct.pack('<H', grid_x))
+        primary_buffer.write(bytes([friction_u8, height_u8, grip_u8, surface_flags]))
     
-    # Add padding to align row offset table to 4-byte boundary
-    # Cell data is 6 bytes per cell, so padding is needed if (cell_count * 6) % 4 != 0
-    cell_data_size = len(sorted_cells) * 6
-    padding_needed = (4 - (cell_data_size % 4)) % 4
-    if padding_needed > 0:
+    # 4-byte alignment padding before row offset table
+    if padding_needed:
         primary_buffer.write(b'\x00' * padding_needed)
-        print(f"Debug: Added {padding_needed} bytes of padding before row offset table for 4-byte alignment")
     
-    # Write row offset table (4 bytes per offset)
+    # Row offset table: (height + 1) entries, each uint32 points to first cell in that row
     for offset in row_offsets:
         primary_buffer.write(struct.pack('<I', offset))
     
     primary_data = primary_buffer.getvalue()
-    primary_size = len(primary_data)
     
-    # POINTER_RELOCATION section (0x10) - Pointer relocation table
-    # This section contains offsets within PRIMARY_DATA that point to data requiring relocation
-    # Standard relocations for track MRDF files point to:
-    # - 0x58: Row offset table pointer location  
-    # - 0x68: Secondary pointer location
+    # POINTER_RELOCATION section (0x10): Offsets within PRIMARY_DATA requiring relocation
+    # Format: pairs of (offset uint32, padding uint32) for each pointer location
     pointer_data = b''
-    relocations = [0x58, 0x68]
-    for offset in relocations:
-        pointer_data += struct.pack('<I', offset)  # 4-byte offset
-        pointer_data += struct.pack('<I', 0)       # 4-byte padding
-    pointer_size = len(pointer_data)
+    for offset in [0x58, 0x68]:  # Cell data ptr and row table ptr locations
+        pointer_data += struct.pack('<II', offset, 0)
     
-    # RASTER_CELLS section (0x50) - Material type definitions
+    # RASTER_CELLS section (0x50): Material type definitions
+    # Material types (0-15) are encoded in cell surface flags (bits 2-5)
     # Format: [material_type (uint32), property_value (float)] repeated, then total_count (uint32)
-    # TODO: Extract material definitions from Blender mesh attributes
-    # For now, using placeholder data - this should be dynamically generated
     raster_data = b''
-    material_definitions = {
-        3: [0.02345, 0.06789, 0.01234]  # Example: material type 3 with 3 property values
-    }
-    total_entries = 0
-    for material_type, properties in material_definitions.items():
-        for prop_value in properties:
-            raster_data += struct.pack('<I', material_type)
-            raster_data += struct.pack('<f', prop_value)
-            total_entries += 1
-    raster_data += struct.pack('<I', total_entries)  # Total count at the end
-    raster_size = len(raster_data)
+    material_defs = {3: [0.01608, 0.0, 0.0]}  # Placeholder from stock MRDF
+    total_entries = sum(len(props) for props in material_defs.values())
+    for mat_type, props in material_defs.items():
+        for prop in props:
+            raster_data += struct.pack('<If', mat_type, prop)
+    raster_data += struct.pack('<I', total_entries)
     
-    # Calculate total file size
-    extended_header_size = 8  # Extended header data
+    # Calculate file structure
     section_count = 3
-    section_directory_size = section_count * 8  # 8 bytes per section entry
-    total_header_size = 16 + section_directory_size + extended_header_size
+    extended_header_size = 8
+    total_header_size = 16 + (section_count * 8) + extended_header_size
+    total_file_size = total_header_size + len(primary_data) + 12 + len(pointer_data) + len(raster_data) + 4
     
-    # Section sizes + trailing padding (from directory padding byte at offset 5)
-    primary_with_padding = primary_size + 12  # 0x0c bytes trailing padding
-    pointer_with_padding = pointer_size + 0   # 0x00 bytes trailing padding
-    raster_with_padding = raster_size + 4     # 0x04 bytes trailing padding
+    _log(f"File structure: header={total_header_size}b, primary={len(primary_data)}b, pointer={len(pointer_data)}b, raster={len(raster_data)}b")
     
-    total_file_size = total_header_size + primary_with_padding + pointer_with_padding + raster_with_padding
-    
-    print(f"Debug: File structure:")
-    print(f"  Header + directory + extended: {total_header_size} bytes")
-    print(f"  PRIMARY_DATA: {primary_size} bytes")
-    print(f"  POINTER_RELOCATION: {pointer_size} bytes")
-    print(f"  RASTER_CELLS: {raster_size} bytes")
-    print(f"  Total file size: {total_file_size} bytes")
-    
-    # Write the final file
+    # Write MRDF file
     with open(filepath, 'wb') as f:
-        # Write MRDF header (16 bytes) - matching stock MRDF format
-        f.write(b'Q')  # Magic
-        f.write(bytes([0x02]))  # Format flags (bit 1 set, bit 0 clear)
-        f.write(bytes([0x01]))  # Version
-        f.write(bytes([section_count]))  # Section count (3)
-        f.write(bytes([extended_header_size]))  # Extended header size (8)
-        f.write(struct.pack('<H', 256))  # Min sections requirement (256, from stock)
-        f.write(bytes([0x04]))  # Max sections limit (4, from stock)
-        f.write(b'\x8d\xdb\x49\xee\x95\x8a\x25\x73')  # Reserved bytes (Indianapolis 2022 RC pattern)
+        # MRDF header (16 bytes)
+        f.write(b'Q')                                                    # 0x00: Magic byte
+        f.write(bytes([0x02, 0x01, section_count, extended_header_size]))# 0x01-04: Format flags, version, section count, extended header size
+        f.write(struct.pack('<H', 256))                                  # 0x05: Min sections requirement
+        f.write(bytes([0x04]))                                           # 0x07: Max sections limit
+        f.write(os.urandom(8))                                           # 0x08: Unique identifier per export
         
-        # Write section directory (8 bytes per section)
-        section_data_start = total_header_size
+        # Section directory (8 bytes per section)
+        # Format: size (uint32) + type (uint8) + padding[0] = trailing padding bytes + padding[1:2]
+        f.write(struct.pack('<I', len(primary_data)))  # PRIMARY_DATA section
+        f.write(bytes([0x01]))                         # Section type: PRIMARY_DATA
+        f.write(b'\x0c\x00\x00')                       # Trailing padding: 12 bytes
         
-        # Section directory entries: 4 bytes size + 1 byte type + 3 bytes padding
-        # The first padding byte (offset 5) specifies trailing padding bytes after section data
+        f.write(struct.pack('<I', len(pointer_data)))  # POINTER_RELOCATION section
+        f.write(bytes([0x10]))                         # Section type: POINTER_RELOCATION
+        f.write(b'\x00\x00\x00')                       # Trailing padding: 0 bytes
         
-        # Section 0: PRIMARY_DATA (0x01)
-        f.write(struct.pack('<I', primary_size))  # Section size
-        f.write(bytes([0x01]))  # Section type (PRIMARY_DATA)
-        f.write(b'\x0c\x00\x00')  # Padding: 0x0c = 12 bytes trailing padding after section
+        f.write(struct.pack('<I', len(raster_data)))   # RASTER_CELLS section
+        f.write(bytes([0x50]))                         # Section type: RASTER_CELLS
+        f.write(b'\x04\x00\x00')                       # Trailing padding: 4 bytes
         
-        # Section 1: POINTER_RELOCATION (0x10)
-        f.write(struct.pack('<I', pointer_size))  # Section size
-        f.write(bytes([0x10]))  # Section type (POINTER_RELOCATION)
-        f.write(b'\x00\x00\x00')  # Padding: 0 bytes trailing padding
+        # Extended header (8 bytes, unused here)
+        f.write(b'\x00' * 8)
         
-        # Section 2: RASTER_CELLS (0x50)
-        f.write(struct.pack('<I', raster_size))  # Section size
-        f.write(bytes([0x50]))  # Section type (RASTER_CELLS)
-        f.write(b'\x04\x00\x00')  # Padding: 0x04 = 4 bytes trailing padding after section
-        
-        # Write extended header data (8 bytes)
-        f.write(b'\x00' * 8)  # Extended header (all zeros for now)
-        
-        # Write section data with trailing padding
-        f.write(primary_data)  # PRIMARY_DATA section
-        f.write(b'\x00' * 12)  # Trailing padding for PRIMARY_DATA (0x0c bytes)
-        f.write(pointer_data)  # POINTER_RELOCATION section
-        # No trailing padding for POINTER_RELOCATION (0x00 bytes)
-        f.write(raster_data)   # RASTER_CELLS section
-        f.write(b'\x00' * 4)   # Trailing padding for RASTER_CELLS (0x04 bytes)
+        # Section data with trailing padding
+        f.write(primary_data)
+        f.write(b'\x00' * 12)  # PRIMARY_DATA trailing padding
+        f.write(pointer_data)
+        f.write(raster_data)
+        f.write(b'\x00' * 4)   # RASTER_CELLS trailing padding
     
-    # Verify file size
-    actual_file_size = Path(filepath).stat().st_size
+    actual_size = Path(filepath).stat().st_size
+    if actual_size != total_file_size:
+        raise RuntimeError(f"File size mismatch: expected {total_file_size}, got {actual_size}")
     
-    print(f"MRDF file written: {filepath}")
-    print(f"  Grid: {width} × {height} cells")
-    print(f"  Cell data: {len(sorted_cells)} cells")
-    print(f"  Row offsets: {len(row_offsets)} entries")
-    print(f"  Expected file size: {total_file_size:,} bytes")
-    print(f"  Actual file size: {actual_file_size:,} bytes")
-    
-    if actual_file_size != total_file_size:
-        print(f"  ERROR: File size mismatch!")
-    else:
-        print(f"  File size verification: PASS")
+    print(f"Exported {len(sorted_cells)} cells to {Path(filepath).name} ({actual_size:,} bytes)")
 
 def export_livetrack_mrdf(obj, filepath: str, context):
     """Main export function"""
-    print(f"Exporting LiveTrack MRDF: {filepath}")
-    print("=" * 60)
-    
-    # Analyze mesh to get grid dimensions, bounds, and auto-calculated cell size
     width, height, world_bounds, cell_size = get_grid_dimensions_and_bounds(obj)
-    
-    # Extract grid data from mesh attributes (only masked cells)
     cells = extract_grid_data(obj)
     
-    # Calculate expected vs actual cells
-    total_possible_cells = width * height
-    print(f"Grid capacity: {total_possible_cells} cells")
-    print(f"Masked cells: {len(cells)} cells ({len(cells)/total_possible_cells*100:.1f}% coverage)")
+    if not cells:
+        raise ValueError("No masked cells found. Check 'mask' attribute has True values.")
     
-    if len(cells) == 0:
-        raise ValueError("No masked cells found! Check that the 'mask' attribute has some True values.")
+    coverage = len(cells) / (width * height) * 100
+    _log(f"Grid: {width}×{height} ({width * height} capacity), {len(cells)} masked ({coverage:.1f}% coverage)")
     
-    # Write MRDF file
     write_mrdf_file(filepath, width, height, world_bounds, cell_size, cells)
-    
-    print("=" * 60)
-    print("LiveTrack MRDF export completed successfully!")
 
 def menu_func_export(self, context):
     self.layout.operator(LiveTrackMRDFExporter.bl_idname, text="Madness LiveTrack Data (.mrdf)")
