@@ -4,21 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "f469678665168d54",
+        "id": "7907c85f4ae8fca0",
         "type": "tabs",
         "children": [
           {
-            "id": "d6aca745c9cc7916",
+            "id": "19e66e96ab8cf5f2",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Notes/File Format Listing.md",
-                "mode": "preview",
+                "file": "Formats/TRD Property Details/Oval Type.md",
+                "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "File Format Listing"
+              "title": "Oval Type"
             }
           }
         ]
@@ -78,7 +78,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 267.5
   },
   "right": {
     "id": "f0f30c5af6b2b057",
@@ -142,13 +142,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Limitations.md",
+                "file": "Notes/Materials.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of Limitations"
+              "title": "Outline of Materials"
             }
           }
         ],
@@ -170,19 +170,26 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "d6aca745c9cc7916",
+  "active": "19e66e96ab8cf5f2",
   "lastOpenFiles": [
+    "Formats/TRD.md",
+    "Formats/TRD Property Details/Oval Type.md",
+    "Formats/TRD Property Details/XLASTID.md",
+    "Notes/File Format Listing.md",
+    "Formats/TRD Property Details/Order Override.md",
+    "Formats/TRD Property Details/Number Of Turns.md",
+    "Formats/TRD Property Details/PitSpeedLimit_HighKPH.md",
+    "Formats/TRD Property Details/Track Surface.md",
+    "Formats/AIW.md",
+    "Notes/Materials.md",
     "Tutorial.md",
     "Formats/triggers.xml.md",
-    "Formats/TRD.md",
     "Formats/MEB.md",
     "Formats/LiveTrack MRDF.md",
     "Formats/GCL.md",
     "Formats/Camera XML.md",
     "Formats/CSM.md",
     "Formats/BMT.md",
-    "Notes/File Format Listing.md",
-    "Formats/AIW.md",
     "Formats/TRD Property Details/Cut track disabled.md",
     "Formats/TRD Property Details/Vehicle Filter.md",
     "Formats/TRD Property Details/Uses Reflection Flag.md",
@@ -191,14 +198,7 @@
     "Formats/TRD Property Details/Track_Climate.md",
     "Formats/TRD Property Details/DLC ID.md",
     "Formats/TRD Property Details/GrassSkidmarksOverride.md",
-    "Formats/TRD Property Details/GrassParticlesOverride.md",
-    "Formats/TRD Property Details/Weather Weights.md",
-    "Formats/TRD Property Details/CutTrackFraction.md",
     "Notes",
-    "README.md",
-    "Open Madness FMOD Tools/Notes.md",
-    "Formats/TRD Property Details/ShortTrackName.md",
-    "Formats/TRD Property Details/Setup group.md",
     "Open Madness FMOD Tools",
     "Open Madness Track Tools",
     "Formats"

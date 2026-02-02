@@ -99,7 +99,7 @@ Below is a list of every known assignable property found in AMS2's stock TRD fil
 - [[Order Override]]
 	- Determines display order for tracks in the same group (showing under the same track submenu in the UI).
 - [[Oval Type]]
-	- May determine the oval archetype (short oval, speedway, tri-oval, superspeedway, etc)?
+	- Determines the track archetype (short oval, restrictor plate oval, super speedway oval, low downforce circuit, high downforce circuit, etc.)
 - [[PitSpeedLimit_HighKPH]]
 	- Determines the default pitlane speed limit for the track, if any.
 - [[Post race orientation]]

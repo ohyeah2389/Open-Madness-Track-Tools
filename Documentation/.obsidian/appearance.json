@@ -1,7 +1,7 @@
 {
   "accentColor": "#c81e1e",
-  "interfaceFontFamily": "Monaspace Neon Var",
-  "textFontFamily": "Monaspace Neon Var",
+  "interfaceFontFamily": "",
+  "textFontFamily": "",
   "baseFontSize": 14,
   "showViewHeader": true,
   "showRibbon": false
