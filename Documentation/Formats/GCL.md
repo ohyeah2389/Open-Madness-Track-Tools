@@ -4,12 +4,15 @@ Format:
 - Header (32 bytes)
 	- Version/magic (01 00 00 10)
 	- Triangle count (int)
-	- Float x4
+	- Float x4 (unknown purpose)
 	- Flag x2
+		- X dimension in 100x100m cells
+		- Z dimension in 100x100m cells
 - Triangle data (40 bytes)
 	- Float x3
 	- Float x3
 	- Float x3
+		- Triangle vertex order written clockwise
 	- Flag
 		- 0x1 = Racing surface
 		- 0x2 = Pit area
