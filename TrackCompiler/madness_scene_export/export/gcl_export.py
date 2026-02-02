@@ -65,7 +65,8 @@ def collect_scene_triangles(
                     converted = _convert_coordinate(co)
                     verts.append(converted)
                     min_y = min(min_y, converted[1])
-                tris.append((verts[0], verts[1], verts[2], flag))
+                # GCL expects clockwise winding order?
+                tris.append((verts[0], verts[2], verts[1], flag))
         finally:
             obj_eval.to_mesh_clear()
 
@@ -249,17 +250,29 @@ def write_header(
     max_z: float,
     grid_100_x: int,
     grid_100_z: int,
+    x0: Optional[float] = None,
+    x1: Optional[float] = None,
+    z0: Optional[float] = None,
+    z1: Optional[float] = None,
+    grid_x_override: Optional[int] = None,
+    grid_z_override: Optional[int] = None,
 ):
+    x0_val = float(min_x if x0 is None else x0)
+    x1_val = float(max_x if x1 is None else x1)
+    z0_val = float(min_z if z0 is None else z0)
+    z1_val = float(max_z if z1 is None else z1)
+    grid_x_val = int(grid_100_x if grid_x_override is None else grid_x_override)
+    grid_z_val = int(grid_100_z if grid_z_override is None else grid_z_override)
     header = struct.pack(
         "<2I4f2I",
         version,
         tri_count,
-        float(min_x),
-        float(max_x),
-        float(min_z),
-        float(max_z),
-        int(grid_100_z),
-        int(grid_100_x),
+        x0_val,
+        x1_val,
+        z0_val,
+        z1_val,
+        grid_x_val,
+        grid_z_val,
     )
     f.write(header)
 
@@ -382,9 +395,7 @@ def build_and_write_dectree(
                         continue
 
                     if len(c10_tris) <= SUBDIVISION_THRESHOLD:
-                        write_cell(
-                            f, c10_min_x, c10_min_z, elevation, PROP_10M, refs=c10_tris
-                        )
+                        write_cell(f, c10_min_x, c10_min_z, elevation, PROP_10M, refs=c10_tris)
                         cell_counts["10m"] += 1
                         continue
 
@@ -409,9 +420,7 @@ def build_and_write_dectree(
                                 ):
                                     refs.append(ti)
 
-                            write_cell(
-                                f, c1_min_x, c1_min_z, elevation, PROP_1M, refs=refs
-                            )
+                            write_cell(f, c1_min_x, c1_min_z, elevation, PROP_1M, refs=refs)
                             cell_counts["1m"] += 1
 
     return cell_counts
@@ -434,21 +443,12 @@ def export_gcl(
             message += f" Missing objects: {', '.join(missing)}."
         raise ValueError(message)
 
-    elevation = (
-        elevation_override if elevation_override is not None else (min_y - 1.0)
-    )
+    elevation = elevation_override if elevation_override is not None else min_y
 
-    flattened_tris: List[Tri] = []
-    for (v0, v1, v2, flag) in tris:
-        v0_flat = (v0[0], elevation, v0[2])
-        v1_flat = (v1[0], elevation, v1[2])
-        v2_flat = (v2[0], elevation, v2[2])
-        flattened_tris.append((v0_flat, v1_flat, v2_flat, flag))
-
-    min_x = min(min(t[0][0], t[1][0], t[2][0]) for t in flattened_tris)
-    max_x = max(max(t[0][0], t[1][0], t[2][0]) for t in flattened_tris)
-    min_z = min(min(t[0][2], t[1][2], t[2][2]) for t in flattened_tris)
-    max_z = max(max(t[0][2], t[1][2], t[2][2]) for t in flattened_tris)
+    min_x = min(min(t[0][0], t[1][0], t[2][0]) for t in tris)
+    max_x = max(max(t[0][0], t[1][0], t[2][0]) for t in tris)
+    min_z = min(min(t[0][2], t[1][2], t[2][2]) for t in tris)
+    max_z = max(max(t[0][2], t[1][2], t[2][2]) for t in tris)
 
     grid_min_x, grid_max_x, grid_100_x = align_grid(min_x, max_x, 100.0)
     grid_min_z, grid_max_z, grid_100_z = align_grid(min_z, max_z, 100.0)
@@ -459,7 +459,7 @@ def export_gcl(
         write_header(
             f,
             version=version,
-            tri_count=len(flattened_tris),
+            tri_count=len(tris),
             min_x=grid_min_x,
             min_z=grid_min_z,
             max_x=grid_max_x,
@@ -467,10 +467,10 @@ def export_gcl(
             grid_100_x=grid_100_x,
             grid_100_z=grid_100_z,
         )
-        write_triangles(f, flattened_tris)
+        write_triangles(f, tris)
         cell_counts = build_and_write_dectree(
             f,
-            tris=flattened_tris,
+            tris=tris,
             grid_min_x=grid_min_x,
             grid_min_z=grid_min_z,
             grid_100_x=grid_100_x,
@@ -478,7 +478,7 @@ def export_gcl(
             elevation=elevation,
         )
 
-    print(f"GCL export: wrote {len(flattened_tris)} triangles to {filepath}")
+    print(f"GCL export: wrote {len(tris)} triangles to {filepath}")
     print(
         f"GCL bounds X[{grid_min_x},{grid_max_x}] Z[{grid_min_z},{grid_max_z}] grid {grid_100_x} x {grid_100_z}"
     )
@@ -493,7 +493,7 @@ def export_gcl(
         print(f"GCL export warning: objects with no geometry: {', '.join(empty)}")
 
     return {
-        "triangles": len(flattened_tris),
+        "triangles": len(tris),
         "grid": (grid_100_x, grid_100_z),
         "bounds": {
             "min_x": grid_min_x,
