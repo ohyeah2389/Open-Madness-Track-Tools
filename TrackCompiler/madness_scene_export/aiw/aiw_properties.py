@@ -48,7 +48,7 @@ class AIWTrackFeatures(bpy.types.PropertyGroup):
 
     track_difficulty: FloatProperty(
         name="Track Difficulty",
-        description="AI difficulty multiplier",
+        description="Unused according to Reiza devs",
         default=1.0,
         min=0.1,
         max=5.0,
