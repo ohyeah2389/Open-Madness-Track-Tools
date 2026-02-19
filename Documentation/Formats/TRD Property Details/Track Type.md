@@ -14,3 +14,13 @@
 - `Point to Point` (5)
 - `Rallycross` (10)
 
+Notes from Reiza:
+- Used for UI
+- Valid values:
+	- `Oval`
+	- `Circuit`
+	- `Point to Point`
+	- `Kart`
+	- `Offroad`
+	- `Rallycross`
+	- `Road`
