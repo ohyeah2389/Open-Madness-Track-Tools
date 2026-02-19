@@ -281,6 +281,54 @@ class MadnessGclExporter(bpy.types.Operator, ExportHelper):
         default=0.0,
     )  # type: ignore
 
+    use_min_x_override: BoolProperty(
+        name="Override Min X",
+        description="Use a custom minimum X for the 100m grid origin",
+        default=False,
+    )  # type: ignore
+
+    min_x_override: FloatProperty(
+        name="Min X",
+        description="Minimum X for 100m grid origin",
+        default=0.0,
+    )  # type: ignore
+
+    use_min_y_override: BoolProperty(
+        name="Override Min Y",
+        description="Use a custom minimum Y for the 100m grid origin",
+        default=False,
+    )  # type: ignore
+
+    min_y_override: FloatProperty(
+        name="Min Y",
+        description="Minimum Y for 100m grid origin",
+        default=0.0,
+    )  # type: ignore
+
+    use_max_x_override: BoolProperty(
+        name="Override Max X",
+        description="Write a custom raw float for the header max X position",
+        default=False,
+    )  # type: ignore
+
+    max_x_override: FloatProperty(
+        name="Max X",
+        description="Raw float written as the header max X position",
+        default=0.0,
+    )  # type: ignore
+
+    use_max_y_override: BoolProperty(
+        name="Override Max Y",
+        description="Write a custom raw float for the header max Y position",
+        default=False,
+    )  # type: ignore
+
+    max_y_override: FloatProperty(
+        name="Max Y",
+        description="Raw float written as the header max Y position",
+        default=0.0,
+    )  # type: ignore
+
     def execute(self, context):
         try:
             version = int(self.version_string, 0)
@@ -289,6 +337,10 @@ class MadnessGclExporter(bpy.types.Operator, ExportHelper):
             return {"CANCELLED"}
 
         elevation = self.elevation_override if self.use_elevation_override else None
+        min_x = self.min_x_override if self.use_min_x_override else None
+        min_y = self.min_y_override if self.use_min_y_override else None
+        max_x = self.max_x_override if self.use_max_x_override else None
+        max_y = self.max_y_override if self.use_max_y_override else None
 
         try:
             result = export_gcl(
@@ -296,6 +348,10 @@ class MadnessGclExporter(bpy.types.Operator, ExportHelper):
                 context=context,
                 version=version,
                 elevation_override=elevation,
+                min_x_override=min_x,
+                min_z_override=min_y,
+                max_x_override=max_x,
+                max_z_override=max_y,
             )
         except Exception as exc:
             self.report({"ERROR"}, f"GCL export failed: {exc}")
@@ -316,6 +372,27 @@ class MadnessGclExporter(bpy.types.Operator, ExportHelper):
         row = layout.row()
         row.enabled = self.use_elevation_override
         row.prop(self, "elevation_override")
+        layout.separator()
+
+        layout.prop(self, "use_min_x_override")
+        row = layout.row()
+        row.enabled = self.use_min_x_override
+        row.prop(self, "min_x_override")
+
+        layout.prop(self, "use_min_y_override")
+        row = layout.row()
+        row.enabled = self.use_min_y_override
+        row.prop(self, "min_y_override")
+
+        layout.prop(self, "use_max_x_override")
+        row = layout.row()
+        row.enabled = self.use_max_x_override
+        row.prop(self, "max_x_override")
+
+        layout.prop(self, "use_max_y_override")
+        row = layout.row()
+        row.enabled = self.use_max_y_override
+        row.prop(self, "max_y_override")
 
 
 def menu_func_export(self, context):

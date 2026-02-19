@@ -22,11 +22,23 @@ EPS = 1e-8
 
 Vec3 = Tuple[float, float, float]
 Tri = Tuple[Vec3, Vec3, Vec3, int]
+CellCacheEntry = Tuple[float, float, List[int]]
+
+
+def _f32(value: float) -> float:
+    """Round a Python float to IEEE-754 float32."""
+    return struct.unpack("<f", struct.pack("<f", float(value)))[0]
+
+
+# Parent cells with children use the raw uint32 value 10 in both float fields.
+SUBDIVISION_MARKER = 10
+SUBDIVISION_MARKER_F32 = struct.unpack("<f", struct.pack("<I", SUBDIVISION_MARKER))[0]
 
 
 def _convert_coordinate(co) -> Vec3:
     """Convert Blender world coordinates to AMS2 coordinates."""
-    return float(co.x), float(co.z), float(co.y)
+    # Quantize to float32 early so overlap/binning uses exactly what is written.
+    return _f32(co.x), _f32(co.z), _f32(co.y)
 
 
 def collect_scene_triangles(
@@ -257,10 +269,13 @@ def write_header(
     grid_x_override: Optional[int] = None,
     grid_z_override: Optional[int] = None,
 ):
-    x0_val = float(min_x if x0 is None else x0)
-    x1_val = float(max_x if x1 is None else x1)
-    z0_val = float(min_z if z0 is None else z0)
-    z1_val = float(max_z if z1 is None else z1)
+    # Stock AMS2 GCLs commonly store axis endpoints in reverse order
+    # (max, min) even though they represent the same extents.
+    # Keep that ordering by default for compatibility.
+    x0_val = float(max_x if x0 is None else x0)
+    x1_val = float(min_x if x1 is None else x1)
+    z0_val = float(max_z if z0 is None else z0)
+    z1_val = float(min_z if z1 is None else z1)
     grid_x_val = int(grid_100_x if grid_x_override is None else grid_x_override)
     grid_z_val = int(grid_100_z if grid_z_override is None else grid_z_override)
     header = struct.pack(
@@ -271,8 +286,8 @@ def write_header(
         x1_val,
         z0_val,
         z1_val,
-        grid_x_val,
         grid_z_val,
+        grid_x_val,
     )
     f.write(header)
 
@@ -302,14 +317,16 @@ def write_cell(
     elevation: float,
     prop: float,
     refs: Optional[List[int]] = None,
+    parameter: float = 0.0,
+    float_1: float = 0.0,
 ):
     refs = clamp_refs(refs or [])
     f.write(struct.pack("<I", len(refs)))
     f.write(
         struct.pack(
             "<6f",
-            0.0,
-            0.0,
+            float(parameter),
+            float(float_1),
             float(center_x),
             float(elevation),
             float(center_z),
@@ -327,6 +344,29 @@ def triangle_overlaps_cell(
     return triangle_intersects_rect((x0, z0), (x1, z1), (x2, z2), cx0, cz0, cx1, cz1)
 
 
+def _normalize_dectree_grid_dims(
+    tris: List[Tri],
+    grid_min_x: float,
+    grid_min_z: float,
+    grid_100_x: int,
+    grid_100_z: int,
+) -> Tuple[int, int]:
+    """Resolve x/z dimension swaps before building variable cell data."""
+    if not tris:
+        return grid_100_x, grid_100_z
+
+    max_x = max(max(t[0][0], t[1][0], t[2][0]) for t in tris)
+    max_z = max(max(t[0][2], t[1][2], t[2][2]) for t in tris)
+    needed_x = max(1, int(math.ceil((max_x - grid_min_x) / 100.0)))
+    needed_z = max(1, int(math.ceil((max_z - grid_min_z) / 100.0)))
+
+    fits_current = needed_x <= grid_100_x and needed_z <= grid_100_z
+    fits_swapped = needed_x <= grid_100_z and needed_z <= grid_100_x
+    if not fits_current and fits_swapped:
+        return grid_100_z, grid_100_x
+    return grid_100_x, grid_100_z
+
+
 def build_and_write_dectree(
     f,
     tris: List[Tri],
@@ -336,45 +376,42 @@ def build_and_write_dectree(
     grid_100_z: int,
     elevation: float = 0.0,
 ) -> Dict[str, int]:
+    grid_100_x, grid_100_z = _normalize_dectree_grid_dims(
+        tris, grid_min_x, grid_min_z, grid_100_x, grid_100_z
+    )
     bins_100 = build_spatial_bins(tris, grid_min_x, grid_min_z, grid_100_x, grid_100_z)
     cell_counts = {"100m": 0, "10m": 0, "1m": 0}
+
+    def write_parent_cell_with_marker(
+        has_children: bool, x: float, z: float, prop: float
+    ) -> None:
+        if has_children:
+            write_cell(
+                f,
+                x,
+                z,
+                elevation,
+                prop,
+                refs=[],
+                parameter=SUBDIVISION_MARKER_F32,
+                float_1=SUBDIVISION_MARKER_F32,
+            )
+        else:
+            write_cell(f, x, z, elevation, prop, refs=[])
 
     for ix100 in range(0, grid_100_x):
         for iz100 in range(0, grid_100_z):
             cell_min_x = grid_min_x + ix100 * 100.0
             cell_min_z = grid_min_z + iz100 * 100.0
-            cell_max_x = cell_min_x + 100.0
-            cell_max_z = cell_min_z + 100.0
-
-            write_cell(f, cell_min_x, cell_min_z, elevation, PROP_100M, refs=[])
-            cell_counts["100m"] += 1
 
             tri_candidates = bins_100.get((ix100, iz100), [])
             if not tri_candidates:
+                write_parent_cell_with_marker(False, cell_min_x, cell_min_z, PROP_100M)
+                cell_counts["100m"] += 1
                 continue
 
             has_any_10m_overlap = False
-            for ix10 in range(0, 10):
-                for iz10 in range(0, 10):
-                    c10_min_x = cell_min_x + ix10 * 10.0
-                    c10_min_z = cell_min_z + iz10 * 10.0
-                    c10_max_x = c10_min_x + 10.0
-                    c10_max_z = c10_min_z + 10.0
-
-                    for ti in tri_candidates:
-                        if triangle_overlaps_cell(
-                            tris[ti], c10_min_x, c10_min_z, c10_max_x, c10_max_z
-                        ):
-                            has_any_10m_overlap = True
-                            break
-                    if has_any_10m_overlap:
-                        break
-                if has_any_10m_overlap:
-                    break
-
-            if not has_any_10m_overlap:
-                continue
-
+            c10_cache: List[CellCacheEntry] = []
             for ix10 in range(0, 10):
                 for iz10 in range(0, 10):
                     c10_min_x = cell_min_x + ix10 * 10.0
@@ -388,40 +425,52 @@ def build_and_write_dectree(
                             tris[ti], c10_min_x, c10_min_z, c10_max_x, c10_max_z
                         ):
                             c10_tris.append(ti)
+                    if c10_tris:
+                        has_any_10m_overlap = True
+                    c10_cache.append((c10_min_x, c10_min_z, c10_tris))
 
-                    if not c10_tris:
-                        write_cell(f, c10_min_x, c10_min_z, elevation, PROP_10M, refs=[])
-                        cell_counts["10m"] += 1
-                        continue
+            # 100m parent cells with children have marker values in parameter/float_1.
+            write_parent_cell_with_marker(has_any_10m_overlap, cell_min_x, cell_min_z, PROP_100M)
+            cell_counts["100m"] += 1
 
-                    if len(c10_tris) <= SUBDIVISION_THRESHOLD:
-                        write_cell(f, c10_min_x, c10_min_z, elevation, PROP_10M, refs=c10_tris)
-                        cell_counts["10m"] += 1
-                        continue
+            if not has_any_10m_overlap:
+                continue
 
+            for c10_min_x, c10_min_z, c10_tris in c10_cache:
+                if not c10_tris:
                     write_cell(f, c10_min_x, c10_min_z, elevation, PROP_10M, refs=[])
                     cell_counts["10m"] += 1
+                    continue
 
-                    for ix1 in range(0, 10):
-                        for iz1 in range(0, 10):
-                            c1_min_x = c10_min_x + ix1 * 1.0
-                            c1_min_z = c10_min_z + iz1 * 1.0
-                            c1_max_x = c1_min_x + 1.0
-                            c1_max_z = c1_min_z + 1.0
+                if len(c10_tris) <= SUBDIVISION_THRESHOLD:
+                    write_cell(f, c10_min_x, c10_min_z, elevation, PROP_10M, refs=c10_tris)
+                    cell_counts["10m"] += 1
+                    continue
 
-                            refs: List[int] = []
-                            for ti in c10_tris:
-                                if triangle_overlaps_cell(
-                                    tris[ti],
-                                    c1_min_x,
-                                    c1_min_z,
-                                    c1_max_x,
-                                    c1_max_z,
-                                ):
-                                    refs.append(ti)
+                # 10m parent cells with 1m children carry the same marker pattern.
+                write_parent_cell_with_marker(True, c10_min_x, c10_min_z, PROP_10M)
+                cell_counts["10m"] += 1
 
-                            write_cell(f, c1_min_x, c1_min_z, elevation, PROP_1M, refs=refs)
-                            cell_counts["1m"] += 1
+                for ix1 in range(0, 10):
+                    for iz1 in range(0, 10):
+                        c1_min_x = c10_min_x + ix1 * 1.0
+                        c1_min_z = c10_min_z + iz1 * 1.0
+                        c1_max_x = c1_min_x + 1.0
+                        c1_max_z = c1_min_z + 1.0
+
+                        refs: List[int] = []
+                        for ti in c10_tris:
+                            if triangle_overlaps_cell(
+                                tris[ti],
+                                c1_min_x,
+                                c1_min_z,
+                                c1_max_x,
+                                c1_max_z,
+                            ):
+                                refs.append(ti)
+
+                        write_cell(f, c1_min_x, c1_min_z, elevation, PROP_1M, refs=refs)
+                        cell_counts["1m"] += 1
 
     return cell_counts
 
@@ -431,6 +480,10 @@ def export_gcl(
     context: bpy.types.Context,
     version: int = 0x10000001,
     elevation_override: Optional[float] = None,
+    min_x_override: Optional[float] = None,
+    min_z_override: Optional[float] = None,
+    max_x_override: Optional[float] = None,
+    max_z_override: Optional[float] = None,
 ) -> Dict[str, object]:
     depsgraph = context.evaluated_depsgraph_get()
     tris, min_y, missing, non_mesh, empty = collect_scene_triangles(
@@ -450,8 +503,38 @@ def export_gcl(
     min_z = min(min(t[0][2], t[1][2], t[2][2]) for t in tris)
     max_z = max(max(t[0][2], t[1][2], t[2][2]) for t in tris)
 
-    grid_min_x, grid_max_x, grid_100_x = align_grid(min_x, max_x, 100.0)
-    grid_min_z, grid_max_z, grid_100_z = align_grid(min_z, max_z, 100.0)
+    auto_grid_min_x, auto_grid_max_x, auto_grid_100_x = align_grid(min_x, max_x, 100.0)
+    auto_grid_min_z, auto_grid_max_z, auto_grid_100_z = align_grid(min_z, max_z, 100.0)
+
+    grid_min_x = auto_grid_min_x if min_x_override is None else float(min_x_override)
+    grid_min_z = auto_grid_min_z if min_z_override is None else float(min_z_override)
+
+    # Keep dectree dimensions computed from geometry/min overrides.
+    if min_x_override is None:
+        grid_100_x = auto_grid_100_x
+        grid_max_x = auto_grid_max_x
+    else:
+        grid_max_x = auto_grid_max_x
+        grid_100_x = max(1, int(math.ceil((grid_max_x - grid_min_x) / 100.0)))
+
+    if min_z_override is None:
+        grid_100_z = auto_grid_100_z
+        grid_max_z = auto_grid_max_z
+    else:
+        grid_max_z = auto_grid_max_z
+        grid_100_z = max(1, int(math.ceil((grid_max_z - grid_min_z) / 100.0)))
+
+    # Normalize once for dectree traversal.
+    dectree_grid_x, dectree_grid_z = _normalize_dectree_grid_dims(
+        tris, grid_min_x, grid_min_z, grid_100_x, grid_100_z
+    )
+    # Stock-compatible header convention stores these dimensions transposed
+    # relative to dectree traversal.
+    grid_span_x = dectree_grid_z
+    grid_span_z = dectree_grid_x
+
+    grid_max_x = grid_max_x if max_x_override is None else float(max_x_override)
+    grid_max_z = grid_max_z if max_z_override is None else float(max_z_override)
 
     Path(filepath).parent.mkdir(parents=True, exist_ok=True)
 
@@ -464,8 +547,8 @@ def export_gcl(
             min_z=grid_min_z,
             max_x=grid_max_x,
             max_z=grid_max_z,
-            grid_100_x=grid_100_x,
-            grid_100_z=grid_100_z,
+            grid_100_x=grid_span_x,
+            grid_100_z=grid_span_z,
         )
         write_triangles(f, tris)
         cell_counts = build_and_write_dectree(
@@ -473,14 +556,15 @@ def export_gcl(
             tris=tris,
             grid_min_x=grid_min_x,
             grid_min_z=grid_min_z,
-            grid_100_x=grid_100_x,
-            grid_100_z=grid_100_z,
+            grid_100_x=dectree_grid_x,
+            grid_100_z=dectree_grid_z,
             elevation=elevation,
         )
 
     print(f"GCL export: wrote {len(tris)} triangles to {filepath}")
     print(
-        f"GCL bounds X[{grid_min_x},{grid_max_x}] Z[{grid_min_z},{grid_max_z}] grid {grid_100_x} x {grid_100_z}"
+        f"GCL bounds X[{grid_min_x},{grid_max_x}] Z[{grid_min_z},{grid_max_z}] "
+        f"grid header {grid_span_x} x {grid_span_z} / dectree {dectree_grid_x} x {dectree_grid_z}"
     )
     print(
         f"GCL elevation {elevation:.3f}m | cells 100m={cell_counts['100m']} 10m={cell_counts['10m']} 1m={cell_counts['1m']}"
@@ -494,7 +578,8 @@ def export_gcl(
 
     return {
         "triangles": len(tris),
-        "grid": (grid_100_x, grid_100_z),
+        "grid": (dectree_grid_x, dectree_grid_z),
+        "header_grid": (grid_span_x, grid_span_z),
         "bounds": {
             "min_x": grid_min_x,
             "max_x": grid_max_x,
