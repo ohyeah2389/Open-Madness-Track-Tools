@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Set
 import mathutils  # type: ignore
 import numpy as np
 from ..properties.dynamic_properties import is_sms_dynamic, get_dynamic_name
-from ..utils.coordinate_transforms import decompose_matrix, convert_position, convert_rotation_matrix, q_to_matrix
+from ..utils.coordinate_transforms import convert_position, convert_rotation_matrix
 
 
 def collect_dynamic_objects(scene) -> List[Dict[str, Any]]:
@@ -16,21 +16,21 @@ def collect_dynamic_objects(scene) -> List[Dict[str, Any]]:
         if is_sms_dynamic(obj):
             dynamic_props = obj.madness_dynamic
             
-            # Skip objects without templates
+            # Skip empties without a template selection.
+            # Since any empty can now be used, this avoids warning spam for
+            # non-dynamic helper empties in the scene.
             if not dynamic_props.template_name:
-                print(f"Warning: Dynamic object '{obj.name}' has no template selected, skipping")
                 continue
             
             # Get world transform and convert to Madness coordinate system
             world_matrix = obj.matrix_world
             
-            # Convert full matrix to Madness coordinate system using decompose_matrix
-            # Convert Blender matrix to numpy array first
+            # Convert Blender transform directly to Madness coordinates.
+            # Dynamic env matrices expect direct converted basis axes here; using the
+            # generic quaternion post-fix path can invert yaw direction for dynamics.
             world_matrix_np = np.array(world_matrix)
-            madness_position, madness_quaternion = decompose_matrix(world_matrix_np)
-            
-            # Convert quaternion to rotation matrix
-            madness_rotation = q_to_matrix(madness_quaternion)
+            madness_position = convert_position(world_matrix_np[:3, 3])
+            madness_rotation = convert_rotation_matrix(world_matrix_np[:3, :3])
             
             # Handle scale - use object scale or override
             if dynamic_props.use_scale_override:
@@ -81,8 +81,9 @@ def collect_dynamic_objects(scene) -> List[Dict[str, Any]]:
 
 def load_master_template(template_name: str) -> Dict[str, Any]:
     """Load a specific template from the master dynamic collisions file"""
-    addon_dir = Path(__file__).parent
-    database_path = addon_dir / "database" / "master_dynamic_collisions.xml"
+    # Resolve from madness_scene_export/export -> madness_scene_export/database
+    addon_root = Path(__file__).resolve().parent.parent
+    database_path = addon_root / "database" / "master_dynamic_collisions.xml"
     
     if not database_path.exists():
         raise FileNotFoundError(f"Master dynamic collisions file not found: {database_path}")
@@ -220,10 +221,14 @@ def create_environment_xml(dynamic_objects: List[Dict[str, Any]]) -> ET.Element:
     
     funcpropdata = ET.SubElement(array_prop, 'funcpropdata')
     
-    # Add each dynamic object
+    # Add each dynamic object.
+    # AMS2 stock files typically use high-range, pointer-like IDs and often
+    # increase by 0xD0 between sibling EnvironmentObject entries.
+    object_id_base = 0x8D100000
     for i, obj_info in enumerate(dynamic_objects, 1):
+        object_id = object_id_base + ((i - 1) * 0xD0)
         obj_data = ET.SubElement(funcpropdata, 'data', 
-                                **{'class': 'EnvironmentObject', 'id': f'0x{9000000 + i:08X}'})
+                                **{'class': 'EnvironmentObject', 'id': f'0x{object_id:08X}'})
         
         # Generate instance name (template name + number)
         instance_name = f"{obj_info['template_name']} {i}"
@@ -253,7 +258,7 @@ def export_environment_xml(filepath: str, dynamic_objects: List[Dict[str, Any]])
     root = create_environment_xml(dynamic_objects)
     
     # Format and write XML without encoding
-    ET.indent(root, space="  ")
+    ET.indent(root, space="    ")
     tree = ET.ElementTree(root)
     tree.write(filepath, xml_declaration=False)
     

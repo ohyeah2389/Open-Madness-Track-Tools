@@ -6,7 +6,7 @@ _group_expand_state = {}
 
 
 class MadnessDynamicPanel(bpy.types.Panel):
-    """Panel for SMS Dynamic Object properties"""
+    """Panel for dynamic physics object properties"""
     bl_label = "Madness Dynamic Object"
     bl_idname = "OBJECT_PT_madness_dynamic"
     bl_space_type = 'PROPERTIES'
@@ -34,7 +34,22 @@ class MadnessDynamicPanel(bpy.types.Panel):
             row.prop(dynamic_props, "template_name", text="Template")
         else:
             row.operator("madness_dynamic.select_template", text="Select Template", icon='DOWNARROW_HLT')
-        row.operator("madness_dynamic.refresh_templates", text="", icon='TRASH' if dynamic_props.template_name else 'FILE_REFRESH')
+        if dynamic_props.template_name:
+            row.operator("madness_dynamic.clear_template", text="", icon='TRASH')
+        else:
+            row.operator("madness_dynamic.refresh_templates", text="", icon='FILE_REFRESH')
+
+        selected_dynamic_empties = [
+            selected_obj for selected_obj in context.selected_objects
+            if selected_obj.type == 'EMPTY'
+        ]
+        if dynamic_props.template_name and len(selected_dynamic_empties) > 1:
+            copy_row = main_box.row()
+            copy_row.operator(
+                "madness_dynamic.copy_template_to_selected",
+                text=f"Copy Template To {len(selected_dynamic_empties)} Selected Empties",
+                icon='DUPLICATE'
+            )
         
         if dynamic_props.template_name:
             # Mass Override
@@ -104,7 +119,7 @@ class MADNESS_DYNAMIC_OT_select_template(bpy.types.Operator):
         obj = context.object
         
         if not obj or not is_sms_dynamic(obj):
-            layout.label(text="No SMS_DYN object selected")
+            layout.label(text="No dynamic empty selected")
             return
         
         layout.label(text="Select Dynamic Object Template:", icon='LIBRARY_DATA_DIRECT')
@@ -252,7 +267,7 @@ class MADNESS_DYNAMIC_OT_set_template(bpy.types.Operator):
         obj = context.object
         
         if not obj or not is_sms_dynamic(obj):
-            self.report({'ERROR'}, "No SMS_DYN object selected")
+            self.report({'ERROR'}, "No dynamic empty selected")
             return {'CANCELLED'}
         
         obj.madness_dynamic.template_name = self.template_name
@@ -272,6 +287,58 @@ class MADNESS_DYNAMIC_OT_refresh_templates(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class MADNESS_DYNAMIC_OT_clear_template(bpy.types.Operator):
+    """Clear template from the active empty only"""
+    bl_idname = "madness_dynamic.clear_template"
+    bl_label = "Clear Template"
+    bl_description = "Clear the selected template on the active empty"
+
+    def execute(self, context):
+        obj = context.object
+        if not obj or obj.type != 'EMPTY':
+            self.report({'ERROR'}, "Active object is not an empty")
+            return {'CANCELLED'}
+
+        obj.madness_dynamic.template_name = ""
+        self.report({'INFO'}, "Template cleared for active empty")
+        return {'FINISHED'}
+
+
+class MADNESS_DYNAMIC_OT_copy_template_to_selected(bpy.types.Operator):
+    """Copy active template to all selected empties"""
+    bl_idname = "madness_dynamic.copy_template_to_selected"
+    bl_label = "Copy Template To Selected"
+    bl_description = "Copy the active empty's template to all selected empties"
+
+    def execute(self, context):
+        active_obj = context.object
+        if not active_obj or active_obj.type != 'EMPTY':
+            self.report({'ERROR'}, "Active object is not an empty")
+            return {'CANCELLED'}
+
+        template_name = active_obj.madness_dynamic.template_name
+        if not template_name:
+            self.report({'WARNING'}, "Active empty has no template selected")
+            return {'CANCELLED'}
+
+        selected_empties = [obj for obj in context.selected_objects if obj.type == 'EMPTY']
+        if not selected_empties:
+            self.report({'WARNING'}, "No selected empties to copy template to")
+            return {'CANCELLED'}
+
+        updated_count = 0
+        for obj in selected_empties:
+            if obj.madness_dynamic.template_name != template_name:
+                obj.madness_dynamic.template_name = template_name
+                updated_count += 1
+
+        self.report(
+            {'INFO'},
+            f"Applied template '{template_name}' to {len(selected_empties)} selected empties ({updated_count} changed)"
+        )
+        return {'FINISHED'}
+
+
 
 
 def register():
@@ -280,7 +347,9 @@ def register():
         MADNESS_DYNAMIC_OT_select_template,
         MADNESS_DYNAMIC_OT_toggle_group,
         MADNESS_DYNAMIC_OT_set_template,
-        MADNESS_DYNAMIC_OT_refresh_templates
+        MADNESS_DYNAMIC_OT_refresh_templates,
+        MADNESS_DYNAMIC_OT_clear_template,
+        MADNESS_DYNAMIC_OT_copy_template_to_selected
     ]
     
     for cls in classes:
@@ -294,6 +363,8 @@ def register():
 
 def unregister():
     classes = [
+        MADNESS_DYNAMIC_OT_copy_template_to_selected,
+        MADNESS_DYNAMIC_OT_clear_template,
         MADNESS_DYNAMIC_OT_refresh_templates,
         MADNESS_DYNAMIC_OT_set_template,
         MADNESS_DYNAMIC_OT_toggle_group,

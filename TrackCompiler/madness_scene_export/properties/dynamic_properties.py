@@ -18,9 +18,9 @@ def get_available_dynamic_templates():
     if _template_cache is not None:
         return _template_cache
     
-    # Get the database folder path relative to this addon
-    addon_dir = Path(__file__).parent
-    database_path = addon_dir / "database" / "master_dynamic_collisions.xml"
+    # Resolve from madness_scene_export/properties -> madness_scene_export/database
+    addon_root = Path(__file__).resolve().parent.parent
+    database_path = addon_root / "database" / "master_dynamic_collisions.xml"
     
     templates = [("", "Select Template", "")]
     
@@ -64,7 +64,7 @@ def update_template_list(self, context):
 
 
 class MadnessDynamicProperties(bpy.types.PropertyGroup):
-    """Properties for SMS_DYN_ prefixed empty objects"""
+    """Properties for dynamic physics empties"""
 
     # Template Selection
     template_name: StringProperty(
@@ -145,31 +145,22 @@ class MadnessDynamicProperties(bpy.types.PropertyGroup):
 
 
 def is_sms_dynamic(obj):
-    """Check if object is an SMS dynamic object (SMS_DYN_ prefixed empty)"""
-    return (obj and 
-            obj.type == 'EMPTY' and 
-            obj.name.startswith('SMS_DYN_'))
+    """Check if object can be used as a dynamic physics empty."""
+    return obj and obj.type == 'EMPTY'
 
 
 def get_dynamic_name(obj):
-    """Get dynamic object name without SMS_DYN_ prefix"""
+    """Get dynamic object display name for exported instance naming."""
     if obj.name.startswith('SMS_DYN_'):
         return obj.name[8:]  # Remove 'SMS_DYN_' prefix
     return obj.name
 
 
 def refresh_template_list():
-    """Force refresh of the template list for all dynamic objects"""
+    """Force refresh of the cached template list."""
     global _template_cache
     # Clear the cache to force reload
     _template_cache = None
-    
-    # This can be called when the master database is updated
-    for obj in bpy.context.scene.objects:
-        if is_sms_dynamic(obj):
-            # Trigger a UI refresh by touching the property
-            if hasattr(obj, 'madness_dynamic'):
-                obj.madness_dynamic.property_unset("template_name")
 
 
 def register():

@@ -177,7 +177,7 @@ class MadnessDynamicObjectsExporter(bpy.types.Operator, ExportHelper):
             if results["collisions"] == 0 and results["environment"] == 0:
                 self.report(
                     {"WARNING"},
-                    "No SMS_DYN objects found in scene. Create empties named SMS_DYN_[name] first.",
+                    "No dynamic empties with templates found in scene. Select a template on one or more empties first.",
                 )
                 return {"CANCELLED"}
 
