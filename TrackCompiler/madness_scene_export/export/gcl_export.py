@@ -77,7 +77,7 @@ def collect_scene_triangles(
                     converted = _convert_coordinate(co)
                     verts.append(converted)
                     min_y = min(min_y, converted[1])
-                # GCL expects clockwise winding order?
+                # GCL expects clockwise winding order
                 tris.append((verts[0], verts[2], verts[1], flag))
         finally:
             obj_eval.to_mesh_clear()
@@ -222,6 +222,11 @@ def align_grid(min_v: float, max_v: float, cell: float) -> Tuple[float, float, i
     return a, b, n
 
 
+def floor_to_100(value: float) -> float:
+    """Round a value down to the nearest 100."""
+    return math.floor(value / 100.0) * 100.0
+
+
 def rects_overlap(ax0, az0, ax1, az1, bx0, bz0, bx1, bz1) -> bool:
     return not (ax1 <= bx0 or bx1 <= ax0 or az1 <= bz0 or bz1 <= az0)
 
@@ -256,38 +261,26 @@ def write_header(
     f,
     version: int,
     tri_count: int,
-    min_x: float,
-    min_z: float,
-    max_x: float,
-    max_z: float,
+    hundred: float,
+    origin_x: float,
+    origin_y: float,
+    origin_z: float,
     grid_100_x: int,
     grid_100_z: int,
-    x0: Optional[float] = None,
-    x1: Optional[float] = None,
-    z0: Optional[float] = None,
-    z1: Optional[float] = None,
-    grid_x_override: Optional[int] = None,
-    grid_z_override: Optional[int] = None,
 ):
-    # Stock AMS2 GCLs commonly store axis endpoints in reverse order
-    # (max, min) even though they represent the same extents.
-    # Keep that ordering by default for compatibility.
-    x0_val = float(max_x if x0 is None else x0)
-    x1_val = float(min_x if x1 is None else x1)
-    z0_val = float(max_z if z0 is None else z0)
-    z1_val = float(min_z if z1 is None else z1)
-    grid_x_val = int(grid_100_x if grid_x_override is None else grid_x_override)
-    grid_z_val = int(grid_100_z if grid_z_override is None else grid_z_override)
+    # Canonical header layout:
+    # values[2]=hundred, values[3]=origin_x, values[4]=origin_y, values[5]=origin_z
+    # values[6]=grid_cells_x, values[7]=grid_cells_z
     header = struct.pack(
         "<2I4f2I",
         version,
         tri_count,
-        x0_val,
-        x1_val,
-        z0_val,
-        z1_val,
-        grid_z_val,
-        grid_x_val,
+        float(hundred),
+        float(origin_x),
+        float(origin_y),
+        float(origin_z),
+        int(grid_100_x),
+        int(grid_100_z),
     )
     f.write(header)
 
@@ -344,29 +337,6 @@ def triangle_overlaps_cell(
     return triangle_intersects_rect((x0, z0), (x1, z1), (x2, z2), cx0, cz0, cx1, cz1)
 
 
-def _normalize_dectree_grid_dims(
-    tris: List[Tri],
-    grid_min_x: float,
-    grid_min_z: float,
-    grid_100_x: int,
-    grid_100_z: int,
-) -> Tuple[int, int]:
-    """Resolve x/z dimension swaps before building variable cell data."""
-    if not tris:
-        return grid_100_x, grid_100_z
-
-    max_x = max(max(t[0][0], t[1][0], t[2][0]) for t in tris)
-    max_z = max(max(t[0][2], t[1][2], t[2][2]) for t in tris)
-    needed_x = max(1, int(math.ceil((max_x - grid_min_x) / 100.0)))
-    needed_z = max(1, int(math.ceil((max_z - grid_min_z) / 100.0)))
-
-    fits_current = needed_x <= grid_100_x and needed_z <= grid_100_z
-    fits_swapped = needed_x <= grid_100_z and needed_z <= grid_100_x
-    if not fits_current and fits_swapped:
-        return grid_100_z, grid_100_x
-    return grid_100_x, grid_100_z
-
-
 def build_and_write_dectree(
     f,
     tris: List[Tri],
@@ -376,9 +346,6 @@ def build_and_write_dectree(
     grid_100_z: int,
     elevation: float = 0.0,
 ) -> Dict[str, int]:
-    grid_100_x, grid_100_z = _normalize_dectree_grid_dims(
-        tris, grid_min_x, grid_min_z, grid_100_x, grid_100_z
-    )
     bins_100 = build_spatial_bins(tris, grid_min_x, grid_min_z, grid_100_x, grid_100_z)
     cell_counts = {"100m": 0, "10m": 0, "1m": 0}
 
@@ -480,10 +447,6 @@ def export_gcl(
     context: bpy.types.Context,
     version: int = 0x10000001,
     elevation_override: Optional[float] = None,
-    min_x_override: Optional[float] = None,
-    min_z_override: Optional[float] = None,
-    max_x_override: Optional[float] = None,
-    max_z_override: Optional[float] = None,
 ) -> Dict[str, object]:
     depsgraph = context.evaluated_depsgraph_get()
     tris, min_y, missing, non_mesh, empty = collect_scene_triangles(
@@ -496,45 +459,16 @@ def export_gcl(
             message += f" Missing objects: {', '.join(missing)}."
         raise ValueError(message)
 
-    elevation = elevation_override if elevation_override is not None else min_y
+    base_elevation = elevation_override if elevation_override is not None else min_y
+    elevation = floor_to_100(base_elevation)
 
     min_x = min(min(t[0][0], t[1][0], t[2][0]) for t in tris)
     max_x = max(max(t[0][0], t[1][0], t[2][0]) for t in tris)
     min_z = min(min(t[0][2], t[1][2], t[2][2]) for t in tris)
     max_z = max(max(t[0][2], t[1][2], t[2][2]) for t in tris)
 
-    auto_grid_min_x, auto_grid_max_x, auto_grid_100_x = align_grid(min_x, max_x, 100.0)
-    auto_grid_min_z, auto_grid_max_z, auto_grid_100_z = align_grid(min_z, max_z, 100.0)
-
-    grid_min_x = auto_grid_min_x if min_x_override is None else float(min_x_override)
-    grid_min_z = auto_grid_min_z if min_z_override is None else float(min_z_override)
-
-    # Keep dectree dimensions computed from geometry/min overrides.
-    if min_x_override is None:
-        grid_100_x = auto_grid_100_x
-        grid_max_x = auto_grid_max_x
-    else:
-        grid_max_x = auto_grid_max_x
-        grid_100_x = max(1, int(math.ceil((grid_max_x - grid_min_x) / 100.0)))
-
-    if min_z_override is None:
-        grid_100_z = auto_grid_100_z
-        grid_max_z = auto_grid_max_z
-    else:
-        grid_max_z = auto_grid_max_z
-        grid_100_z = max(1, int(math.ceil((grid_max_z - grid_min_z) / 100.0)))
-
-    # Normalize once for dectree traversal.
-    dectree_grid_x, dectree_grid_z = _normalize_dectree_grid_dims(
-        tris, grid_min_x, grid_min_z, grid_100_x, grid_100_z
-    )
-    # Stock-compatible header convention stores these dimensions transposed
-    # relative to dectree traversal.
-    grid_span_x = dectree_grid_z
-    grid_span_z = dectree_grid_x
-
-    grid_max_x = grid_max_x if max_x_override is None else float(max_x_override)
-    grid_max_z = grid_max_z if max_z_override is None else float(max_z_override)
+    grid_min_x, grid_max_x, grid_100_x = align_grid(min_x, max_x, 100.0)
+    grid_min_z, grid_max_z, grid_100_z = align_grid(min_z, max_z, 100.0)
 
     Path(filepath).parent.mkdir(parents=True, exist_ok=True)
 
@@ -543,12 +477,12 @@ def export_gcl(
             f,
             version=version,
             tri_count=len(tris),
-            min_x=grid_min_x,
-            min_z=grid_min_z,
-            max_x=grid_max_x,
-            max_z=grid_max_z,
-            grid_100_x=grid_span_x,
-            grid_100_z=grid_span_z,
+            hundred=100.0,
+            origin_x=grid_min_x,
+            origin_y=elevation,
+            origin_z=grid_min_z,
+            grid_100_x=grid_100_x,
+            grid_100_z=grid_100_z,
         )
         write_triangles(f, tris)
         cell_counts = build_and_write_dectree(
@@ -556,18 +490,18 @@ def export_gcl(
             tris=tris,
             grid_min_x=grid_min_x,
             grid_min_z=grid_min_z,
-            grid_100_x=dectree_grid_x,
-            grid_100_z=dectree_grid_z,
-            elevation=elevation,
+            grid_100_x=grid_100_x,
+            grid_100_z=grid_100_z,
+            elevation=base_elevation,
         )
 
     print(f"GCL export: wrote {len(tris)} triangles to {filepath}")
     print(
         f"GCL bounds X[{grid_min_x},{grid_max_x}] Z[{grid_min_z},{grid_max_z}] "
-        f"grid header {grid_span_x} x {grid_span_z} / dectree {dectree_grid_x} x {dectree_grid_z}"
+        f"grid {grid_100_x} x {grid_100_z}"
     )
     print(
-        f"GCL elevation {elevation:.3f}m | cells 100m={cell_counts['100m']} 10m={cell_counts['10m']} 1m={cell_counts['1m']}"
+        f"GCL elevation {base_elevation:.3f}m | cells 100m={cell_counts['100m']} 10m={cell_counts['10m']} 1m={cell_counts['1m']}"
     )
     if missing:
         print(f"GCL export warning: missing objects: {', '.join(missing)}")
@@ -578,15 +512,15 @@ def export_gcl(
 
     return {
         "triangles": len(tris),
-        "grid": (dectree_grid_x, dectree_grid_z),
-        "header_grid": (grid_span_x, grid_span_z),
+        "grid": (grid_100_x, grid_100_z),
+        "header_grid": (grid_100_x, grid_100_z),
         "bounds": {
             "min_x": grid_min_x,
             "max_x": grid_max_x,
             "min_z": grid_min_z,
             "max_z": grid_max_z,
         },
-        "elevation": elevation,
+        "elevation": base_elevation,
         "cell_counts": cell_counts,
         "missing_objects": missing,
         "non_mesh_objects": non_mesh,
