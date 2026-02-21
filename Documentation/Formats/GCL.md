@@ -4,7 +4,12 @@ Format:
 - Header (32 bytes)
 	- Version/magic (01 00 00 10)
 	- Triangle count (int)
-	- Float x4 (unknown purpose)
+	- Float x1
+		- always 100 (possibly top level cell size?)
+	- Float x3
+		- Origin X
+		- Origin Y
+		- Origin Z
 	- Flag x2
 		- X dimension in 100x100m cells
 		- Z dimension in 100x100m cells
