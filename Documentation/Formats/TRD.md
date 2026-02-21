@@ -162,7 +162,7 @@ Below is a list of every known assignable property found in AMS2's stock TRD fil
 - [[TrackGradeFilter]]
 	- Racing category of the track, such as `Grade1`, `Historic`, etc.
 - [[TrackName]]
-	- The name of the track displayed in the UI. Stock game tracks use this to look up a "pretty name" somewhere in the game's config files; for custom tracks, use spaces instead of underscores to display a "pretty name" in the UI.
+	- The name of the track displayed in the UI. Stock game tracks use this to look up a "pretty name" in the game's translation files; for custom tracks, use spaces instead of underscores to display a "pretty name" in the UI.
 - [[Track_Altitude]]
 	- Altitude offset in meters of the scene origin.
 - [[Track_Climate]]
