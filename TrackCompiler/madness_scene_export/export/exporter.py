@@ -74,8 +74,12 @@ def _export_single_object(obj, obj_name, output_dir, resource_prefix, objects_li
         options=options
     )
 
-    # Get userflags (default if not specified)
-    userflags = 0b10000000000100000001000001110101  # Default userflags
+    # Get userflags from mesh settings, or use default if not available
+    if hasattr(obj.data, "meb_export_settings"):
+        from ..settings.meb_export_settings import get_userflags_value
+        userflags = get_userflags_value(obj.data.meb_export_settings)
+    else:
+        userflags = 0b00000000000100000000000001110100  # Default fallback
 
     # Create ObjectInfo
     obj_info = ObjectInfo(

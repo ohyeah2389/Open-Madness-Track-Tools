@@ -1,6 +1,7 @@
 import bpy
 from pathlib import Path
-from bpy.props import StringProperty, PointerProperty, FloatProperty, BoolVectorProperty
+from bpy.props import StringProperty, PointerProperty, FloatProperty, BoolVectorProperty, IntProperty
+from .userflags import USERFLAG_CATEGORIES, get_userflag_name, get_userflag_description
 
 
 class EmptyMEBSettings(bpy.types.PropertyGroup):
@@ -37,6 +38,78 @@ def get_empty_userflags_value(settings) -> int:
         if flag:
             value |= 1 << i
     return value
+
+
+class OBJECT_OT_toggle_empty_userflag(bpy.types.Operator):
+    """Toggle an empty object userflag bit."""
+    bl_idname = "object.toggle_empty_userflag"
+    bl_label = "Toggle User Flag"
+    bl_options = {"UNDO"}
+
+    bit_index: IntProperty(default=0, min=0, max=31)  # type: ignore
+
+    @classmethod
+    def description(cls, context, properties):
+        return get_userflag_description(properties.bit_index)
+
+    def execute(self, context):
+        obj = context.object
+        if not obj or obj.type != "EMPTY" or not hasattr(obj, "empty_meb_settings"):
+            return {"CANCELLED"}
+
+        settings = obj.empty_meb_settings
+        settings.userflags[self.bit_index] = not settings.userflags[self.bit_index]
+        return {"FINISHED"}
+
+
+class OBJECT_OT_copy_empty_userflag(bpy.types.Operator):
+    """Copy one empty userflag to selected empty objects."""
+    bl_idname = "object.copy_empty_userflag"
+    bl_label = "Copy User Flag"
+    bl_description = "Copy one userflag to all selected Empty objects"
+    bl_options = {"REGISTER", "UNDO"}
+
+    bit_index: IntProperty(default=0, min=0, max=31)  # type: ignore
+
+    @classmethod
+    def poll(cls, context):
+        return (
+            context.object
+            and context.object.type == "EMPTY"
+            and len(context.selected_objects) > 1
+            and hasattr(context.object, "empty_meb_settings")
+        )
+
+    @classmethod
+    def description(cls, context, properties):
+        return f"Copy '{get_userflag_name(properties.bit_index)}' to selected empty objects"
+
+    def execute(self, context):
+        active_obj = context.object
+        if not active_obj or active_obj.type != "EMPTY":
+            return {"CANCELLED"}
+        if not hasattr(active_obj, "empty_meb_settings"):
+            self.report({"ERROR"}, "Active object has no MEB settings")
+            return {"CANCELLED"}
+
+        source_settings = active_obj.empty_meb_settings
+        copied_count = 0
+
+        for obj in context.selected_objects:
+            if obj == active_obj or obj.type != "EMPTY":
+                continue
+            if not hasattr(obj, "empty_meb_settings"):
+                continue
+
+            target_settings = obj.empty_meb_settings
+            target_settings.userflags[self.bit_index] = source_settings.userflags[self.bit_index]
+            copied_count += 1
+
+        self.report(
+            {"INFO"},
+            f"Copied {get_userflag_name(self.bit_index)} to {copied_count} objects",
+        )
+        return {"FINISHED"}
 
 
 def convert_to_relative_game_path(absolute_path: str, game_folder: str = None) -> str:
@@ -166,14 +239,29 @@ class EMPTY_PT_meb_reference(bpy.types.Panel):
         binary_str = format(userflags_value, "032b")
         box.label(text=f"Value: {userflags_value} (0b{binary_str})")
 
-        # Create a 4x8 grid of checkboxes for the 32 bits
-        for row in range(4):
-            row_layout = box.row()
-            for col_idx in range(8):
-                bit_index = row * 8 + col_idx
-                row_layout.prop(
-                    settings, "userflags", index=bit_index, text=f"{bit_index}"
+        # Clean single-column category layout with tooltip descriptions.
+        flags_col = box.column(align=True)
+        for category_name, bit_indices in USERFLAG_CATEGORIES:
+            category_box = flags_col.box()
+            category_box.label(text=category_name)
+            category_col = category_box.column(align=True)
+            for bit_index in bit_indices:
+                row = category_col.row(align=True)
+                icon = "CHECKBOX_HLT" if settings.userflags[bit_index] else "CHECKBOX_DEHLT"
+                op = row.operator(
+                    "object.toggle_empty_userflag",
+                    text=get_userflag_name(bit_index),
+                    icon=icon,
+                    depress=settings.userflags[bit_index],
                 )
+                op.bit_index = bit_index
+                if len(context.selected_objects) > 1:
+                    copy_op = row.operator(
+                        "object.copy_empty_userflag",
+                        text="",
+                        icon="COPYDOWN",
+                    )
+                    copy_op.bit_index = bit_index
 
         # Show path conversion preview
         if settings.meb_file_path:
@@ -183,62 +271,16 @@ class EMPTY_PT_meb_reference(bpy.types.Panel):
             col.label(text="Export Path Preview:")
             if converted_path.startswith("UNKNOWN_PATH/"):
                 col.label(text=converted_path, icon="ERROR")
-                col.label(text="⚠ Could not auto-detect path pattern!")
+                col.label(text="Could not auto-detect path pattern!")
                 col.label(text="Ensure path contains 'tracks' or game folder.")
             else:
                 col.label(text=converted_path, icon="CHECKMARK")
 
-        # Copy to selected button
-        if len(context.selected_objects) > 1:
-            col.separator()
-            op = col.operator("object.copy_empty_meb_settings", text="Copy To Selected")
-
-
-class OBJECT_OT_copy_empty_meb_settings(bpy.types.Operator):
-    """Copy Empty MEB settings to selected objects"""
-
-    bl_idname = "object.copy_empty_meb_settings"
-    bl_label = "Copy MEB Settings"
-    bl_description = "Copy MEB reference settings to all selected Empty objects"
-    bl_options = {"REGISTER", "UNDO"}
-
-    @classmethod
-    def poll(cls, context):
-        return (
-            context.object
-            and context.object.type == "EMPTY"
-            and len(context.selected_objects) > 1
-        )
-
-    def execute(self, context):
-        active_obj = context.object
-        if not hasattr(active_obj, "empty_meb_settings"):
-            self.report({"ERROR"}, "Active object has no MEB settings")
-            return {"CANCELLED"}
-
-        source_settings = active_obj.empty_meb_settings
-        copied_count = 0
-
-        for obj in context.selected_objects:
-            if obj != active_obj and obj.type == "EMPTY":
-                if hasattr(obj, "empty_meb_settings"):
-                    target_settings = obj.empty_meb_settings
-                    # Copy MEB properties
-                    target_settings.meb_file_path = source_settings.meb_file_path
-                    target_settings.sphere_radius = source_settings.sphere_radius
-                    # Copy userflags
-                    for i in range(32):
-                        target_settings.userflags[i] = source_settings.userflags[i]
-                    copied_count += 1
-
-        self.report({"INFO"}, f"Copied MEB settings to {copied_count} objects")
-        return {"FINISHED"}
-
-
 def register():
     bpy.utils.register_class(EmptyMEBSettings)
+    bpy.utils.register_class(OBJECT_OT_toggle_empty_userflag)
+    bpy.utils.register_class(OBJECT_OT_copy_empty_userflag)
     bpy.utils.register_class(EMPTY_PT_meb_reference)
-    bpy.utils.register_class(OBJECT_OT_copy_empty_meb_settings)
 
     # Add MEB settings to Empty objects
     bpy.types.Object.empty_meb_settings = PointerProperty(type=EmptyMEBSettings)
@@ -247,6 +289,7 @@ def register():
 def unregister():
     del bpy.types.Object.empty_meb_settings
 
-    bpy.utils.unregister_class(OBJECT_OT_copy_empty_meb_settings)
     bpy.utils.unregister_class(EMPTY_PT_meb_reference)
+    bpy.utils.unregister_class(OBJECT_OT_copy_empty_userflag)
+    bpy.utils.unregister_class(OBJECT_OT_toggle_empty_userflag)
     bpy.utils.unregister_class(EmptyMEBSettings)

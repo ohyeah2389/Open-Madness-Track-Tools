@@ -102,39 +102,40 @@ Defines 3D geometry objects with transformation and rendering properties:
 #### `userflags`
 
 Decimal-encoded bitmask determining special visual properties about the node.
-If enabled, the following things happen:
-0. Activates `<CONTROL Distances>` and disables the default distance culling (happens at about 400m)
-1. Unknown
-2. Unknown
-3. Unknown
-4. Unknown
-5. Unknown
-6. Unknown
-7. Unknown
-8. Unknown
-9. Unknown
-10. Unknown
-11. Unknown
-12. Unknown
-13. Unknown
-14. Unknown
-15. Unknown
-16. Unknown
-17. Unknown
-18. Unknown
-19. Unknown
-20. Unknown
-21. Unknown
-22. Unknown
-23. Unknown
-24. Unknown
-25. Unknown
-26. Unknown
-27. Unknown
-28. Unknown
-29. Unknown
-30. Unknown
-31. Unknown
+Quotes are the inline comments from SMS (or Reiza) developers.
+
+0. `FarDistantMesh` "This mesh draws beyond the usual automatic LOD cutoff limits"
+1. `GarageNodePlaceHolder` "Object if a node for where cars are to be positioned"
+2. `CannotCull` "This object cannot be culled using radius over distance"
+3. `UnderPass` "road underpass mesh (removed for reflections)"
+4. `CastsShadows` "Casts shadows"
+5. `ReceivesShadows` "Receives shadows cast" NOTE: This appears to refer to self-shadowing; disabling this flag does not prevent shadows being cast onto this object from other objects
+6. `RenderInDynamicEnvmap` "Render this object in dynamic envmaps"
+7. `Damageable` "Can this object receive mesh damage (using MeshDamageManager)"
+8. `Distortion` "Render this object as part of Distortion only - note this flag is set by code, not by art"
+9. `HighDetail` "Exclude when using Medium and Low Detail settings"
+10. `DummyForShadowCasting` "Render this object ONLY when casting shadows"
+11. `AnimatedAds` "Meshes flagged with this flag will get registered with AnimatedAds system"
+12. `BillboardMesh` "Meshes flagged with this flag contain billboarded polygons"
+13. `NeedsHeightOcclusionTests` "Meshes flagged with this flag will do full blown occlusion tests always"
+14. `ForceRenderShadows` "Force shadows of this object to render"
+15. `MeshHasFlares` "meshes with flares.."
+16. `MeshHasVideo` "meshes with videos"
+17. `SwappableDecoration` "meshes Swappable Decoration"
+18. `PhysicsMesh` "meshes with physics"
+19. `GrassyTerrain` "Grassy Terrain"
+20. `RenderInReflection` "meshes to render in reflections"
+21. `GodRayOcculder` "meshes used to block the god rays"
+22. `LowerEmapCull` "Future expansion"
+23. `HideInSpring` "Object should not render in spring - use in combination with others to allow easy flag based seasonal controls"
+24. `HideInSummer` "Object should not render in summer"
+25. `HideInAutumn` "Object should not render in autumn"
+26. `HideInWinter` "Object should not render in winter"
+27. `HideInSnow` "Object should not render in snow - different to winter in some cases e.g. bare tree vs snow covered tree"
+28. `MediumDetail` "Exclude when using Low Detail settings"
+29. `GrassBladeRenderable` "Grass BladeMesh"
+30. `Trees` "After this we are into the flags which are code generated only"
+31. `DontRenderInStaticEnvmap` "Force not to render in static envmap"
 
 
 ### LIGHT Objects
