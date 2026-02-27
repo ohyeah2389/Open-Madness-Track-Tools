@@ -359,6 +359,17 @@ def write_meb_file(
     """
     writer = MEBWriter(output_path)
     
+    # Material slots can exist without any assigned triangles; skip them.
+    # Keep count/data aligned to avoid writing empty index buffers.
+    material_entries = [
+        (name, idxs, verts)
+        for name, idxs, verts in zip(materials, indices_by_material, vertices_by_material)
+        if len(idxs) > 0
+    ]
+    filtered_materials = [entry[0] for entry in material_entries]
+    filtered_indices = [entry[1] for entry in material_entries]
+    filtered_vertices = [entry[2] for entry in material_entries]
+    
     # Calculate overall bounds
     bounds = _calculate_bounds(vertices, flip_coordinates)
     
@@ -389,7 +400,7 @@ def write_meb_file(
     writer.write_mesh_name(mesh_name)
     writer.write_vertex_count(len(vertices))
     writer.write_vertex_params_count(param_count)
-    writer.write_material_count(len(materials), disable_materials)
+    writer.write_material_count(len(filtered_materials), disable_materials)
     writer.write_bounding_info(bounds)
     
     # Write vertex data sections
@@ -438,13 +449,13 @@ def write_meb_file(
         writer.write_bodywork_section(len(vertices))
     
     # Write material data
-    if not disable_materials and materials:
+    if not disable_materials and filtered_materials:
         writer.write_material_data(
-            materials,
-            indices_by_material,
+            filtered_materials,
+            filtered_indices,
             material_dir,
             flip_coordinates,
-            vertices_by_material
+            filtered_vertices
         )
     
     # Save to file
