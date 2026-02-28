@@ -122,7 +122,7 @@ Below is a list of every known assignable property found in AMS2's stock TRD fil
 - [[Rolling Start Allowed]]
 	- Determines whether the track can use a rolling start.
 - [[RollingStartPoleSide]]
-	- Determines which side of the grid pole position starts on (not known which side is which yet).
+	- Determines which side of the grid pole position starts on. 1 is right, 0 is left.
 - [[SandSkidmarksOverride]]
 - [[ScalarAIBlueFlagDistanceMoveLane]]
 - [[ScalarAIBlueFlagSpeedReductions]]
