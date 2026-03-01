@@ -13,7 +13,8 @@ from typing import List, Tuple
 import mathutils # type: ignore
 
 # Constants
-REQUIRED_ATTRS = ['friction', 'height', 'grip', 'flag_0', 'flag_1', 'mask']
+FLAG_ATTRS = [f'flag_{i}' for i in range(8)]
+CORE_REQUIRED_ATTRS = ['friction', 'height', 'grip', 'mask']
 INIT_CELLS = [
     (112, 0, 0.000, 0.000, 0.000, 0x00),
     (0, 1, 0.753, 0.024, 0.000, 0x00),
@@ -60,13 +61,17 @@ class LiveTrackMRDFExporter(bpy.types.Operator, ExportHelper):
                 self.report({'ERROR'}, "Please select a mesh object")
                 return {'CANCELLED'}
             
-            missing = [attr for attr in REQUIRED_ATTRS if attr not in obj.data.attributes]
-            if missing:
-                self.report({'ERROR'}, f"Missing required attributes: {', '.join(missing)}")
+            missing_core = [attr for attr in CORE_REQUIRED_ATTRS if attr not in obj.data.attributes]
+            if missing_core:
+                self.report({'ERROR'}, f"Missing required attributes: {', '.join(missing_core)}")
                 return {'CANCELLED'}
-            
+
+            missing_flags = [attr for attr in FLAG_ATTRS if attr not in obj.data.attributes]
             export_livetrack_mrdf(obj, self.filepath, context)
-            self.report({'INFO'}, f"LiveTrack MRDF exported: {self.filepath}")
+            msg = f"Exported {Path(self.filepath).name}"
+            if missing_flags:
+                msg += f" (missing flags->0: {', '.join(missing_flags)})"
+            self.report({'INFO'}, msg)
             return {'FINISHED'}
             
         except Exception as e:
@@ -113,7 +118,8 @@ def extract_grid_data(obj) -> List[Tuple[int, int, float, float, float, int]]:
     mesh = eval_obj.data
     world_matrix = obj.matrix_world
     
-    attrs = {name: mesh.attributes[name] for name in REQUIRED_ATTRS}
+    attrs = {name: mesh.attributes[name] for name in CORE_REQUIRED_ATTRS}
+    flag_attrs = {name: mesh.attributes[name] for name in FLAG_ATTRS if name in mesh.attributes}
     
     # Build grid coordinate mapping
     vertices = [(world_matrix @ v.co).xyz for v in mesh.vertices]
@@ -136,10 +142,10 @@ def extract_grid_data(obj) -> List[Tuple[int, int, float, float, float, int]]:
         grip = attrs['grip'].data[idx].value
         
         surface_flags = 0
-        if attrs['flag_0'].data[idx].value:
-            surface_flags |= 0x01
-        if attrs['flag_1'].data[idx].value:
-            surface_flags |= 0x02
+        for bit, flag_name in enumerate(FLAG_ATTRS):
+            flag_attr = flag_attrs.get(flag_name)
+            if flag_attr and flag_attr.data[idx].value:
+                surface_flags |= (1 << bit)
         
         cells.append((grid_x, grid_y, friction, height, grip, surface_flags))
     
