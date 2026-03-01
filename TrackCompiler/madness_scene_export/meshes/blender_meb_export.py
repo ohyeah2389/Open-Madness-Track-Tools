@@ -4,7 +4,7 @@ Extracts mesh data directly from Blender objects to write MEB files.
 
 import numpy as np
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import Any, List, Tuple, Optional
 from dataclasses import dataclass, field
 
 try:
@@ -13,6 +13,9 @@ try:
     import mathutils  # type: ignore
     BLENDER_AVAILABLE = True
 except ImportError:
+    bpy: Any = None
+    bmesh: Any = None
+    mathutils: Any = None
     BLENDER_AVAILABLE = False
 
 from .meb_writer import BoundingInfo, write_meb_file
