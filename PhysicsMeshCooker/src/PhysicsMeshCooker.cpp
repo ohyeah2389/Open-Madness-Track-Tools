@@ -1,20 +1,5 @@
 // MeshCooker.cpp : cook an OBJ into Madness engine-compliant mesh chunks
 
-#define PX_PHYSX_STATIC_LIB
-#ifdef _WIN64
-#pragma comment(lib, "C:\\PhysX3.3.4\\Lib\\vc14win64\\PhysX3DEBUG_x64.lib")
-#pragma comment(lib, "C:\\PhysX3.3.4\\Lib\\vc14win64\\PhysX3CommonDEBUG_x64.lib")
-#pragma comment(lib, "C:\\PhysX3.3.4\\Lib\\vc14win64\\PhysX3CookingDEBUG_x64.lib")
-#pragma comment(lib, "C:\\PhysX3.3.4\\Lib\\vc14win64\\PhysX3ExtensionsDEBUG.lib")
-#pragma comment(lib, "C:\\PhysX3.3.4\\Lib\\vc14win64\\PhysXProfileSDKDEBUG.lib")
-#else // 32-bit build
-#pragma comment(lib, "PhysX3.lib")
-#pragma comment(lib, "PhysX3Common.lib")
-#pragma comment(lib, "PhysX3Cooking.lib")
-#pragma comment(lib, "PhysX3Extensions.lib")
-#pragma comment(lib, "PhysXProfileSDK.lib")
-#endif
-
 #include <PxPhysicsAPI.h>
 #include <fstream>
 #include <iostream>
@@ -23,7 +8,6 @@
 #include <string>
 #include <cstdint>
 #include <windows.h> // CreateDirectory
-#include <unordered_map>
 #include <algorithm>
 
 using namespace physx;

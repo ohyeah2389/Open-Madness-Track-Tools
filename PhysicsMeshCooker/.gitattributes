@@ -1,0 +1,22 @@
+# Default: normalise all text files to LF in the repo
+* text=auto eol=lf
+
+# Explicitly LF for files that must be Unix line endings
+*.sh        text eol=lf
+*.clangd    text eol=lf
+CMakeLists.txt text eol=lf
+Makefile    text eol=lf
+
+# Explicitly CRLF for Windows-only files
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+
+# Binary files - no line ending conversion
+*.exe       binary
+*.dll       binary
+*.lib       binary
+*.obj       binary
+*.pdb       binary
+*.png       binary
+*.jpg       binary
+*.jpeg      binary

@@ -1,27 +1,35 @@
-# Build outputs
+# Build output
 build/
 x64/
 Debug/
 Release/
+
+# Compiled binaries
 *.exe
 *.dll
-*.lib
 *.pdb
 *.exp
 *.ilk
 *.obj
-*.log
-*.tlog/
-*.lastbuildstate
-*.recipe
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
 
 # Visual Studio
 .vs/
 *.vcxproj.user
 *.suo
-
-# Visual Studio Code
-.vscode/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.log
+*.tlog/
+*.lastbuildstate
+*.recipe
 
 # Windows
 Thumbs.db
