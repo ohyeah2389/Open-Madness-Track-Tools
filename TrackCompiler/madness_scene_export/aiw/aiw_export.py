@@ -97,6 +97,7 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
     wall_line_right_obj = None
     pit_line_obj = None
     alt_line_objects = {}
+    garage_line_objects = {}
 
     grid_objects = []
     teleport_objects = []
@@ -140,6 +141,15 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
                 alt_line_objects[alt_id] = obj
             except ValueError:
                 pass
+        elif name.startswith("SMS_AIW_GARAGELINE_"):
+            # Extract garage line number
+            garage_num = name.split("_")[-1]
+            try:
+                garage_id = int(garage_num)
+                garage_line_objects[garage_id] = obj
+                print(f"Found garage line: {name} (id={garage_id})")  # Debug output
+            except ValueError:
+                print(f"Could not parse garage line id from {name}")  # Debug output
         # Check for marker objects (can be mesh or empty)
         elif name.startswith("SMS_AIW_START_"):
             grid_objects.append(obj)
@@ -155,6 +165,7 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
             garage_objects.append(obj)
 
     print(f"Total pit boxes found: {len(pit_box_objects)}")  # Debug output
+    print(f"Total garage lines found: {len(garage_line_objects)}")  # Debug output
 
     # Process waypoints
     all_waypoints = []
@@ -205,6 +216,19 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
         )
         alt_waypoints_dict[branch_id] = alt_waypoints
         all_waypoints.extend(alt_waypoints)
+
+    # Garage extension lines (branch_id 500 and ascending)
+    garage_waypoints_dict = {}
+    for garage_id in sorted(garage_line_objects.keys()):
+        branch_id = 1
+        print(f"Processing garage line {garage_id} as branch_id {branch_id}")  # Debug output
+        garage_waypoints = WaypointProcessor.process_waypoint_line(
+            garage_line_objects[garage_id],
+            branch_id,
+        )
+        garage_waypoints_dict[branch_id] = garage_waypoints
+        all_waypoints.extend(garage_waypoints)
+        print(f"Processed {len(garage_waypoints)} garage waypoints for garage line {garage_id} (branch_id={branch_id})")  # Debug output
 
     # Store connection waypoints separately to update pointers later
     connection_waypoints = []
@@ -346,6 +370,57 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
                 new_prev,
                 new_next,
                 new_alt_next,
+                1,  # branch_merge (pit lane)
+            )
+
+    # Update garage line pointers and connect to pit lane
+    for branch_id, garage_waypoints in garage_waypoints_dict.items():
+        if not garage_waypoints:
+            continue
+
+        for i, garage_wp in enumerate(garage_waypoints):
+            prev_idx = (
+                garage_waypoints[i - 1].index if i > 0 else garage_waypoints[i].index
+            )
+            next_idx = (
+                garage_waypoints[i + 1].index
+                if i < len(garage_waypoints) - 1
+                else garage_waypoints[i].index
+            )
+            garage_wp.wp_ptrs = (
+                prev_idx,
+                next_idx,
+                -1,
+                1,  # branch_merge (pit lane)
+            )
+
+        if pit_waypoints:
+            last_wp = garage_waypoints[-1]
+            last_pos = np.array(
+                [last_wp.position.x, last_wp.position.y, last_wp.position.z]
+            )
+            nearest_pit_idx = 0
+            min_distance = float("inf")
+
+            for i, pit_wp in enumerate(pit_waypoints):
+                pit_pos = np.array(
+                    [pit_wp.position.x, pit_wp.position.y, pit_wp.position.z]
+                )
+                distance = np.linalg.norm(last_pos - pit_pos)
+                if distance < min_distance:
+                    min_distance = distance
+                    nearest_pit_idx = i
+
+            pit_wp_final_idx = pit_waypoints[nearest_pit_idx].index
+            prev_idx = (
+                garage_waypoints[-2].index
+                if len(garage_waypoints) > 1
+                else last_wp.index
+            )
+            last_wp.wp_ptrs = (
+                prev_idx,
+                pit_wp_final_idx,
+                pit_wp_final_idx,
                 1,  # branch_merge (pit lane)
             )
 
