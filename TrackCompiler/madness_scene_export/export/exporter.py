@@ -79,7 +79,7 @@ def _export_single_object(obj, obj_name, output_dir, resource_prefix, objects_li
         from ..settings.meb_export_settings import get_userflags_value
         userflags = get_userflags_value(obj.data.meb_export_settings)
     else:
-        userflags = 0b00000000000100000000000001110100  # Default fallback
+        userflags = 0b00000000000100000000000001110101  # Default fallback
 
     # Create ObjectInfo
     obj_info = ObjectInfo(
@@ -162,14 +162,14 @@ def export_objects_to_meb(
             try:
                 group_name = f"KSTREE_GROUP_{group_id}"
                 print(f"Processing KSTREE_GROUP_{group_id} ({len(group_objects)} objects)...")
-                
+
                 combined_obj, _, _ = combine_objects_into_mesh(
                     group_objects, group_id, context, "KSTREE_GROUP"
                 )
-                
+
                 if combined_obj:
                     temp_objects_to_cleanup.append(combined_obj)
-                    
+
                     # Export the combined mesh
                     _export_single_object(
                         combined_obj, group_name, output_dir,
@@ -185,14 +185,14 @@ def export_objects_to_meb(
             try:
                 full_group_name = f"SMS_GRP_{group_name}"
                 print(f"Processing SMS_GRP_{group_name} ({len(group_objects)} objects)...")
-                
+
                 combined_obj, _, _ = combine_objects_into_mesh(
                     group_objects, group_name, context, "SMS_GRP"
                 )
-                
+
                 if combined_obj:
                     temp_objects_to_cleanup.append(combined_obj)
-                    
+
                     # Export the combined mesh
                     _export_single_object(
                         combined_obj, full_group_name, output_dir,
@@ -326,10 +326,10 @@ def export_madness_scene(
 
         # Determine texture export path based on SGX location (needed before MTX generation)
         texture_export_dir = determine_texture_export_path(output_dir, track_name)
-        
+
         # Generate list of unique materials
         unique_materials = sorted(set(all_materials))
-        
+
         # Prepare texture mapping (resolves paths and calculates game-relative paths)
         print("Preparing texture mapping...")
         texture_mapping = {}
@@ -337,7 +337,7 @@ def export_madness_scene(
             texture_mapping = prepare_texture_mapping(
                 unique_materials, output_dir, texture_export_dir, track_name, context
             )
-        
+
         # Generate MTX files (passes texture_mapping for correct paths)
         print("Generating MTX files...")
         prepare_mtx_files_from_materials(
@@ -373,12 +373,12 @@ def prepare_texture_mapping(
     context
 ):
     """Create a mapping of textures for MTX generation and texture copying.
-    
+
     Returns a dict mapping (material_name, param_name) to (resolved_src_path, game_relative_path).
     Does NOT modify material settings - just prepares the mapping.
     """
     texture_mapping = {}
-    
+
     for mat_name in material_names:
         # Find corresponding Blender material
         blender_material = None
@@ -386,30 +386,30 @@ def prepare_texture_mapping(
             if sanitize(mat.name) == mat_name:
                 blender_material = mat
                 break
-        
+
         if blender_material and hasattr(blender_material, "mtx_settings"):
             mtx = blender_material.mtx_settings
-            
+
             for param in mtx.shader_params:
                 if param.param_type == "EPT_TEXTURE" and param.texture_value:
                     # Resolve the texture path to actual file location
                     from ..materials.mtx_material_system import resolve_texture_path
                     src_path, exists = resolve_texture_path(param.texture_value, context)
-                    
+
                     if exists and src_path:
                         # Calculate the game-relative path for MTX files
                         game_relative_path = create_relative_texture_path(
                             mtx_dir, texture_export_dir, src_path.name, track_name
                         )
-                        
+
                         # Store mapping
                         key = (mat_name, param.name)
                         texture_mapping[key] = (str(src_path), game_relative_path)
-                        
+
                         print(f"  Mapped {mat_name}.{param.name}: {game_relative_path}")
                     else:
                         print(f"  Warning: Texture not found for {mat_name}.{param.name}: {param.texture_value}")
-    
+
     return texture_mapping
 
 
@@ -418,26 +418,26 @@ def export_textures(
     texture_export_dir: Path
 ):
     """Export textures to target directory using the prepared texture mapping.
-    
+
     Args:
         texture_mapping: Dict mapping (material_name, param_name) to (resolved_src_path, game_relative_path)
         texture_export_dir: Directory to export textures to
     """
     texture_export_dir.mkdir(parents=True, exist_ok=True)
-    
+
     texture_count = 0
     copied_files = set()  # Track already copied files to avoid duplicates
-    
+
     for (mat_name, param_name), (src_path_str, game_path) in texture_mapping.items():
         src_path = Path(src_path_str)
-        
+
         if src_path.exists():
             dest_path = texture_export_dir / src_path.name
-            
+
             # Skip if already copied
             if dest_path in copied_files:
                 continue
-            
+
             try:
                 shutil.copy2(src_path, dest_path)
                 texture_count += 1
@@ -447,14 +447,14 @@ def export_textures(
                 print(f"  Failed to copy texture {src_path.name}: {e}")
         else:
             print(f"  Warning: Source texture no longer exists: {src_path}")
-    
+
     print(f"Exported {texture_count} textures to {texture_export_dir}")
 
 
 def create_relative_texture_path(
-    mtx_dir: Path, 
-    texture_dir: Path, 
-    texture_name: str, 
+    mtx_dir: Path,
+    texture_dir: Path,
+    texture_name: str,
     track_name: str
 ) -> str:
     """Create the correct relative texture path for MTX files."""
@@ -469,36 +469,36 @@ def create_relative_texture_path(
 
 
 def copy_meb_file_to_export(
-    original_meb_path: str, 
-    output_dir: Path, 
-    relative_meb_path: str, 
+    original_meb_path: str,
+    output_dir: Path,
+    relative_meb_path: str,
     track_name: str
 ) -> Path:
     """Copy MEB file from source location to export directory."""
     if not original_meb_path:
         print(f"Warning: No source MEB path provided for {relative_meb_path}")
         return Path(relative_meb_path.lstrip("\\"))
-    
+
     source_path = Path(original_meb_path)
-    
+
     if not source_path.exists():
         print(f"Warning: Source MEB file not found: {source_path}")
         return Path(relative_meb_path.lstrip("\\"))
-    
+
     # Determine the destination path based on export structure
     dest_path = determine_meb_export_path(output_dir, relative_meb_path, track_name)
-    
+
     try:
         # Ensure destination directory exists
         dest_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Copy the MEB file
         shutil.copy2(source_path, dest_path)
         print(f"Copied MEB file: {source_path.name} -> {dest_path}")
-        
+
         # Return the relative path for use in SGX
         return create_relative_meb_path_for_sgx(output_dir, dest_path, track_name)
-        
+
     except Exception as e:
         print(f"Failed to copy MEB file {source_path}: {e}")
         # Return original relative path as fallback
@@ -509,16 +509,16 @@ def determine_meb_export_path(output_dir: Path, relative_meb_path: str, track_na
     """Determine where to copy the MEB file based on export structure."""
     # Extract just the filename from the relative path
     meb_filename = Path(relative_meb_path).name
-    
+
     # Check if we're in a tracks-based structure
     path_parts = output_dir.parts
     tracks_index = -1
-    
+
     for i, part in enumerate(path_parts):
         if part.lower() == "tracks":
             tracks_index = i
             break
-    
+
     if tracks_index >= 0:
         # If "tracks" is found, place MEB in tracks/track_name/
         tracks_parent = Path(*path_parts[:tracks_index])
@@ -526,7 +526,7 @@ def determine_meb_export_path(output_dir: Path, relative_meb_path: str, track_na
     else:
         # If no "tracks" in path, place MEB in track_name/ relative to SGX
         meb_dir = output_dir / track_name
-    
+
     return meb_dir / meb_filename
 
 

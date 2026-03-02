@@ -5,7 +5,7 @@ from .userflags import USERFLAG_CATEGORIES, get_userflag_name, get_userflag_desc
 
 def _get_default_userflags():
     """Get default userflags as boolean array."""
-    default_value = 0b00000000000100000000000001110100
+    default_value = 0b00000000000100000000000001110101
     flags = [False] * 32
     for i in range(32):
         if default_value & (1 << i):
@@ -14,44 +14,44 @@ def _get_default_userflags():
 
 class MEBExportSettings(bpy.types.PropertyGroup):
     """MEB Exporter settings attached to mesh objects"""
-    
+
     # Export Options
     flip_coordinates: BoolProperty(
         name="Flip Coordinates",
         description="Flip coordinate system",
         default=False
     ) # type: ignore
-    
+
     disable_material: BoolProperty(
         name="Disable Material",
         description="Disable material data export",
         default=False
     ) # type: ignore
-    
+
     tangent_space: BoolProperty(
         name="Tangent Space",
         description="Generate tangent space data",
         default=True
     ) # type: ignore
-    
+
     bodywork: BoolProperty(
         name="Bodywork",
         description="Add bodywork-specific data",
         default=False
     ) # type: ignore
-    
+
     wsection1: BoolProperty(
         name="W Section 1",
         description="Enable W section 1",
         default=False
     ) # type: ignore
-    
+
     wsection2: BoolProperty(
-        name="W Section 2", 
+        name="W Section 2",
         description="Enable W section 2",
         default=False
     ) # type: ignore
-    
+
     # UV Mapping (1-6, 0=none)
     uv1: IntProperty(
         name="UV Map 1",
@@ -60,15 +60,15 @@ class MEBExportSettings(bpy.types.PropertyGroup):
         min=0,
         max=6
     ) # type: ignore
-    
+
     uv2: IntProperty(
         name="UV Map 2",
-        description="UV Map 2 index (1-6, 0=none)", 
+        description="UV Map 2 index (1-6, 0=none)",
         default=0,
         min=0,
         max=6
     ) # type: ignore
-    
+
     uv3: IntProperty(
         name="UV Map 3",
         description="UV Map 3 index (1-6, 0=none)",
@@ -76,7 +76,7 @@ class MEBExportSettings(bpy.types.PropertyGroup):
         min=0,
         max=6
     ) # type: ignore
-    
+
     uv4: IntProperty(
         name="UV Map 4",
         description="UV Map 4 index (1-6, 0=none)",
@@ -84,7 +84,7 @@ class MEBExportSettings(bpy.types.PropertyGroup):
         min=0,
         max=6
     ) # type: ignore
-    
+
     uv5: IntProperty(
         name="UV Map 5",
         description="UV Map 5 index (1-6, 0=none)",
@@ -92,7 +92,7 @@ class MEBExportSettings(bpy.types.PropertyGroup):
         min=0,
         max=6
     ) # type: ignore
-    
+
     uv6: IntProperty(
         name="UV Map 6",
         description="UV Map 6 index (1-6, 0=none)",
@@ -100,7 +100,7 @@ class MEBExportSettings(bpy.types.PropertyGroup):
         min=0,
         max=6
     ) # type: ignore
-    
+
     # W Section UV Mapping
     wuv1: IntProperty(
         name="W Section UV 1",
@@ -109,7 +109,7 @@ class MEBExportSettings(bpy.types.PropertyGroup):
         min=0,
         max=6
     ) # type: ignore
-    
+
     wuv2: IntProperty(
         name="W Section UV 2",
         description="W Section UV 2 index (1-6, 0=none)",
@@ -117,14 +117,14 @@ class MEBExportSettings(bpy.types.PropertyGroup):
         min=0,
         max=6
     ) # type: ignore
-    
+
     # Custom extra arguments for anything not covered above
     custom_args: StringProperty(
         name="Custom Arguments",
         description="Additional custom arguments for MEB exporter",
         default=""
     ) # type: ignore
-    
+
     # Userflags - 32-bit bitmask for SGX object flags
     userflags: BoolVectorProperty(
         name="User Flags",
@@ -136,30 +136,30 @@ class MEBExportSettings(bpy.types.PropertyGroup):
 def build_meb_args(settings: MEBExportSettings) -> List[str]:
     """Convert MEB export settings to command-line arguments"""
     args = []
-    
+
     # Add boolean flags
     if settings.flip_coordinates:
         args.append("--flip")
-    
+
     if settings.disable_material:
         args.append("--disable-material")
-    
+
     if settings.tangent_space:
         args.append("--tangent-space")
-    
+
     if settings.bodywork:
         args.append("--bodywork")
-    
+
     if settings.wsection1:
         args.append("--wsection1")
-    
+
     if settings.wsection2:
         args.append("--wsection2")
-    
+
     # Add UV mappings (only if not 0)
     uv_mappings = [
         ("--uv1", settings.uv1),
-        ("--uv2", settings.uv2), 
+        ("--uv2", settings.uv2),
         ("--uv3", settings.uv3),
         ("--uv4", settings.uv4),
         ("--uv5", settings.uv5),
@@ -167,17 +167,17 @@ def build_meb_args(settings: MEBExportSettings) -> List[str]:
         ("--wuv1", settings.wuv1),
         ("--wuv2", settings.wuv2),
     ]
-    
+
     for flag, value in uv_mappings:
         if value > 0:
             args.extend([flag, str(value)])
-    
+
     # Add custom arguments
     if settings.custom_args.strip():
         # Split custom args respecting quotes
         import shlex
         args.extend(shlex.split(settings.custom_args))
-    
+
     return args
 
 def get_userflags_value(settings: MEBExportSettings) -> int:
