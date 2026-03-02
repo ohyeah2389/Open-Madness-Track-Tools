@@ -167,7 +167,6 @@ Defines particle systems with complex emission and behavior controls:
 <OBJ_ID no="3">
     <PARTICLES>
         <PARTICLESYSTEM FileVersion="[version]">
-            <!-- Performance Settings -->
             <SYSTEM>
                 <PERFLEVEL MinLevel="[0-4|alwayson]" />
                 <MAXPARTICLES Max="[count]" Min="[count]" MaxSortable="[count]" />
@@ -176,32 +175,21 @@ Defines particle systems with complex emission and behavior controls:
                 <KillWhenRewind Value="TRUE|FALSE" />
             </SYSTEM>
             
-            <!-- Rendering Configuration -->
             <PARTICLE ParticleType="Billboard|GenericQuad|AxisFacingQuadStrip|OrientedQuad|PhysicsMesh" />
             
-            <!-- Emission Parameters -->
             <EMITTERPARAMS>
-                <!-- Complex emission configuration -->
             </EMITTERPARAMS>
             
-            <!-- Forces and Behaviors -->
             <AFFECTOR type="[affector_type]">
-                <!-- Multiple affectors supported -->
             </AFFECTOR>
             
-            <!-- Particle Properties -->
             <PARTICLEPARAMS>
-                <!-- Type-specific properties -->
             </PARTICLEPARAMS>
             
-            <!-- Animation Curves -->
             <ENVELOPE>
-                <!-- Parameter animation over time -->
             </ENVELOPE>
             
-            <!-- Dynamic Scaling -->
             <PARAMSCALER>
-                <!-- Runtime parameter scaling -->
             </PARAMSCALER>
         </PARTICLESYSTEM>
     </PARTICLES>
