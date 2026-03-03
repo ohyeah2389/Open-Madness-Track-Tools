@@ -98,6 +98,38 @@ def _export_single_object(obj, obj_name, output_dir, resource_prefix, objects_li
     print(f"Successfully exported {obj_name} -> {meb_path.name}")
 
 
+def _curve_to_temp_mesh_object(curve_obj, context):
+    """Create a temporary mesh object from a curve object for export."""
+    depsgraph = context.evaluated_depsgraph_get()
+    eval_obj = curve_obj.evaluated_get(depsgraph)
+
+    try:
+        mesh_data = bpy.data.meshes.new_from_object(
+            eval_obj, preserve_all_data_layers=True, depsgraph=depsgraph
+        )
+    except TypeError:
+        eval_mesh = eval_obj.to_mesh()
+        if not eval_mesh:
+            return None
+        mesh_data = eval_mesh.copy()
+        eval_obj.to_mesh_clear()
+
+    if not mesh_data or not mesh_data.polygons:
+        if mesh_data:
+            bpy.data.meshes.remove(mesh_data)
+        return None
+
+    temp_obj = bpy.data.objects.new(f"TEMP_CURVE_MESH_{curve_obj.name}", mesh_data)
+    context.scene.collection.objects.link(temp_obj)
+    temp_obj.matrix_world = curve_obj.matrix_world.copy()
+
+    if curve_obj.data.materials:
+        for mat in curve_obj.data.materials:
+            temp_obj.data.materials.append(mat)
+
+    return temp_obj
+
+
 def export_objects_to_meb(
     context,
     output_dir: Path,
@@ -117,11 +149,11 @@ def export_objects_to_meb(
     try:
         bpy.ops.object.select_all(action="DESELECT")
 
-        # Collect all visible mesh objects
-        mesh_objects = []
+        # Collect all visible mesh objects (and curves with bevel depth as temporary meshes)
+        export_entries = []
 
         for obj in context.scene.objects:
-            if obj.type != "MESH" or not obj.data.polygons:
+            if obj.type not in {"MESH", "CURVE"}:
                 continue
 
             if not is_object_in_visible_collection(obj, view_layer):
@@ -131,18 +163,32 @@ def export_objects_to_meb(
                 print(f"Skipping {obj.name} - object is hidden")
                 continue
 
-            mesh_objects.append(obj)
+            if obj.type == "MESH":
+                if obj.data.polygons:
+                    export_entries.append((obj, obj.name))
+                continue
 
-        print(f"Found {len(mesh_objects)} visible mesh objects to export")
+            if obj.data.bevel_depth <= 0:
+                continue
+
+            temp_curve_mesh = _curve_to_temp_mesh_object(obj, context)
+            if not temp_curve_mesh:
+                print(f"Skipping {obj.name} - curve could not be converted to mesh")
+                continue
+
+            temp_objects_to_cleanup.append(temp_curve_mesh)
+            export_entries.append((temp_curve_mesh, obj.name))
+
+        print(f"Found {len(export_entries)} visible exportable objects (meshes + beveled curves)")
 
         # Group objects by their group prefix
         kstree_groups = {}  # group_id -> [objects]
         sms_groups = {}     # group_name -> [objects]
         ungrouped_objects = []
 
-        for obj in mesh_objects:
-            kstree_group = parse_kstree_group(obj.name)
-            sms_group = parse_sms_group(obj.name)
+        for obj, source_name in export_entries:
+            kstree_group = parse_kstree_group(source_name)
+            sms_group = parse_sms_group(source_name)
 
             if kstree_group:
                 if kstree_group not in kstree_groups:
@@ -153,7 +199,7 @@ def export_objects_to_meb(
                     sms_groups[sms_group] = []
                 sms_groups[sms_group].append(obj)
             else:
-                ungrouped_objects.append(obj)
+                ungrouped_objects.append((obj, source_name))
 
         print(f"Grouped: {len(kstree_groups)} KSTREE groups, {len(sms_groups)} SMS groups, {len(ungrouped_objects)} ungrouped objects")
 
@@ -204,14 +250,14 @@ def export_objects_to_meb(
                 traceback.print_exc()
 
         # Process ungrouped objects
-        for obj in ungrouped_objects:
+        for obj, source_name in ungrouped_objects:
             try:
                 _export_single_object(
-                    obj, obj.name, output_dir,
+                    obj, source_name, output_dir,
                     resource_prefix, objects, temp_objects_to_cleanup
                 )
             except Exception as e:
-                print(f"ERROR: Failed to export {obj.name}: {e}")
+                print(f"ERROR: Failed to export {source_name}: {e}")
                 import traceback
                 traceback.print_exc()
                 continue
