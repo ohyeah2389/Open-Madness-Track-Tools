@@ -1,10 +1,13 @@
 import bpy  # type: ignore
+import bmesh  # type: ignore
 from pathlib import Path
 from typing import List, Tuple
 import numpy as np
 import re
 from ..utils.coordinate_transforms import decompose_matrix
 from ..utils import sanitize
+
+TEMP_EXPORT_TAG = "_omtt_temp_export"
 
 
 class ObjectInfo:
@@ -118,18 +121,13 @@ def combine_objects_into_mesh(objects: List, group_name: str, context, group_typ
 
     Returns: (combined_object, combined_materials, combined_transform_data)
     """
-    import mathutils  # type: ignore
-
     if not objects:
         return None, [], None
 
     print(f"Combining {len(objects)} objects for group {group_name}...")
 
     try:
-        original_active = context.active_object
-
-        # Clear selection
-        bpy.ops.object.select_all(action="DESELECT")
+        depsgraph = context.evaluated_depsgraph_get()
 
         # Build unified material list from all objects to combine
         combined_materials = []
@@ -138,80 +136,70 @@ def combine_objects_into_mesh(objects: List, group_name: str, context, group_typ
         for obj in objects:
             if obj.data.materials:
                 for mat in obj.data.materials:
-                    if mat and mat not in [m for m, _ in combined_materials]:
+                    if mat and mat not in material_mapping:
                         material_mapping[mat] = len(combined_materials)
                         combined_materials.append((mat, obj.name))
 
         print(f"  Combined materials: {[mat.name if mat else 'None' for mat, _ in combined_materials]}")
 
-        # Create copies of all objects with applied transforms and modifiers
-        temp_objects = []
+        # Build one in-memory merged mesh from evaluated object meshes.
+        bm = bmesh.new()
+        source_meshes_to_cleanup = []
 
         for obj in objects:
-            temp_obj = obj.copy()
-            temp_obj.data = obj.data.copy()
-            temp_obj.name = f"TEMP_COMBINE_{obj.name}"
+            eval_obj = obj.evaluated_get(depsgraph)
+            mesh_data = None
+            try:
+                mesh_data = bpy.data.meshes.new_from_object(
+                    eval_obj, preserve_all_data_layers=True, depsgraph=depsgraph
+                )
+            except TypeError:
+                eval_mesh = eval_obj.to_mesh()
+                if eval_mesh:
+                    mesh_data = eval_mesh.copy()
+                    eval_obj.to_mesh_clear()
 
-            # Link to scene
-            context.collection.objects.link(temp_obj)
-            temp_objects.append(temp_obj)
+            if not mesh_data or not mesh_data.polygons:
+                if mesh_data:
+                    bpy.data.meshes.remove(mesh_data)
+                continue
 
-            # Apply world transform
-            temp_obj.matrix_world = obj.matrix_world
+            # Bake world transform into vertex positions so merged object can stay at identity.
+            mesh_data.transform(obj.matrix_world)
 
-        if not temp_objects:
+            # Remap material slots to the shared group material layout.
+            source_materials = list(mesh_data.materials)
+            mesh_data.materials.clear()
+            for mat, _ in combined_materials:
+                mesh_data.materials.append(mat)
+
+            if combined_materials:
+                for poly in mesh_data.polygons:
+                    src_idx = poly.material_index
+                    src_mat = source_materials[src_idx] if src_idx < len(source_materials) else None
+                    poly.material_index = material_mapping.get(src_mat, 0)
+
+            bm.from_mesh(mesh_data)
+            source_meshes_to_cleanup.append(mesh_data)
+
+        if not bm.verts:
+            bm.free()
             return None, [], None
 
-        # Apply modifiers only to objects that actually have them
-        for temp_obj in temp_objects:
-            if temp_obj.modifiers:
-                bpy.ops.object.select_all(action="DESELECT")
-                temp_obj.select_set(True)
-                context.view_layer.objects.active = temp_obj
+        combined_mesh = bpy.data.meshes.new(f"TEMP_COMBINED_{group_name}")
+        bm.to_mesh(combined_mesh)
+        bm.free()
+        combined_mesh.update()
 
-                modifier_count = len(temp_obj.modifiers)
-                try:
-                    # Apply the first modifier until none are left
-                    while temp_obj.modifiers:
-                        bpy.ops.object.modifier_apply(modifier=temp_obj.modifiers[0].name)
-                    print(f"  Applied {modifier_count} modifiers to {temp_obj.name}")
-                except Exception as e:
-                    print(f"  Warning: Could not apply modifiers to {temp_obj.name}: {e}")
+        for mesh_data in source_meshes_to_cleanup:
+            bpy.data.meshes.remove(mesh_data)
 
-        # Select all temp objects for joining
-        bpy.ops.object.select_all(action="DESELECT")
-        for temp_obj in temp_objects:
-            temp_obj.select_set(True)
+        for mat, _ in combined_materials:
+            combined_mesh.materials.append(mat)
 
-        # Set the first object as active
-        context.view_layer.objects.active = temp_objects[0]
-
-        # Apply transforms to all objects first
-        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-
-        # Join all objects into the first one
-        bpy.ops.object.join()
-
-        # The combined object is now the active object
-        combined_obj = context.active_object
-        combined_obj.name = f"COMBINED_{group_name}"
-        combined_obj.data.name = f"TEMP_COMBINED_{group_name}"
-
-        # Store original material assignments before clearing
-        original_material_indices = {}
-        if combined_obj.data.materials:
-            for poly in combined_obj.data.polygons:
-                original_material_indices[poly.index] = poly.material_index
-
-        # Clear materials and reassign based on our unified list
-        combined_obj.data.materials.clear()
-        for mat, source_obj in combined_materials:
-            combined_obj.data.materials.append(mat)
-
-        # Fix material indices based on original assignments
-        for poly_idx, original_idx in original_material_indices.items():
-            if original_idx < len(combined_materials):
-                combined_obj.data.polygons[poly_idx].material_index = original_idx
+        combined_obj = bpy.data.objects.new(f"COMBINED_{group_name}", combined_mesh)
+        combined_obj[TEMP_EXPORT_TAG] = True
+        context.collection.objects.link(combined_obj)
 
         # Verify material assignments
         invalid_faces = []
@@ -229,16 +217,7 @@ def combine_objects_into_mesh(objects: List, group_name: str, context, group_typ
         combined_obj.rotation_euler = (0, 0, 0)
         combined_obj.scale = (1, 1, 1)
 
-        world_matrix = combined_obj.matrix_world.copy()
-        world_location, world_rotation, world_scale = world_matrix.decompose()
-
-        import mathutils  # type: ignore
-
-        loc_matrix = mathutils.Matrix.Translation(world_location)
-        rot_matrix = world_rotation.to_matrix().to_4x4()
-        transform_matrix = loc_matrix @ rot_matrix
-
-        matrix = np.array(transform_matrix)
+        matrix = np.array(combined_obj.matrix_world.copy())
         translation, quaternion = decompose_matrix(matrix)
 
         # Get material names
@@ -251,11 +230,6 @@ def combine_objects_into_mesh(objects: List, group_name: str, context, group_typ
                     material_names.append("DefaultMaterial")
         else:
             material_names.append("DefaultMaterial")
-
-        # Restore original selection
-        bpy.ops.object.select_all(action="DESELECT")
-        if original_active and original_active.name in bpy.data.objects:
-            context.view_layer.objects.active = original_active
 
         print(f"Successfully combined {len(objects)} objects into {combined_obj.name}")
         return combined_obj, material_names, (translation, quaternion)

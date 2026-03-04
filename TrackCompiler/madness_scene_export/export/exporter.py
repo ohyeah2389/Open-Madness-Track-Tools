@@ -2,11 +2,15 @@ import bpy  # type: ignore
 import tempfile
 from pathlib import Path
 import shutil
+import os
+from dataclasses import dataclass
+from concurrent.futures import Future, ThreadPoolExecutor
 from typing import List, Tuple
 import xml.etree.ElementTree as ET
 import numpy as np
 from .object_export import (
     ObjectInfo,
+    TEMP_EXPORT_TAG,
     collect_empty_objects_with_meb,
     sanitize,
     is_object_in_visible_collection,
@@ -14,88 +18,168 @@ from .object_export import (
     parse_sms_group,
     combine_objects_into_mesh,
 )
-from ..meshes import export_object_to_meb, MeshExportOptions
+from ..meshes import MeshExportOptions
+from ..meshes.blender_meb_export import extract_mesh_data_from_blender
+from ..meshes.meb_writer import write_meb_file
 from ..materials.mtx_processor import prepare_mtx_files_from_materials
 from ..utils.coordinate_transforms import decompose_matrix
 
 
-def _export_single_object(obj, obj_name, output_dir, resource_prefix, objects_list, temp_objects_list):
-    """Helper function to export a single object to MEB."""
-    # Get transform
-    world_matrix = obj.matrix_world.copy()
-    matrix = np.array(world_matrix)
-    translation, quaternion = decompose_matrix(matrix)
+@dataclass
+class _PendingObjectExport:
+    name: str
+    meb_path: Path
+    translation: np.ndarray
+    quaternion: np.ndarray
+    materials: List[str]
+    userflags: int
+    future: Future
 
-    # Prepare materials
-    materials = []
-    if obj.data.materials:
-        for mat in obj.data.materials:
-            if mat:
-                materials.append(sanitize(mat.name))
-            else:
-                materials.append("DefaultMaterial")
-    else:
-        materials.append("DefaultMaterial")
 
-    # Build MEB export options from object settings
+def _build_maybe_overridden_options(obj, resource_prefix: str) -> MeshExportOptions:
+    """Build MEB export options from object settings."""
     options = MeshExportOptions(
         material_dir=resource_prefix if resource_prefix else "vehicles/car_name/"
     )
 
-    # Get MEB settings from object if available
-    if hasattr(obj.data, "meb_export_settings"):
-        meb_settings = obj.data.meb_export_settings
+    if not hasattr(obj.data, "meb_export_settings"):
+        return options
 
-        # Manual UV map configuration
-        uv_indices = []
-        for i in range(1, 7):
-            uv_prop = f'uv{i}'
-            if hasattr(meb_settings, uv_prop):
-                uv_val = getattr(meb_settings, uv_prop)
-                if uv_val > 0:
-                    uv_indices.append(uv_val - 1)
-        if uv_indices:
-            options.uv_map_indices = uv_indices
+    meb_settings = obj.data.meb_export_settings
+    uv_indices = []
+    for i in range(1, 7):
+        uv_prop = f"uv{i}"
+        if hasattr(meb_settings, uv_prop):
+            uv_val = getattr(meb_settings, uv_prop)
+            if uv_val > 0:
+                uv_indices.append(uv_val - 1)
+    if uv_indices:
+        options.uv_map_indices = uv_indices
 
-        if hasattr(meb_settings, 'tangent_space'):
-            options.generate_tangent_space = meb_settings.tangent_space
-        if hasattr(meb_settings, 'bodywork'):
-            options.bodywork_data = meb_settings.bodywork
-        if hasattr(meb_settings, 'disable_material'):
-            options.disable_materials = meb_settings.disable_material
+    if hasattr(meb_settings, "tangent_space"):
+        options.generate_tangent_space = meb_settings.tangent_space
+    if hasattr(meb_settings, "bodywork"):
+        options.bodywork_data = meb_settings.bodywork
+    if hasattr(meb_settings, "disable_material"):
+        options.disable_materials = meb_settings.disable_material
+    return options
 
-    # Export to MEB
-    print(f"Exporting {obj_name} to MEB... (tangents={options.generate_tangent_space}, bodywork={options.bodywork_data}, UVs={options.uv_map_indices})")
-    meb_path = output_dir / f"{sanitize(obj_name)}.meb"
-    bounds = export_object_to_meb(
-        obj,
-        meb_path,
-        mesh_name=sanitize(obj_name),
-        options=options
-    )
 
-    # Get userflags from mesh settings, or use default if not available
+def _collect_material_names(obj) -> List[str]:
+    materials = []
+    if obj.data.materials:
+        for mat in obj.data.materials:
+            materials.append(sanitize(mat.name) if mat else "DefaultMaterial")
+    else:
+        materials.append("DefaultMaterial")
+    return materials
+
+
+def _get_userflags(obj) -> int:
     if hasattr(obj.data, "meb_export_settings"):
         from ..settings.meb_export_settings import get_userflags_value
-        userflags = get_userflags_value(obj.data.meb_export_settings)
-    else:
-        userflags = 0b00000000000100000000000001110101  # Default fallback
+        return get_userflags_value(obj.data.meb_export_settings)
+    return 0b00000000000100000000000001110101
 
-    # Create ObjectInfo
-    obj_info = ObjectInfo(
-        name=sanitize(obj_name),
-        meb_path=meb_path,
-        translation=translation,
-        quaternion=quaternion,
-        sphere_center=bounds.sphere_center,
-        sphere_radius=bounds.sphere_radius,
-        materials=materials,
-        bb_min=bounds.bb_min,
-        bb_max=bounds.bb_max,
-        userflags=userflags,
+
+def _write_meb_from_extracted(meb_path: Path, mesh_name: str, options: MeshExportOptions, extracted_data) -> object:
+    """Write MEB file using already extracted mesh data (thread-safe, no bpy usage)."""
+    (
+        vertices,
+        normals,
+        colors,
+        uv_layers,
+        material_names,
+        indices_by_material,
+        vertices_by_material,
+        tangents,
+        bitangents,
+    ) = extracted_data
+
+    if len(vertices) > 65535:
+        raise ValueError(
+            f"Mesh {mesh_name} has {len(vertices)} unique vertices (after deduplication and triangulation), "
+            "which exceeds the MEB format limit of 65535. Split the mesh into smaller parts."
+        )
+
+    return write_meb_file(
+        output_path=meb_path,
+        mesh_name=mesh_name,
+        vertices=vertices,
+        normals=normals,
+        colors=colors,
+        uv_layers=uv_layers,
+        materials=material_names,
+        indices_by_material=indices_by_material,
+        vertices_by_material=vertices_by_material,
+        tangents=tangents,
+        bitangents=bitangents,
+        flip_coordinates=options.flip_coordinates,
+        material_dir=options.material_dir,
+        disable_materials=options.disable_materials,
+        bodywork_data=options.bodywork_data,
+        w_sections=options.w_sections,
     )
-    objects_list.append(obj_info)
-    print(f"Successfully exported {obj_name} -> {meb_path.name}")
+
+
+def _complete_next_pending_export(pending_exports, objects_list):
+    pending = pending_exports.pop(0)
+    bounds = pending.future.result()
+    objects_list.append(
+        ObjectInfo(
+            name=pending.name,
+            meb_path=pending.meb_path,
+            translation=pending.translation,
+            quaternion=pending.quaternion,
+            sphere_center=bounds.sphere_center,
+            sphere_radius=bounds.sphere_radius,
+            materials=pending.materials,
+            bb_min=bounds.bb_min,
+            bb_max=bounds.bb_max,
+            userflags=pending.userflags,
+        )
+    )
+    print(f"Successfully exported {pending.name} -> {pending.meb_path.name}")
+
+
+def _export_single_object(
+    obj,
+    obj_name,
+    output_dir,
+    resource_prefix,
+    pending_exports,
+    writer_pool: ThreadPoolExecutor,
+):
+    """Queue a single object for pipelined MEB export."""
+    world_matrix = obj.matrix_world.copy()
+    matrix = np.array(world_matrix)
+    translation, quaternion = decompose_matrix(matrix)
+    materials = _collect_material_names(obj)
+    options = _build_maybe_overridden_options(obj, resource_prefix)
+    userflags = _get_userflags(obj)
+
+    print(f"Exporting {obj_name} to MEB... (tangents={options.generate_tangent_space}, bodywork={options.bodywork_data}, UVs={options.uv_map_indices})")
+    meb_path = output_dir / f"{sanitize(obj_name)}.meb"
+    sanitized_name = sanitize(obj_name)
+    extracted_data = extract_mesh_data_from_blender(obj, options)
+
+    pending_exports.append(
+        _PendingObjectExport(
+            name=sanitized_name,
+            meb_path=meb_path,
+            translation=translation,
+            quaternion=quaternion,
+            materials=materials,
+            userflags=userflags,
+            future=writer_pool.submit(
+                _write_meb_from_extracted,
+                meb_path,
+                sanitized_name,
+                options,
+                extracted_data,
+            ),
+        )
+    )
 
 
 def _curve_to_temp_mesh_object(curve_obj, context):
@@ -120,6 +204,7 @@ def _curve_to_temp_mesh_object(curve_obj, context):
         return None
 
     temp_obj = bpy.data.objects.new(f"TEMP_CURVE_MESH_{curve_obj.name}", mesh_data)
+    temp_obj[TEMP_EXPORT_TAG] = True
     context.scene.collection.objects.link(temp_obj)
     temp_obj.matrix_world = curve_obj.matrix_world.copy()
 
@@ -146,137 +231,142 @@ def export_objects_to_meb(
     original_selection = context.selected_objects[:]
     original_active = context.active_object
 
+    writer_workers = max(1, min(4, os.cpu_count() or 1))
+    max_in_flight = writer_workers * 2
+
     try:
-        bpy.ops.object.select_all(action="DESELECT")
+        with ThreadPoolExecutor(max_workers=writer_workers) as writer_pool:
+            pending_exports = []
+            bpy.ops.object.select_all(action="DESELECT")
 
-        # Collect all visible mesh objects (and curves with bevel depth as temporary meshes)
-        export_entries = []
+            # Collect all visible mesh objects (and curves with bevel depth as temporary meshes)
+            export_entries = []
+            for obj in context.scene.objects:
+                if obj.type not in {"MESH", "CURVE"}:
+                    continue
+                if not is_object_in_visible_collection(obj, view_layer):
+                    continue
+                if obj.hide_get():
+                    print(f"Skipping {obj.name} - object is hidden")
+                    continue
 
-        for obj in context.scene.objects:
-            if obj.type not in {"MESH", "CURVE"}:
-                continue
+                if obj.type == "MESH":
+                    if obj.data.polygons:
+                        export_entries.append((obj, obj.name))
+                    continue
 
-            if not is_object_in_visible_collection(obj, view_layer):
-                continue
+                if obj.data.bevel_depth <= 0:
+                    continue
 
-            if obj.hide_get():
-                print(f"Skipping {obj.name} - object is hidden")
-                continue
+                temp_curve_mesh = _curve_to_temp_mesh_object(obj, context)
+                if not temp_curve_mesh:
+                    print(f"Skipping {obj.name} - curve could not be converted to mesh")
+                    continue
+                temp_objects_to_cleanup.append(temp_curve_mesh)
+                export_entries.append((temp_curve_mesh, obj.name))
 
-            if obj.type == "MESH":
-                if obj.data.polygons:
-                    export_entries.append((obj, obj.name))
-                continue
+            print(f"Found {len(export_entries)} visible exportable objects (meshes + beveled curves)")
 
-            if obj.data.bevel_depth <= 0:
-                continue
+            # Group objects by their group prefix
+            kstree_groups = {}
+            sms_groups = {}
+            ungrouped_objects = []
+            for obj, source_name in export_entries:
+                kstree_group = parse_kstree_group(source_name)
+                sms_group = parse_sms_group(source_name)
+                if kstree_group:
+                    kstree_groups.setdefault(kstree_group, []).append(obj)
+                elif sms_group:
+                    sms_groups.setdefault(sms_group, []).append(obj)
+                else:
+                    ungrouped_objects.append((obj, source_name))
 
-            temp_curve_mesh = _curve_to_temp_mesh_object(obj, context)
-            if not temp_curve_mesh:
-                print(f"Skipping {obj.name} - curve could not be converted to mesh")
-                continue
+            print(f"Grouped: {len(kstree_groups)} KSTREE groups, {len(sms_groups)} SMS groups, {len(ungrouped_objects)} ungrouped objects")
 
-            temp_objects_to_cleanup.append(temp_curve_mesh)
-            export_entries.append((temp_curve_mesh, obj.name))
+            # Process grouped objects
+            for group_id, group_objects in kstree_groups.items():
+                try:
+                    group_name = f"KSTREE_GROUP_{group_id}"
+                    print(f"Processing KSTREE_GROUP_{group_id} ({len(group_objects)} objects)...")
+                    combined_obj, _, _ = combine_objects_into_mesh(group_objects, group_id, context, "KSTREE_GROUP")
+                    if combined_obj:
+                        temp_objects_to_cleanup.append(combined_obj)
+                        _export_single_object(
+                            combined_obj,
+                            group_name,
+                            output_dir,
+                            resource_prefix,
+                            pending_exports,
+                            writer_pool,
+                        )
+                        if len(pending_exports) >= max_in_flight:
+                            _complete_next_pending_export(pending_exports, objects)
+                except Exception as e:
+                    print(f"ERROR: Failed to process KSTREE_GROUP_{group_id}: {e}")
+                    import traceback
+                    traceback.print_exc()
 
-        print(f"Found {len(export_entries)} visible exportable objects (meshes + beveled curves)")
+            for group_name, group_objects in sms_groups.items():
+                try:
+                    full_group_name = f"SMS_GRP_{group_name}"
+                    print(f"Processing SMS_GRP_{group_name} ({len(group_objects)} objects)...")
+                    combined_obj, _, _ = combine_objects_into_mesh(group_objects, group_name, context, "SMS_GRP")
+                    if combined_obj:
+                        temp_objects_to_cleanup.append(combined_obj)
+                        _export_single_object(
+                            combined_obj,
+                            full_group_name,
+                            output_dir,
+                            resource_prefix,
+                            pending_exports,
+                            writer_pool,
+                        )
+                        if len(pending_exports) >= max_in_flight:
+                            _complete_next_pending_export(pending_exports, objects)
+                except Exception as e:
+                    print(f"ERROR: Failed to process SMS_GRP_{group_name}: {e}")
+                    import traceback
+                    traceback.print_exc()
 
-        # Group objects by their group prefix
-        kstree_groups = {}  # group_id -> [objects]
-        sms_groups = {}     # group_name -> [objects]
-        ungrouped_objects = []
-
-        for obj, source_name in export_entries:
-            kstree_group = parse_kstree_group(source_name)
-            sms_group = parse_sms_group(source_name)
-
-            if kstree_group:
-                if kstree_group not in kstree_groups:
-                    kstree_groups[kstree_group] = []
-                kstree_groups[kstree_group].append(obj)
-            elif sms_group:
-                if sms_group not in sms_groups:
-                    sms_groups[sms_group] = []
-                sms_groups[sms_group].append(obj)
-            else:
-                ungrouped_objects.append((obj, source_name))
-
-        print(f"Grouped: {len(kstree_groups)} KSTREE groups, {len(sms_groups)} SMS groups, {len(ungrouped_objects)} ungrouped objects")
-
-        # Process KSTREE_GROUP objects
-        for group_id, group_objects in kstree_groups.items():
-            try:
-                group_name = f"KSTREE_GROUP_{group_id}"
-                print(f"Processing KSTREE_GROUP_{group_id} ({len(group_objects)} objects)...")
-
-                combined_obj, _, _ = combine_objects_into_mesh(
-                    group_objects, group_id, context, "KSTREE_GROUP"
-                )
-
-                if combined_obj:
-                    temp_objects_to_cleanup.append(combined_obj)
-
-                    # Export the combined mesh
+            # Process ungrouped objects
+            for obj, source_name in ungrouped_objects:
+                try:
                     _export_single_object(
-                        combined_obj, group_name, output_dir,
-                        resource_prefix, objects, temp_objects_to_cleanup
+                        obj,
+                        source_name,
+                        output_dir,
+                        resource_prefix,
+                        pending_exports,
+                        writer_pool,
                     )
-            except Exception as e:
-                print(f"ERROR: Failed to process KSTREE_GROUP_{group_id}: {e}")
-                import traceback
-                traceback.print_exc()
+                    if len(pending_exports) >= max_in_flight:
+                        _complete_next_pending_export(pending_exports, objects)
+                except Exception as e:
+                    print(f"ERROR: Failed to export {source_name}: {e}")
+                    import traceback
+                    traceback.print_exc()
 
-        # Process SMS_GRP objects
-        for group_name, group_objects in sms_groups.items():
-            try:
-                full_group_name = f"SMS_GRP_{group_name}"
-                print(f"Processing SMS_GRP_{group_name} ({len(group_objects)} objects)...")
-
-                combined_obj, _, _ = combine_objects_into_mesh(
-                    group_objects, group_name, context, "SMS_GRP"
-                )
-
-                if combined_obj:
-                    temp_objects_to_cleanup.append(combined_obj)
-
-                    # Export the combined mesh
-                    _export_single_object(
-                        combined_obj, full_group_name, output_dir,
-                        resource_prefix, objects, temp_objects_to_cleanup
-                    )
-            except Exception as e:
-                print(f"ERROR: Failed to process SMS_GRP_{group_name}: {e}")
-                import traceback
-                traceback.print_exc()
-
-        # Process ungrouped objects
-        for obj, source_name in ungrouped_objects:
-            try:
-                _export_single_object(
-                    obj, source_name, output_dir,
-                    resource_prefix, objects, temp_objects_to_cleanup
-                )
-            except Exception as e:
-                print(f"ERROR: Failed to export {source_name}: {e}")
-                import traceback
-                traceback.print_exc()
-                continue
+            while pending_exports:
+                _complete_next_pending_export(pending_exports, objects)
 
     finally:
         # Clean up temporary combined objects
         if temp_objects_to_cleanup:
             print(f"Cleaning up {len(temp_objects_to_cleanup)} temporary objects...")
             bpy.ops.object.select_all(action="DESELECT")
+            has_selected_temp = False
             for temp_obj in temp_objects_to_cleanup:
                 if temp_obj and temp_obj.name in bpy.data.objects:
                     try:
-                        # Select the temp object
-                        temp_obj.select_set(True)
-                        # Delete it
-                        bpy.ops.object.delete()
-                        bpy.ops.object.select_all(action="DESELECT")
+                        if bool(temp_obj.get(TEMP_EXPORT_TAG, False)):
+                            temp_obj.select_set(True)
+                            has_selected_temp = True
+                        else:
+                            print(f"Skipping cleanup of non-temp object: {temp_obj.name}")
                     except Exception as e:
                         print(f"Warning: Could not delete temporary object {temp_obj.name}: {e}")
+            if has_selected_temp:
+                bpy.ops.object.delete()
 
         # Restore selection
         bpy.ops.object.select_all(action="DESELECT")
