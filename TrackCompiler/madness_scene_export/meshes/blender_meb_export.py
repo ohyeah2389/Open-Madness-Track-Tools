@@ -84,29 +84,36 @@ def extract_mesh_data_from_blender(
         scale_matrix = mathutils.Matrix.Diagonal(obj.matrix_world.to_scale()).to_4x4()
         eval_mesh.transform(scale_matrix)
 
-        # Ensure mesh has triangulated faces
-        bm = bmesh.new()
-        bm.from_mesh(eval_mesh)
-        bmesh.ops.triangulate(bm, faces=bm.faces)
-        bm.to_mesh(eval_mesh)
-        bm.free()
+        # Use Blender's cached loop triangles instead of always triangulating with bmesh.
+        eval_mesh.calc_loop_triangles()
 
-        # Calculate tangents if needed
-        if options.generate_tangent_space:
-            # Ensure we have UVs before calculating tangents
-            if len(eval_mesh.uv_layers) > 0:
+        # Calculate tangents if needed.
+        # Some evaluated meshes still contain n-gons; calc_tangents can fail on those.
+        # Triangulate first when n-gons are detected to avoid the exception path.
+        if options.generate_tangent_space and len(eval_mesh.uv_layers) > 0:
+            has_ngons = any(poly.loop_total > 4 for poly in eval_mesh.polygons)
+            if has_ngons:
+                print(f"  Warning: Tangent calc needs tris/quads on {obj.name}; triangulating fallback...")
+                bm = bmesh.new()
+                bm.from_mesh(eval_mesh)
+                bmesh.ops.triangulate(bm, faces=bm.faces)
+                bm.to_mesh(eval_mesh)
+                bm.free()
+                eval_mesh.calc_loop_triangles()
+
+            try:
                 eval_mesh.calc_tangents()
-
-        # Build vertex data with deduplication
-        # We'll build unique vertices and an index buffer
-        unique_vertices = []
-        unique_normals = []
-        unique_colors = []
-        unique_tangents = []
-        unique_bitangents = []
-
-        # Map from vertex data tuple to vertex index
-        vertex_map = {}
+            except RuntimeError as e:
+                if "Tangentspace can only be computed for tris/quads" not in str(e) and \
+                   "Tangent space can only be computed for tris/quads" not in str(e):
+                    raise
+                bm = bmesh.new()
+                bm.from_mesh(eval_mesh)
+                bmesh.ops.triangulate(bm, faces=bm.faces)
+                bm.to_mesh(eval_mesh)
+                bm.free()
+                eval_mesh.calc_loop_triangles()
+                eval_mesh.calc_tangents()
 
         # Determine which UV layers to export
         # NOTE: Can have duplicates! e.g. [0, 1, 0, 1] means write UV0, UV1, UV0 again, UV1 again
@@ -119,7 +126,6 @@ def extract_mesh_data_from_blender(
 
         # Build a set of unique source UV layers we need to read
         unique_source_uv_indices = sorted(set(uv_indices_to_export))
-        unique_uv_data = {uv_idx: [] for uv_idx in unique_source_uv_indices}
 
         # Track indices by material
         material_names = []
@@ -136,96 +142,102 @@ def extract_mesh_data_from_blender(
         else:
             material_names.append("DefaultMaterial")
 
-        # Initialize index lists for each material
-        material_indices = [[] for _ in material_names]
-        material_vertex_sets = [set() for _ in material_names]
+        # Flatten triangle loop/material references once.
+        tri_count = len(eval_mesh.loop_triangles)
+        tri_loop_indices = np.empty((tri_count, 3), dtype=np.int32)
+        tri_material_indices = np.empty(tri_count, dtype=np.int32)
+        for tri_idx, tri in enumerate(eval_mesh.loop_triangles):
+            tri_loop_indices[tri_idx] = tri.loops
+            mat_idx = tri.material_index
+            tri_material_indices[tri_idx] = mat_idx if mat_idx < len(material_names) else 0
 
-        # Extract per-loop data with vertex deduplication
-        for poly in eval_mesh.polygons:
-            mat_idx = poly.material_index
-            if mat_idx >= len(material_names):
-                mat_idx = 0
+        loop_indices = tri_loop_indices.reshape(-1)
+        material_per_loop = np.repeat(tri_material_indices, 3)
 
-            for loop_idx in poly.loop_indices:
-                loop = eval_mesh.loops[loop_idx]
-                vert = eval_mesh.vertices[loop.vertex_index]
+        # Gather positions from vertices via loop->vertex indirection.
+        loop_vertex_index_all = np.empty(len(eval_mesh.loops), dtype=np.int32)
+        eval_mesh.loops.foreach_get("vertex_index", loop_vertex_index_all)
+        vertex_index_per_loop = loop_vertex_index_all[loop_indices]
 
-                # Build vertex data
-                pos = tuple(vert.co)
-                normal = tuple(loop.normal)
+        vertex_co_all = np.empty(len(eval_mesh.vertices) * 3, dtype=np.float32)
+        eval_mesh.vertices.foreach_get("co", vertex_co_all)
+        vertex_co_all = vertex_co_all.reshape(-1, 3)
+        loop_positions = vertex_co_all[vertex_index_per_loop]
 
-                # Vertex color
-                if eval_mesh.vertex_colors:
-                    color_layer = eval_mesh.vertex_colors[0]
-                    color = color_layer.data[loop_idx].color
-                    color_tuple = (color[0], color[1], color[2], 1.0)
-                else:
-                    color_tuple = (1.0, 1.0, 1.0, 1.0)
+        # Loop normals.
+        loop_normals_all = np.empty(len(eval_mesh.loops) * 3, dtype=np.float32)
+        eval_mesh.loops.foreach_get("normal", loop_normals_all)
+        loop_normals_all = loop_normals_all.reshape(-1, 3)
+        loop_normals = loop_normals_all[loop_indices]
 
-                # UVs - build tuple with ALL requested UV data (including duplicates for dedup key)
-                uv_tuple = ()
-                for uv_idx in uv_indices_to_export:
-                    if uv_idx < len(eval_mesh.uv_layers):
-                        uv_layer = eval_mesh.uv_layers[uv_idx]
-                        uv = uv_layer.data[loop_idx].uv
-                        uv_tuple += (uv[0], uv[1])
+        # Loop colors (RGBA).
+        if eval_mesh.vertex_colors:
+            color_data_all = np.empty(len(eval_mesh.loops) * 4, dtype=np.float32)
+            eval_mesh.vertex_colors[0].data.foreach_get("color", color_data_all)
+            color_data_all = color_data_all.reshape(-1, 4)
+            loop_colors = color_data_all[loop_indices].copy()
+            loop_colors[:, 3] = 1.0
+        else:
+            loop_colors = np.ones((len(loop_indices), 4), dtype=np.float32)
 
-                # Tangents/bitangents
-                tangent_tuple = ()
-                bitangent_tuple = ()
-                if options.generate_tangent_space and len(eval_mesh.uv_layers) > 0:
-                    tangent_tuple = tuple(loop.tangent)
-                    bitangent_tuple = tuple(loop.bitangent)
+        # Gather UV layers once per source layer.
+        source_uv_per_loop = {}
+        for uv_idx in unique_source_uv_indices:
+            uv_data_all = np.empty(len(eval_mesh.loops) * 2, dtype=np.float32)
+            eval_mesh.uv_layers[uv_idx].data.foreach_get("uv", uv_data_all)
+            uv_data_all = uv_data_all.reshape(-1, 2)
+            source_uv_per_loop[uv_idx] = uv_data_all[loop_indices]
 
-                # Create a unique key for this vertex
-                vertex_key = (pos, normal, color_tuple, uv_tuple, tangent_tuple, bitangent_tuple)
+        # Tangents/bitangents (optional).
+        tangents_loop = None
+        bitangents_loop = None
+        if options.generate_tangent_space and len(eval_mesh.uv_layers) > 0:
+            tangents_all = np.empty(len(eval_mesh.loops) * 3, dtype=np.float32)
+            bitangents_all = np.empty(len(eval_mesh.loops) * 3, dtype=np.float32)
+            eval_mesh.loops.foreach_get("tangent", tangents_all)
+            eval_mesh.loops.foreach_get("bitangent", bitangents_all)
+            tangents_loop = tangents_all.reshape(-1, 3)[loop_indices]
+            bitangents_loop = bitangents_all.reshape(-1, 3)[loop_indices]
 
-                # Check if we've seen this exact vertex before
-                if vertex_key in vertex_map:
-                    # Reuse existing vertex
-                    vertex_index = vertex_map[vertex_key]
-                else:
-                    # Add new unique vertex
-                    vertex_index = len(unique_vertices)
-                    vertex_map[vertex_key] = vertex_index
+        # Build dedup key columns exactly matching exported attributes.
+        key_columns = [loop_positions, loop_normals, loop_colors]
+        for uv_idx in uv_indices_to_export:
+            key_columns.append(source_uv_per_loop[uv_idx])
+        if tangents_loop is not None and bitangents_loop is not None:
+            key_columns.append(tangents_loop)
+            key_columns.append(bitangents_loop)
+        dedup_key = np.ascontiguousarray(np.concatenate(key_columns, axis=1))
 
-                    unique_vertices.append(list(pos))
-                    unique_normals.append(list(normal))
-                    unique_colors.append(list(color_tuple))
+        # Deduplicate in NumPy/C instead of Python dict + tuple creation.
+        _, unique_idx, inverse = np.unique(
+            dedup_key, axis=0, return_index=True, return_inverse=True
+        )
 
-                    # Store UV data only once per unique source layer
-                    for uv_idx in unique_source_uv_indices:
-                        uv_layer = eval_mesh.uv_layers[uv_idx]
-                        uv = uv_layer.data[loop_idx].uv
-                        unique_uv_data[uv_idx].append([uv[0], uv[1]])
+        vertices = loop_positions[unique_idx].astype(np.float32, copy=False)
+        normals = loop_normals[unique_idx].astype(np.float32, copy=False)
+        colors = loop_colors[unique_idx].astype(np.float32, copy=False)
 
-                    if options.generate_tangent_space and len(eval_mesh.uv_layers) > 0:
-                        unique_tangents.append(list(tangent_tuple))
-                        unique_bitangents.append(list(bitangent_tuple))
+        tangents_array = (
+            tangents_loop[unique_idx].astype(np.float32, copy=False)
+            if tangents_loop is not None
+            else None
+        )
+        bitangents_array = (
+            bitangents_loop[unique_idx].astype(np.float32, copy=False)
+            if bitangents_loop is not None
+            else None
+        )
 
-                # Track this vertex index for this material
-                material_indices[mat_idx].append(vertex_index)
-                material_vertex_sets[mat_idx].add(vertex_index)
+        unique_uv_data = {
+            uv_idx: source_uv_per_loop[uv_idx][unique_idx].astype(np.float32, copy=False)
+            for uv_idx in unique_source_uv_indices
+        }
 
-        # Convert lists to numpy arrays
-        vertices = np.array(unique_vertices, dtype=np.float32)
-        normals = np.array(unique_normals, dtype=np.float32)
-        colors = np.array(unique_colors, dtype=np.float32)
-
-        tangents_array = None
-        bitangents_array = None
-        if options.generate_tangent_space and unique_tangents:
-            tangents_array = np.array(unique_tangents, dtype=np.float32)
-            bitangents_array = np.array(unique_bitangents, dtype=np.float32)
-
-        # Convert material indices to numpy arrays
-        for mat_idx, idx_list in enumerate(material_indices):
-            indices_by_material.append(np.array(idx_list, dtype=np.uint16))
-
-            # Extract vertices for this material (for bounding calculation)
-            vertex_set = material_vertex_sets[mat_idx]
-            mat_vertices = vertices[list(vertex_set)]
-            vertices_by_material.append(mat_vertices)
+        for mat_idx in range(len(material_names)):
+            mat_loop_indices = inverse[material_per_loop == mat_idx].astype(np.uint16, copy=False)
+            indices_by_material.append(mat_loop_indices)
+            unique_vertex_indices = np.unique(mat_loop_indices)
+            vertices_by_material.append(vertices[unique_vertex_indices])
 
         # Build UV layer list WITH DUPLICATES as specified in uv_indices_to_export
         # Each entry references the appropriate source UV data (may reference same data multiple times)
@@ -235,7 +247,7 @@ def extract_mesh_data_from_blender(
             # Store as (slot_index, uv_array) - slot_index determines which UV section header to use
             uv_layers.append((slot_idx, uv_array))
 
-        print(f"  Deduplicated {len(vertex_map)} unique vertices from {sum(len(p.loop_indices) for p in eval_mesh.polygons)} loops")
+        print(f"  Deduplicated {len(vertices)} unique vertices from {len(eval_mesh.loop_triangles) * 3} loops")
         print(f"  Export options: tangent_space={options.generate_tangent_space}, bodywork={options.bodywork_data}, UV slots={len(uv_layers)} (source layers: {uv_indices_to_export})")
         print(f"  Returning tangents: {tangents_array is not None}, bitangents: {bitangents_array is not None}")
 
