@@ -118,6 +118,9 @@ def write_aiw_file(track_data: aiw_parser.TrackData, filepath: str):
         # Write waypoint metadata
         meta = track_data.waypoint_metadata
         f.write(f"trackstate={meta.trackstate}\n")
+        if meta.pit_extensions_start >= 0 and meta.pit_extensions_end >= 0:
+            f.write(f"PitExtensionsStart={meta.pit_extensions_start}\n")
+            f.write(f"PitExtensionsEnd={meta.pit_extensions_end}\n")
         f.write(f"times=({meta.times[0]:.4f},{meta.times[1]:.4f})\n")
         f.write(f"number_waypoints={meta.number_waypoints}\n")
         f.write(f"lap_length={meta.lap_length:.6f}\n")

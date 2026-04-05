@@ -138,6 +138,8 @@ class WaypointMetadata:
     pit_stop_join_in: float
     pit_stop_join_out: float
     use_line_blend_speed: int
+    pit_extensions_start: int = -1
+    pit_extensions_end: int = -1
 
     # AMS1-only metadata fields
     left_handed_pits: int = 0
@@ -268,7 +270,7 @@ class AIWParser:
         return value.strip()
 
     # ------------------------------------------------------------------
-    # [Features] parser (shared, graceful fallback for missing keys)
+    # [Features] parser
     # ------------------------------------------------------------------
 
     def _parse_features(self, content: str) -> TrackFeatures:
@@ -401,7 +403,7 @@ class AIWParser:
         return rolling_starts
 
     # ------------------------------------------------------------------
-    # [TELEPORT] parser (shared – same format in both games)
+    # [TELEPORT] parser
     # ------------------------------------------------------------------
 
     def _parse_teleport_spots(self, content: str) -> List[TeleportSpot]:
@@ -484,7 +486,7 @@ class AIWParser:
         return pit_spots
 
     # ------------------------------------------------------------------
-    # [Waypoint] metadata parser (game-version-aware)
+    # [Waypoint] metadata parser
     # ------------------------------------------------------------------
 
     def _parse_waypoint_metadata(self, content: str, game_version: str = 'AMS2') -> WaypointMetadata:
@@ -557,6 +559,8 @@ class AIWParser:
 
         return WaypointMetadata(
             trackstate            = int  (get_value('trackstate')),
+            pit_extensions_start  = int  (get_value('PitExtensionsStart', '-1')),
+            pit_extensions_end    = int  (get_value('PitExtensionsEnd',   '-1')),
             times                 = times,
             number_waypoints      = int  (get_value('number_waypoints')),
             lap_length            = float(get_value('lap_length')),
@@ -595,14 +599,34 @@ class AIWParser:
 
     def _default_waypoint_metadata(self) -> WaypointMetadata:
         return WaypointMetadata(
-            0, (0.0, 0.0), 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, (0.0, 0.0), (0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0),
-            (0.0, 0.0), (0.0, 0.0),
-            0.0, 0.0, 0.0, 0.0, 0.0, 0
+            trackstate=0,
+            times=(0.0, 0.0),
+            number_waypoints=0,
+            lap_length=0.0,
+            sector_1_length=0.0,
+            sector_2_length=0.0,
+            fuel_use=0.0,
+            groove_width=0.0,
+            groove_width_wet=0.0,
+            intermediate_fog_level=0.0,
+            intermediate_fog_planes=(0.0, 0.0),
+            rainy_fog_planes=(0.0, 0.0),
+            intermediate_fog_color=(0.0, 0.0, 0.0),
+            rainy_fog_color=(0.0, 0.0, 0.0),
+            fog_density=(0.0, 0.0),
+            rainy_darkness=(0.0, 0.0),
+            garage_depth=0.0,
+            pit_stop_space_front=0.0,
+            pit_stop_space_back=0.0,
+            pit_stop_join_in=0.0,
+            pit_stop_join_out=0.0,
+            use_line_blend_speed=0,
+            pit_extensions_start=-1,
+            pit_extensions_end=-1,
         )
 
     # ------------------------------------------------------------------
-    # AMS2 waypoint parser (original)
+    # AMS2 waypoint parser
     # ------------------------------------------------------------------
 
     def _parse_waypoints(self, content: str) -> List[Waypoint]:
@@ -827,7 +851,7 @@ class AIWParser:
         )
 
     # ------------------------------------------------------------------
-    # Validation helpers (shared)
+    # Validation helpers
     # ------------------------------------------------------------------
 
     def validate_waypoint_structure(self) -> ValidationResult:

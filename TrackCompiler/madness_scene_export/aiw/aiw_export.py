@@ -217,8 +217,8 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
         alt_waypoints_dict[branch_id] = alt_waypoints
         all_waypoints.extend(alt_waypoints)
 
-    # Garage extension lines (branch_id 500 and ascending)
-    garage_waypoints_dict = {}
+    # Garage extension lines (also branch_id 1, flagged by PitExtensionsStart/End)
+    garage_waypoint_lines = []
     for garage_id in sorted(garage_line_objects.keys()):
         branch_id = 1
         print(f"Processing garage line {garage_id} as branch_id {branch_id}")  # Debug output
@@ -226,7 +226,10 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
             garage_line_objects[garage_id],
             branch_id,
         )
-        garage_waypoints_dict[branch_id] = garage_waypoints
+        for garage_wp in garage_waypoints:
+            # Sebring-style pit extension waypoints use lap distance = -1
+            garage_wp.score = (0, -1.0)
+        garage_waypoint_lines.append(garage_waypoints)
         all_waypoints.extend(garage_waypoints)
         print(f"Processed {len(garage_waypoints)} garage waypoints for garage line {garage_id} (branch_id={branch_id})")  # Debug output
 
@@ -374,7 +377,7 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
             )
 
     # Update garage line pointers and connect to pit lane
-    for branch_id, garage_waypoints in garage_waypoints_dict.items():
+    for garage_waypoints in garage_waypoint_lines:
         if not garage_waypoints:
             continue
 
@@ -420,7 +423,7 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
             last_wp.wp_ptrs = (
                 prev_idx,
                 pit_wp_final_idx,
-                pit_wp_final_idx,
+                -1,
                 1,  # branch_merge (pit lane)
             )
 
@@ -734,6 +737,12 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
         )
         rolling_starts.append(rolling_start)
 
+    pit_extensions_start = -1
+    pit_extensions_end = -1
+    if garage_waypoint_lines:
+        pit_extensions_start = garage_waypoint_lines[0][0].index
+        pit_extensions_end = garage_waypoint_lines[-1][-1].index
+
     # Create waypoint metadata
     waypoint_metadata = aiw_parser.WaypointMetadata(
         trackstate=467,  # Default
@@ -761,6 +770,8 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
         pit_stop_join_in=aiw_props.waypoint_metadata.pit_stop_join_in,
         pit_stop_join_out=aiw_props.waypoint_metadata.pit_stop_join_out,
         use_line_blend_speed=1,
+        pit_extensions_start=pit_extensions_start,
+        pit_extensions_end=pit_extensions_end,
     )
 
     # Create track data
