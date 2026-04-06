@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-01-07T03:42:25.667791Z",
-  "sourceRoot": "S:\\Assorted Project Files\\Synced Projects\\AMS2 Track RevEng\\BMT Research\\MTX_Output\\tracks",
+  "generatedAt": "2026-04-06T21:42:27.562109Z",
+  "sourceRoot": "S:\\Assorted Project Files\\Synced Projects\\AMS2 Track RevEng\\BMT Research\\MTX_Output_AMS2\\tracks",
   "sourceRoots": [
-    "S:\\Assorted Project Files\\Synced Projects\\AMS2 Track RevEng\\BMT Research\\MTX_Output\\tracks"
+    "S:\\Assorted Project Files\\Synced Projects\\AMS2 Track RevEng\\BMT Research\\MTX_Output_AMS2\\tracks"
   ],
-  "mtxFiles": 39187,
+  "mtxFiles": 42399,
   "shaders": {
     "Render\\Shaders\\rz_basic.fx": {
       "techniques": {
         "rz_basic": {
-          "filesSeen": 15842,
+          "filesSeen": 17478,
           "defines": [
             "DISABLE_EMISSIVE_CONTROL",
             "EMISSIVE_AS_LIGHTMAP",
@@ -51,25 +51,25 @@
             "USE_DIFFUSE2_MAP",
             "USE_AO_MAP",
             "USE_DETAIL_MAP",
-            "DISABLE_EMISSIVE_CONTROL",
             "USE_COLOR_MAP",
             "USE_ENV_MAP",
             "USE_EMISSIVE_MAPS",
-            "USE_COLOURISATION",
             "USE_LOGO_TINT",
             "USE_ALPHATEST",
             "USE_ADVANCED_MSAA",
             "EXCLUDE_FROM_SHADOWS",
+            "DISABLE_EMISSIVE_CONTROL",
             "USE_DOUBLE_SIDED_SAME",
             "USE_NEW_LOGO",
             "SPECULAR_FROM_DIFFUSE_ALPHA",
             "SPECULAR_POWER_FROM_DIFFUSE_ALPHA",
             "SPECULAR_FROM_NORMAL_ALPHA",
+            "USE_COLOURISATION",
             "USE_COLOURISATION_WITH_MASK",
             "USE_COLOURISATION_EMISSIVE",
-            "USE_FRESNEL",
-            "SPECULAR_POWER_FROM_NORMAL_ALPHA",
             "SHOW_AO_MAP",
+            "SPECULAR_POWER_FROM_NORMAL_ALPHA",
+            "USE_FRESNEL",
             "USE_CUSTOMFRESNEL",
             "ENVMAP_USE_SPECULAR_COLOR",
             "ENVMAP_SCALED_SPEC_A",
@@ -106,12 +106,12 @@
             "fresnelCustomF90",
             "envMapFactor",
             "reflectionBlurBias",
-            "reflectiveBoost",
             "emissiveScale",
             "specularTexture",
             "tintAlpha0",
             "diffuse1Texture",
             "detailTexture",
+            "reflectiveBoost",
             "tintColour0",
             "normalTexture",
             "diffuse2Texture",
@@ -161,7 +161,7 @@
               ],
               "floatMin": 0.125,
               "floatMax": 255.0,
-              "floatAvg": 9.51,
+              "floatAvg": 9.44,
               "floatMedian": 8.0,
               "intMin": null,
               "intMax": null,
@@ -184,7 +184,7 @@
               ],
               "floatMin": 0.125,
               "floatMax": 255.0,
-              "floatAvg": 9.44,
+              "floatAvg": 9.37,
               "floatMedian": 8.0,
               "intMin": null,
               "intMax": null,
@@ -230,7 +230,7 @@
               ],
               "floatMin": 0.035,
               "floatMax": 2.0,
-              "floatAvg": 0.82,
+              "floatAvg": 0.81,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -253,7 +253,7 @@
               ],
               "floatMin": 0.0,
               "floatMax": 16.0,
-              "floatAvg": 0.53,
+              "floatAvg": 0.52,
               "floatMedian": 0.2,
               "intMin": null,
               "intMax": null,
@@ -276,7 +276,7 @@
               ],
               "floatMin": 0.0,
               "floatMax": 1024.0,
-              "floatAvg": 18.75,
+              "floatAvg": 20.46,
               "floatMedian": 8.0,
               "intMin": null,
               "intMax": null,
@@ -299,7 +299,7 @@
               ],
               "floatMin": 0.0,
               "floatMax": 1024.0,
-              "floatAvg": 209.8,
+              "floatAvg": 223.99,
               "floatMedian": 125.0,
               "intMin": null,
               "intMax": null,
@@ -391,7 +391,7 @@
               ],
               "floatMin": 0.05,
               "floatMax": 16.0,
-              "floatAvg": 0.99,
+              "floatAvg": 0.97,
               "floatMedian": 0.8,
               "intMin": null,
               "intMax": null,
@@ -437,7 +437,7 @@
               ],
               "floatMin": 0.0,
               "floatMax": 50.0,
-              "floatAvg": 1.35,
+              "floatAvg": 1.33,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -671,9 +671,9 @@
                 ]
               ],
               "vec4Avg": [
-                0.05,
                 0.04,
-                0.04,
+                0.03,
+                0.03,
                 0.0
               ],
               "vec4Median": [
@@ -692,7 +692,7 @@
               ],
               "floatMin": 0.0,
               "floatMax": 1.0,
-              "floatAvg": 0.26,
+              "floatAvg": 0.19,
               "floatMedian": 0.0,
               "intMin": null,
               "intMax": null,
@@ -714,7 +714,7 @@
               ],
               "floatMin": 0.0,
               "floatMax": 1.0,
-              "floatAvg": 0.01,
+              "floatAvg": 0.02,
               "floatMedian": 0.0,
               "intMin": null,
               "intMax": null,
@@ -736,7 +736,7 @@
               ],
               "floatMin": 0.0,
               "floatMax": 1.0,
-              "floatAvg": 0.02,
+              "floatAvg": 0.01,
               "floatMedian": 0.0,
               "intMin": null,
               "intMax": null,
@@ -838,10 +838,10 @@
               "boolValues": [],
               "sampleValues": [
                 "tracks\\textures\\Barcelona\\TWallCanvas_Colormap.dds",
+                "tracks\\textures\\rz_shared\\generic_weathering_detail.dds",
+                "tracks\\textures\\Barcelona_1999\\CmwallB_ColorMap.dds",
                 "tracks\\textures\\Estoril_1988\\Armcos_dirty.dds",
-                "tracks\\textures\\Estoril_1988\\Armco_Colors.dds",
-                "tracks\\textures\\InterLagos_1991\\Walls_ColorMap.dds",
-                "tracks\\textures\\Spa-Francorchamps_1970\\Armcos_dirty.dds"
+                "tracks\\textures\\Estoril_1988\\Armco_Colors.dds"
               ]
             },
             "tintAlpha0": {
@@ -1019,12 +1019,18 @@
                   0.0,
                   0.0,
                   0.0
+                ],
+                [
+                  0.5,
+                  0.5,
+                  0.5,
+                  0.0
                 ]
               ],
               "vec4Avg": [
-                0.0,
-                0.0,
-                0.0,
+                0.03,
+                0.03,
+                0.03,
                 0.0
               ],
               "vec4Median": [
@@ -1074,7 +1080,8 @@
               ],
               "boolValues": [],
               "sampleValues": [
-                "tracks\\textures\\Le_Mans\\ADVERTISEMENTS_Logos1.dds"
+                "tracks\\textures\\Le_Mans\\ADVERTISEMENTS_Logos1.dds",
+                "tracks\\textures\\Le_Mans_2005\\ADVERTISEMENTS_Logos1.dds"
               ]
             },
             "logo2Texture": {
@@ -1096,7 +1103,8 @@
               "boolValues": [],
               "sampleValues": [
                 "tracks\\textures\\Le_Mans\\ADVERTISEMENTS_Logos2.dds",
-                "tracks\\textures\\Le_Mans\\No_Logos.dds"
+                "tracks\\textures\\Le_Mans\\No_Logos.dds",
+                "tracks\\textures\\Le_Mans_2005\\ADVERTISEMENTS_Logos2.dds"
               ]
             },
             "logo3Texture": {
@@ -1123,7 +1131,7 @@
           }
         },
         "rz_basic_DoubleSided": {
-          "filesSeen": 165,
+          "filesSeen": 167,
           "defines": [
             "EMISSIVE_AS_LIGHTMAP",
             "ENVMAP_SCALED_DIFFUSE_A",
@@ -1232,7 +1240,7 @@
               ],
               "floatMin": 4.0,
               "floatMax": 8.0,
-              "floatAvg": 7.88,
+              "floatAvg": 7.86,
               "floatMedian": 8.0,
               "intMin": null,
               "intMax": null,
@@ -1252,7 +1260,7 @@
               ],
               "floatMin": 4.0,
               "floatMax": 8.0,
-              "floatAvg": 7.88,
+              "floatAvg": 7.86,
               "floatMedian": 8.0,
               "intMin": null,
               "intMax": null,
@@ -1313,7 +1321,7 @@
               ],
               "floatMin": 0.0,
               "floatMax": 3.0,
-              "floatAvg": 0.68,
+              "floatAvg": 0.67,
               "floatMedian": 0.5,
               "intMin": null,
               "intMax": null,
@@ -1336,7 +1344,7 @@
               ],
               "floatMin": 1.0,
               "floatMax": 10.0,
-              "floatAvg": 2.35,
+              "floatAvg": 2.37,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -1359,7 +1367,7 @@
               ],
               "floatMin": 10.0,
               "floatMax": 1024.0,
-              "floatAvg": 60.17,
+              "floatAvg": 59.6,
               "floatMedian": 32.0,
               "intMin": null,
               "intMax": null,
@@ -1425,7 +1433,7 @@
               ],
               "floatMin": 0.5,
               "floatMax": 10.0,
-              "floatAvg": 1.59,
+              "floatAvg": 1.58,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -1659,7 +1667,7 @@
     "Render\\Shaders\\basic.fx": {
       "techniques": {
         "Basic": {
-          "filesSeen": 5921,
+          "filesSeen": 6174,
           "defines": [
             "CLAMP_DIFFUSE",
             "DETAIL_MAPPING",
@@ -1794,7 +1802,7 @@
               ],
               "floatMin": 1.0,
               "floatMax": 256.0,
-              "floatAvg": 12.25,
+              "floatAvg": 12.69,
               "floatMedian": 8.0,
               "intMin": null,
               "intMax": null,
@@ -1817,7 +1825,7 @@
               ],
               "floatMin": 4.0,
               "floatMax": 1024.0,
-              "floatAvg": 100.38,
+              "floatAvg": 100.58,
               "floatMedian": 35.0,
               "intMin": null,
               "intMax": null,
@@ -2011,7 +2019,7 @@
               ],
               "floatMin": 2.0,
               "floatMax": 128.0,
-              "floatAvg": 57.81,
+              "floatAvg": 57.26,
               "floatMedian": 32.0,
               "intMin": null,
               "intMax": null,
@@ -2205,7 +2213,7 @@
               ],
               "floatMin": 1.0,
               "floatMax": 2.0,
-              "floatAvg": 1.67,
+              "floatAvg": 1.71,
               "floatMedian": 2.0,
               "intMin": null,
               "intMax": null,
@@ -2588,7 +2596,7 @@
           }
         },
         "Basic_DoubleSided": {
-          "filesSeen": 399,
+          "filesSeen": 400,
           "defines": [
             "ENVMAP_SCALED_SPEC_A",
             "ENV_MAPPING",
@@ -2657,7 +2665,7 @@
               ],
               "floatMin": 1.0,
               "floatMax": 41.0,
-              "floatAvg": 10.68,
+              "floatAvg": 10.67,
               "floatMedian": 10.0,
               "intMin": null,
               "intMax": null,
@@ -2680,7 +2688,7 @@
               ],
               "floatMin": 14.0,
               "floatMax": 300.0,
-              "floatAvg": 67.03,
+              "floatAvg": 67.98,
               "floatMedian": 48.0,
               "intMin": null,
               "intMax": null,
@@ -2871,7 +2879,7 @@
     "Render\\Shaders\\basic_translucent.fx": {
       "techniques": {
         "Basic_Translucent": {
-          "filesSeen": 2114,
+          "filesSeen": 2244,
           "defines": [
             "ENVMAP_SCALED_SPEC_A",
             "ENV_MAPPING",
@@ -2970,7 +2978,7 @@
               ],
               "floatMin": 1.0,
               "floatMax": 1024.0,
-              "floatAvg": 69.09,
+              "floatAvg": 66.82,
               "floatMedian": 10.0,
               "intMin": null,
               "intMax": null,
@@ -2993,7 +3001,7 @@
               ],
               "floatMin": 1.0,
               "floatMax": 1024.0,
-              "floatAvg": 269.63,
+              "floatAvg": 268.08,
               "floatMedian": 125.0,
               "intMin": null,
               "intMax": null,
@@ -3016,7 +3024,7 @@
               ],
               "floatMin": 0.05,
               "floatMax": 9.0,
-              "floatAvg": 1.77,
+              "floatAvg": 1.79,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -3162,7 +3170,7 @@
               ],
               "floatMin": 1.0,
               "floatMax": 2.032,
-              "floatAvg": 1.87,
+              "floatAvg": 1.89,
               "floatMedian": 2.0,
               "intMin": null,
               "intMax": null,
@@ -3222,7 +3230,7 @@
           }
         },
         "Basic_Translucent_DoubleSided": {
-          "filesSeen": 121,
+          "filesSeen": 122,
           "defines": [
             "ENVMAP_SCALED_SPEC_A",
             "ENV_MAPPING",
@@ -3761,7 +3769,7 @@
     "Render\\Shaders\\rz_road_main_3diffuse.fx": {
       "techniques": {
         "rz_road_main_3diffuse": {
-          "filesSeen": 2520,
+          "filesSeen": 2694,
           "defines": [
             "APPLYLIVETRACKMASKS",
             "BLEND_DIFFUSE_WITH_PUDDLE_MAP",
@@ -3937,7 +3945,7 @@
               ],
               "floatMin": 0.012,
               "floatMax": 4.0,
-              "floatAvg": 0.77,
+              "floatAvg": 0.78,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -3960,7 +3968,7 @@
               ],
               "floatMin": 0.012,
               "floatMax": 2.0,
-              "floatAvg": 0.61,
+              "floatAvg": 0.62,
               "floatMedian": 0.7,
               "intMin": null,
               "intMax": null,
@@ -4052,7 +4060,7 @@
               ],
               "floatMin": 10.0,
               "floatMax": 125.0,
-              "floatAvg": 18.88,
+              "floatAvg": 18.85,
               "floatMedian": 18.0,
               "intMin": null,
               "intMax": null,
@@ -4187,9 +4195,9 @@
               "sampleValues": [
                 "tracks\\textures\\wet_track\\livetrack_mask_6_generic_wet.dds",
                 "tracks\\textures\\wet_track\\livetrack_mask_4.dds",
+                "tracks\\textures\\Watkins_Glen\\Strips_concrete_LT.dds",
                 "tracks\\textures\\wet_track\\livetrack_mask_6_main_track_wet.dds",
-                "tracks\\textures\\indianapolis\\indi_fl_pm_new.dds",
-                "tracks\\textures\\Monza_2020\\Banked_lt.dds"
+                "tracks\\textures\\indianapolis\\indi_fl_pm_new.dds"
               ]
             },
             "puddle2Texture": {
@@ -4235,7 +4243,7 @@
                 "tracks\\textures\\Adelaide_Modern\\terrainblendmap.dds",
                 "tracks\\textures\\Barcelona_1991\\Terrainpainting.dds",
                 "tracks\\textures\\Barcelona\\Terrainpainting.dds",
-                "tracks\\textures\\Bathurst_1983\\TERRAINPAINTING.DDS"
+                "tracks\\textures\\Barcelona_1999\\Terrainpainting.dds"
               ]
             },
             "roadRacingLineMult": {
@@ -4244,7 +4252,7 @@
               ],
               "floatMin": 2.5,
               "floatMax": 6.0,
-              "floatAvg": 3.67,
+              "floatAvg": 3.68,
               "floatMedian": 4.0,
               "intMin": null,
               "intMax": null,
@@ -4343,7 +4351,7 @@
     "Render\\Shaders\\rz_curbs_2diffuse.fx": {
       "techniques": {
         "rz_curbs_2diffuse": {
-          "filesSeen": 819,
+          "filesSeen": 885,
           "defines": [
             "APPLYLIVETRACKMASKS",
             "BLEND_DIFFUSE_WITH_PUDDLE_MAP",
@@ -4431,7 +4439,7 @@
               ],
               "floatMin": 12.0,
               "floatMax": 256.0,
-              "floatAvg": 45.06,
+              "floatAvg": 45.64,
               "floatMedian": 32.0,
               "intMin": null,
               "intMax": null,
@@ -4538,7 +4546,7 @@
               ],
               "floatMin": 0.05,
               "floatMax": 2.0,
-              "floatAvg": 0.93,
+              "floatAvg": 0.94,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -4561,7 +4569,7 @@
               ],
               "floatMin": 0.05,
               "floatMax": 2.0,
-              "floatAvg": 0.79,
+              "floatAvg": 0.8,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -4584,7 +4592,7 @@
               ],
               "floatMin": 0.05,
               "floatMax": 0.5,
-              "floatAvg": 0.1,
+              "floatAvg": 0.09,
               "floatMedian": 0.1,
               "intMin": null,
               "intMax": null,
@@ -4607,7 +4615,7 @@
               ],
               "floatMin": 0.05,
               "floatMax": 0.5,
-              "floatAvg": 0.1,
+              "floatAvg": 0.09,
               "floatMedian": 0.1,
               "intMin": null,
               "intMax": null,
@@ -4653,7 +4661,7 @@
               ],
               "floatMin": 1.0,
               "floatMax": 150.0,
-              "floatAvg": 25.39,
+              "floatAvg": 25.45,
               "floatMedian": 18.0,
               "intMin": null,
               "intMax": null,
@@ -4675,7 +4683,7 @@
                 "EPT_F32"
               ],
               "floatMin": 0.55,
-              "floatMax": 0.67,
+              "floatMax": 0.7,
               "floatAvg": 0.66,
               "floatMedian": 0.7,
               "intMin": null,
@@ -4688,7 +4696,8 @@
               "sampleValues": [
                 0.67,
                 0.55,
-                0.65
+                0.65,
+                0.7
               ]
             },
             "diffuse1Texture": {
@@ -4844,8 +4853,8 @@
                 "EPT_F32"
               ],
               "floatMin": 2.0,
-              "floatMax": 5.5,
-              "floatAvg": 3.57,
+              "floatMax": 6.0,
+              "floatAvg": 3.61,
               "floatMedian": 4.0,
               "intMin": null,
               "intMax": null,
@@ -4919,7 +4928,7 @@
     "Render\\Shaders\\basic_instanced_billboard.fx": {
       "techniques": {
         "Basic_AlphaTest": {
-          "filesSeen": 194,
+          "filesSeen": 205,
           "defines": [
             "CUSTOM_SWAY_PARAMS",
             "LOCK_Z",
@@ -5306,7 +5315,7 @@
               ],
               "vec4Avg": [
                 0.49,
-                0.21,
+                0.2,
                 0.22,
                 1.0
               ],
@@ -5357,9 +5366,9 @@
                 ]
               ],
               "vec4Avg": [
-                0.09,
+                0.08,
                 0.16,
-                0.17,
+                0.16,
                 0.99
               ],
               "vec4Median": [
@@ -5916,7 +5925,7 @@
     "Render\\Shaders\\rz_terrain_4diffuse.fx": {
       "techniques": {
         "rz_terrain_4diffuse": {
-          "filesSeen": 2763,
+          "filesSeen": 3151,
           "defines": [
             "APPLYLIVETRACKMASKS",
             "DEFAULTLIVETRACKRENDERING",
@@ -5951,16 +5960,16 @@
             "USE_UV2_NORMAL2",
             "USE_UV2_DIFFUSE4",
             "USE_UV2_DIFFUSE2",
-            "FULL_TANGENT",
             "USE_UV2_PUDDLE2",
             "USE_UV2_NORMAL4",
             "USE_UV2_DIFFUSE1",
             "USE_UV2_DIFFUSE3",
-            "USE_FRESNEL",
+            "FULL_TANGENT",
             "USE_UV2_PUDDLE1",
+            "USE_FRESNEL",
             "USESURFACECAMERAFACINGNORMALBIAS",
-            "USE_UV2_NORMAL3",
             "USE_UV2_NORMAL1",
+            "USE_UV2_NORMAL3",
             "GRASSLIVETRACKRENDERING",
             "APPLYLIVETRACKMASKS",
             "USEBUMPDEFORMATION",
@@ -6037,7 +6046,7 @@
               ],
               "floatMin": 0.025,
               "floatMax": 44.0,
-              "floatAvg": 0.28,
+              "floatAvg": 0.27,
               "floatMedian": 0.1,
               "intMin": null,
               "intMax": null,
@@ -6129,7 +6138,7 @@
               ],
               "floatMin": 0.011,
               "floatMax": 1.0,
-              "floatAvg": 0.17,
+              "floatAvg": 0.2,
               "floatMedian": 0.1,
               "intMin": null,
               "intMax": null,
@@ -6152,7 +6161,7 @@
               ],
               "floatMin": 0.011,
               "floatMax": 1.0,
-              "floatAvg": 0.17,
+              "floatAvg": 0.2,
               "floatMedian": 0.1,
               "intMin": null,
               "intMax": null,
@@ -6175,7 +6184,7 @@
               ],
               "floatMin": 0.015,
               "floatMax": 1.0,
-              "floatAvg": 0.46,
+              "floatAvg": 0.47,
               "floatMedian": 0.1,
               "intMin": null,
               "intMax": null,
@@ -6198,7 +6207,7 @@
               ],
               "floatMin": 0.015,
               "floatMax": 1.0,
-              "floatAvg": 0.46,
+              "floatAvg": 0.47,
               "floatMedian": 0.1,
               "intMin": null,
               "intMax": null,
@@ -6235,7 +6244,7 @@
                 0.022,
                 0.012,
                 0.025,
-                0.0040000002
+                0.05
               ]
             },
             "variationTilingY": {
@@ -6311,7 +6320,7 @@
               ],
               "floatMin": 0.05,
               "floatMax": 1.0,
-              "floatAvg": 0.91,
+              "floatAvg": 0.92,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -6332,7 +6341,7 @@
               ],
               "floatMin": 0.05,
               "floatMax": 1.0,
-              "floatAvg": 0.91,
+              "floatAvg": 0.92,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -6376,7 +6385,7 @@
               ],
               "floatMin": 4.0,
               "floatMax": 45.0,
-              "floatAvg": 6.52,
+              "floatAvg": 6.58,
               "floatMedian": 5.0,
               "intMin": null,
               "intMax": null,
@@ -6389,8 +6398,8 @@
                 5.0,
                 15.0,
                 4.0,
-                10.0,
-                25.0
+                35.0,
+                10.0
               ]
             },
             "fresnelFactor": {
@@ -6398,7 +6407,7 @@
                 "EPT_F32"
               ],
               "floatMin": 0.55,
-              "floatMax": 0.65,
+              "floatMax": 0.7,
               "floatAvg": 0.55,
               "floatMedian": 0.6,
               "intMin": null,
@@ -6410,6 +6419,7 @@
               "boolValues": [],
               "sampleValues": [
                 0.55,
+                0.7,
                 0.65
               ]
             },
@@ -6659,7 +6669,7 @@
                 "tracks\\textures\\Barcelona_1991\\GRASS_DIFFD_N.dds",
                 "tracks\\textures\\Barcelona_1991\\gravel_diffD_N.dds",
                 "tracks\\textures\\Barcelona\\cliff_diffd_n.dds",
-                "tracks\\textures\\Barcelona\\ROADRXC_N.dds"
+                "tracks\\textures\\Barcelona_1999\\gravel_diffC_grooves_N.dds"
               ]
             },
             "normal4Texture": {
@@ -6740,7 +6750,7 @@
     "Render\\Shaders\\lightglow_billboard.fx": {
       "techniques": {
         "Lightglow": {
-          "filesSeen": 367,
+          "filesSeen": 383,
           "defines": [
             "TRACKSIDE_LIGHT"
           ],
@@ -6811,7 +6821,7 @@
     "Render\\Shaders\\road_dbv.fx": {
       "techniques": {
         "road_dbv": {
-          "filesSeen": 236,
+          "filesSeen": 243,
           "defines": [
             "APPLYLIVETRACKMASKS",
             "BROAD_NORMAL_MAPPING",
@@ -6908,7 +6918,7 @@
               ],
               "floatMin": 5.0,
               "floatMax": 45.0,
-              "floatAvg": 9.69,
+              "floatAvg": 9.64,
               "floatMedian": 8.0,
               "intMin": null,
               "intMax": null,
@@ -7101,7 +7111,7 @@
     "Render\\Shaders\\overlay.fx": {
       "techniques": {
         "Overlay_floatingMesh": {
-          "filesSeen": 201,
+          "filesSeen": 210,
           "defines": [
             "DEFAULTLIVETRACKRENDERING",
             "GRAVELLIVETRACKRENDERING",
@@ -7142,7 +7152,7 @@
               ],
               "floatMin": 1.0,
               "floatMax": 12.0,
-              "floatAvg": 1.91,
+              "floatAvg": 1.87,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -7164,7 +7174,7 @@
               ],
               "floatMin": 8.0,
               "floatMax": 32.0,
-              "floatAvg": 9.43,
+              "floatAvg": 9.37,
               "floatMedian": 8.0,
               "intMin": null,
               "intMax": null,
@@ -7187,7 +7197,7 @@
               ],
               "floatMin": 0.1,
               "floatMax": 1.0,
-              "floatAvg": 0.4,
+              "floatAvg": 0.42,
               "floatMedian": 0.2,
               "intMin": null,
               "intMax": null,
@@ -7310,7 +7320,7 @@
               ],
               "floatMin": 0.3,
               "floatMax": 1.0,
-              "floatAvg": 0.64,
+              "floatAvg": 0.65,
               "floatMedian": 0.6,
               "intMin": null,
               "intMax": null,
@@ -7756,7 +7766,7 @@
     "Render\\Shaders\\rz_overlay.fx": {
       "techniques": {
         "SolidRzOverlay": {
-          "filesSeen": 576,
+          "filesSeen": 645,
           "defines": [
             "DEFAULTLIVETRACKRENDERING",
             "GRASSLIVETRACKRENDERING",
@@ -7815,7 +7825,7 @@
               ],
               "floatMin": 1.0,
               "floatMax": 25.0,
-              "floatAvg": 7.07,
+              "floatAvg": 6.75,
               "floatMedian": 5.0,
               "intMin": null,
               "intMax": null,
@@ -7838,7 +7848,7 @@
               ],
               "floatMin": 1.0,
               "floatMax": 125.0,
-              "floatAvg": 46.94,
+              "floatAvg": 45.93,
               "floatMedian": 45.0,
               "intMin": null,
               "intMax": null,
@@ -7861,8 +7871,8 @@
               ],
               "floatMin": 0.125,
               "floatMax": 5.0,
-              "floatAvg": 1.32,
-              "floatMedian": 1.1,
+              "floatAvg": 1.25,
+              "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
               "vec4Examples": [],
@@ -7946,7 +7956,7 @@
                 "tracks\\textures\\Adelaide_Modern\\terrainblendmap.dds",
                 "tracks\\textures\\Ascurra\\terrainpainting.dds",
                 "tracks\\textures\\Barcelona\\Terrainpainting.dds",
-                "tracks\\textures\\Bathurst_2020\\TERRAINPAINTING.DDS"
+                "tracks\\textures\\Barcelona_1999\\Terrainpainting.dds"
               ]
             },
             "normalTexture": {
@@ -7980,7 +7990,7 @@
               ],
               "floatMin": 25.5,
               "floatMax": 38.0,
-              "floatAvg": 30.3,
+              "floatAvg": 30.27,
               "floatMedian": 30.5,
               "intMin": null,
               "intMax": null,
@@ -8003,7 +8013,7 @@
               ],
               "floatMin": 0.125,
               "floatMax": 0.35,
-              "floatAvg": 0.18,
+              "floatAvg": 0.17,
               "floatMedian": 0.2,
               "intMin": null,
               "intMax": null,
@@ -8046,7 +8056,7 @@
               ],
               "floatMin": 0.022,
               "floatMax": 2.0,
-              "floatAvg": 0.87,
+              "floatAvg": 0.76,
               "floatMedian": 0.5,
               "intMin": null,
               "intMax": null,
@@ -8298,7 +8308,7 @@
           }
         },
         "RzOverlay_floatingMesh": {
-          "filesSeen": 51,
+          "filesSeen": 52,
           "defines": [
             "DEFAULTLIVETRACKRENDERING",
             "GRASSLIVETRACKRENDERING",
@@ -8352,7 +8362,7 @@
               ],
               "floatMin": 1.0,
               "floatMax": 8.0,
-              "floatAvg": 5.57,
+              "floatAvg": 5.62,
               "floatMedian": 8.0,
               "intMin": null,
               "intMax": null,
@@ -8373,7 +8383,7 @@
               ],
               "floatMin": 1.0,
               "floatMax": 25.0,
-              "floatAvg": 19.98,
+              "floatAvg": 20.08,
               "floatMedian": 25.0,
               "intMin": null,
               "intMax": null,
@@ -8394,7 +8404,7 @@
               ],
               "floatMin": 0.1,
               "floatMax": 1.0,
-              "floatAvg": 0.65,
+              "floatAvg": 0.66,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -8946,7 +8956,7 @@
           }
         },
         "rz_overlay2_Solid": {
-          "filesSeen": 621,
+          "filesSeen": 696,
           "defines": [
             "APPLYLIVETRACKMASKS",
             "DEFAULTLIVETRACKRENDERING",
@@ -9011,8 +9021,8 @@
                 "EPT_F32"
               ],
               "floatMin": 0.125,
-              "floatMax": 2.0,
-              "floatAvg": 0.44,
+              "floatMax": 20.0,
+              "floatAvg": 0.47,
               "floatMedian": 0.3,
               "intMin": null,
               "intMax": null,
@@ -9026,7 +9036,7 @@
                 0.33,
                 0.45,
                 1.0,
-                0.3
+                20.0
               ]
             },
             "puddle2TilingX": {
@@ -9035,7 +9045,7 @@
               ],
               "floatMin": 0.05,
               "floatMax": 1.0,
-              "floatAvg": 0.36,
+              "floatAvg": 0.32,
               "floatMedian": 0.1,
               "intMin": null,
               "intMax": null,
@@ -9057,7 +9067,7 @@
               ],
               "floatMin": 0.05,
               "floatMax": 1.0,
-              "floatAvg": 0.35,
+              "floatAvg": 0.32,
               "floatMedian": 0.1,
               "intMin": null,
               "intMax": null,
@@ -9079,7 +9089,7 @@
               ],
               "floatMin": 0.5,
               "floatMax": 4.0,
-              "floatAvg": 2.16,
+              "floatAvg": 2.17,
               "floatMedian": 2.2,
               "intMin": null,
               "intMax": null,
@@ -9102,7 +9112,7 @@
               ],
               "floatMin": 0.8,
               "floatMax": 2.0,
-              "floatAvg": 1.02,
+              "floatAvg": 1.03,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -9113,9 +9123,9 @@
               "boolValues": [],
               "sampleValues": [
                 1.0,
+                2.0,
                 0.8,
                 1.8,
-                2.0,
                 1.4
               ]
             },
@@ -9125,7 +9135,7 @@
               ],
               "floatMin": 0.02,
               "floatMax": 1.9,
-              "floatAvg": 1.29,
+              "floatAvg": 1.3,
               "floatMedian": 1.5,
               "intMin": null,
               "intMax": null,
@@ -9148,7 +9158,7 @@
               ],
               "floatMin": 1.0,
               "floatMax": 20.0,
-              "floatAvg": 2.13,
+              "floatAvg": 2.24,
               "floatMedian": 2.0,
               "intMin": null,
               "intMax": null,
@@ -9161,6 +9171,7 @@
                 1.0,
                 2.0,
                 20.0,
+                16.0,
                 4.0
               ]
             },
@@ -9170,7 +9181,7 @@
               ],
               "floatMin": 4.0,
               "floatMax": 125.0,
-              "floatAvg": 39.88,
+              "floatAvg": 40.26,
               "floatMedian": 45.0,
               "intMin": null,
               "intMax": null,
@@ -9184,7 +9195,7 @@
                 45.0,
                 4.0,
                 40.0,
-                125.0
+                64.0
               ]
             },
             "fresnelFactor": {
@@ -9206,8 +9217,8 @@
                 0.67,
                 0.25,
                 0.65,
-                0.15,
-                0.55
+                0.5,
+                0.15
               ]
             },
             "diffuseTexture": {
@@ -9280,9 +9291,9 @@
               "sampleValues": [
                 "tracks\\textures\\Adelaide_Common\\roadln_detail.dds",
                 "tracks\\textures\\rz_shared\\roadln_detail.dds",
-                "tracks\\textures\\brandshatch\\roadln_detail.dds",
-                "tracks\\textures\\CampoGrande\\roadln_detail.dds",
-                "tracks\\textures\\Curitiba\\roadln_detail.dds"
+                "tracks\\textures\\Mosport\\Logos_Detail_2.dds",
+                "tracks\\textures\\white.dds",
+                "tracks\\textures\\brandshatch\\roadln_detail.dds"
               ]
             },
             "puddleTexture": {
@@ -9329,10 +9340,10 @@
               "boolValues": [],
               "sampleValues": [
                 "tracks\\textures\\Adelaide_Modern\\terrainblendmap.dds",
+                "tracks\\textures\\Barcelona_1999\\Terrainpainting.dds",
                 "tracks\\textures\\Cascavel\\TERRAINPAINTING.DDS",
                 "tracks\\textures\\Estoril_2019\\TERRAINPAINTING.DDS",
-                "tracks\\textures\\Galeao_Airport\\Terrainpainting.dds",
-                "tracks\\textures\\imola\\terrainblendmap.dds"
+                "tracks\\textures\\Galeao_Airport\\Terrainpainting.dds"
               ]
             },
             "roadRacingLineTexture": {
@@ -9388,7 +9399,7 @@
     "Render\\Shaders\\basic_anim_lit.fx": {
       "techniques": {
         "Basic": {
-          "filesSeen": 281,
+          "filesSeen": 302,
           "defines": [
             "ENV_MAPPING",
             "SCALE_EMISSIVE",
@@ -9467,7 +9478,7 @@
               ],
               "floatMin": 10.0,
               "floatMax": 32.0,
-              "floatAvg": 31.6,
+              "floatAvg": 31.63,
               "floatMedian": 32.0,
               "intMin": null,
               "intMax": null,
@@ -9488,7 +9499,7 @@
               ],
               "floatMin": 32.0,
               "floatMax": 512.0,
-              "floatAvg": 505.14,
+              "floatAvg": 505.62,
               "floatMedian": 512.0,
               "intMin": null,
               "intMax": null,
@@ -9781,7 +9792,7 @@
     "Render\\Shaders\\basic_billboard_trees.fx": {
       "techniques": {
         "Basic_AlphaTest": {
-          "filesSeen": 1639,
+          "filesSeen": 1775,
           "defines": [
             "ADDITIONAL_LIGHTING_PARAMS",
             "LOCK_Z",
@@ -9811,8 +9822,8 @@
             "TINT_USE_SIMPLE",
             "USE_RANDOM_COLOR_TINT_BY_WPOS",
             "ADDITIONAL_LIGHTING_PARAMS",
-            "VC_SCALES_DIFFUSE",
-            "USE_EXTRA_SUN_ANGLE_SCALE"
+            "USE_EXTRA_SUN_ANGLE_SCALE",
+            "VC_SCALES_DIFFUSE"
           ],
           "baseDefines": [
             "LOCK_Z",
@@ -9834,23 +9845,23 @@
             "specialNormalMap",
             "mipMapBias",
             "backlitDimming",
-            "tabWPosColour00",
             "backlitPower",
-            "tabWPosColour01",
             "backlitExp",
-            "tabWPosColour02",
-            "diffuseTexture",
-            "tabWPosColour03",
-            "specularPower",
+            "tabWPosColour00",
             "sunAngleDiffuseVariation",
-            "normalTexture",
-            "tabWPosColour04",
+            "specularPower",
+            "diffuseTexture",
+            "tabWPosColour01",
             "sphericalNormalTexture",
             "specularFactor",
-            "tabWPosColour05",
+            "normalTexture",
+            "tabWPosColour02",
             "convolveDesaturation",
-            "tabWPosColour06",
+            "tabWPosColour03",
             "specularDesaturation",
+            "tabWPosColour04",
+            "tabWPosColour05",
+            "tabWPosColour06",
             "tabWPosColour07",
             "tabWPosColour08",
             "tabWPosColour09",
@@ -9928,7 +9939,7 @@
               ],
               "floatMin": 8.0,
               "floatMax": 20.0,
-              "floatAvg": 11.23,
+              "floatAvg": 11.33,
               "floatMedian": 10.0,
               "intMin": null,
               "intMax": null,
@@ -9950,7 +9961,7 @@
               ],
               "floatMin": 3.0,
               "floatMax": 5.0,
-              "floatAvg": 4.95,
+              "floatAvg": 4.96,
               "floatMedian": 5.0,
               "intMin": null,
               "intMax": null,
@@ -10021,8 +10032,8 @@
               ],
               "floatMin": 0.0,
               "floatMax": 2.6,
-              "floatAvg": 0.54,
-              "floatMedian": 0.6,
+              "floatAvg": 0.42,
+              "floatMedian": 0.5,
               "intMin": null,
               "intMax": null,
               "vec4Examples": [],
@@ -10033,9 +10044,9 @@
               "sampleValues": [
                 0.0,
                 0.5,
-                0.8,
-                1.0,
-                0.7
+                0.55,
+                0.7,
+                1.5
               ]
             },
             "snMinimumDiffuse": {
@@ -10044,7 +10055,7 @@
               ],
               "floatMin": 0.0,
               "floatMax": 1.05,
-              "floatAvg": 0.45,
+              "floatAvg": 0.37,
               "floatMedian": 0.6,
               "intMin": null,
               "intMax": null,
@@ -10056,9 +10067,9 @@
               "sampleValues": [
                 0.0,
                 0.8,
-                0.75,
                 0.55,
-                0.65
+                0.65,
+                0.45
               ]
             },
             "snMaximumDiffuse": {
@@ -10066,9 +10077,9 @@
                 "EPT_F32"
               ],
               "floatMin": 1.0,
-              "floatMax": 1.7,
-              "floatAvg": 1.2,
-              "floatMedian": 1.3,
+              "floatMax": 1.75,
+              "floatAvg": 1.19,
+              "floatMedian": 1.2,
               "intMin": null,
               "intMax": null,
               "vec4Examples": [],
@@ -10079,9 +10090,9 @@
               "sampleValues": [
                 1.0,
                 1.3,
-                1.4,
-                1.25,
-                1.35
+                1.65,
+                1.75,
+                1.55
               ]
             },
             "tabWPosColour00": {
@@ -10619,13 +10630,36 @@
                 "tracks\\textures\\Le_Mans\\trees001_n_spherical.dds"
               ]
             },
+            "sunAngleDiffuseVariation": {
+              "types": [
+                "EPT_F32"
+              ],
+              "floatMin": 0.3,
+              "floatMax": 0.5,
+              "floatAvg": 0.37,
+              "floatMedian": 0.4,
+              "intMin": null,
+              "intMax": null,
+              "vec4Examples": [],
+              "vec4Avg": null,
+              "vec4Median": null,
+              "textureExtensions": [],
+              "boolValues": [],
+              "sampleValues": [
+                0.3,
+                0.31999999,
+                0.35,
+                0.4,
+                0.5
+              ]
+            },
             "specularPower": {
               "types": [
                 "EPT_F32"
               ],
-              "floatMin": 40.0,
+              "floatMin": 16.0,
               "floatMax": 128.0,
-              "floatAvg": 74.28,
+              "floatAvg": 69.9,
               "floatMedian": 70.0,
               "intMin": null,
               "intMax": null,
@@ -10636,10 +10670,10 @@
               "boolValues": [],
               "sampleValues": [
                 128.0,
-                50.0,
+                16.0,
                 60.0,
-                70.0,
-                100.0
+                120.0,
+                70.0
               ]
             },
             "specularFactor": {
@@ -10648,8 +10682,8 @@
               ],
               "floatMin": 0.5,
               "floatMax": 5.0,
-              "floatAvg": 1.69,
-              "floatMedian": 1.7,
+              "floatAvg": 1.57,
+              "floatMedian": 1.5,
               "intMin": null,
               "intMax": null,
               "vec4Examples": [],
@@ -10671,7 +10705,7 @@
               ],
               "floatMin": 0.7,
               "floatMax": 0.9,
-              "floatAvg": 0.82,
+              "floatAvg": 0.81,
               "floatMedian": 0.8,
               "intMin": null,
               "intMax": null,
@@ -10693,7 +10727,7 @@
               ],
               "floatMin": 0.5,
               "floatMax": 1.0,
-              "floatAvg": 0.85,
+              "floatAvg": 0.83,
               "floatMedian": 0.8,
               "intMin": null,
               "intMax": null,
@@ -10708,27 +10742,6 @@
                 0.9,
                 1.0,
                 0.7
-              ]
-            },
-            "sunAngleDiffuseVariation": {
-              "types": [
-                "EPT_F32"
-              ],
-              "floatMin": 0.3,
-              "floatMax": 0.5,
-              "floatAvg": 0.41,
-              "floatMedian": 0.4,
-              "intMin": null,
-              "intMax": null,
-              "vec4Examples": [],
-              "vec4Avg": null,
-              "vec4Median": null,
-              "textureExtensions": [],
-              "boolValues": [],
-              "sampleValues": [
-                0.4,
-                0.5,
-                0.3
               ]
             },
             "snOriginYOffset": {
@@ -10761,7 +10774,7 @@
     "Render\\Shaders\\rz_water.fx": {
       "techniques": {
         "Water": {
-          "filesSeen": 184,
+          "filesSeen": 197,
           "defines": [
             "USE_FOAM_WAVES"
           ],
@@ -10852,8 +10865,8 @@
               ],
               "floatMin": 32.0,
               "floatMax": 1000.0,
-              "floatAvg": 237.33,
-              "floatMedian": 50.0,
+              "floatAvg": 223.78,
+              "floatMedian": 32.0,
               "intMin": null,
               "intMax": null,
               "vec4Examples": [],
@@ -10875,7 +10888,7 @@
               ],
               "floatMin": 1000.0,
               "floatMax": 5000.0,
-              "floatAvg": 1826.09,
+              "floatAvg": 1804.57,
               "floatMedian": 1500.0,
               "intMin": null,
               "intMax": null,
@@ -10943,7 +10956,7 @@
               ],
               "floatMin": 0.1,
               "floatMax": 2.5,
-              "floatAvg": 0.81,
+              "floatAvg": 0.8,
               "floatMedian": 0.7,
               "intMin": null,
               "intMax": null,
@@ -10966,7 +10979,7 @@
               ],
               "floatMin": 0.07,
               "floatMax": 3.0,
-              "floatAvg": 0.78,
+              "floatAvg": 0.79,
               "floatMedian": 0.8,
               "intMin": null,
               "intMax": null,
@@ -11035,7 +11048,7 @@
               "floatMin": 0.11,
               "floatMax": 2.0,
               "floatAvg": 0.5,
-              "floatMedian": 0.2,
+              "floatMedian": 0.1,
               "intMin": null,
               "intMax": null,
               "vec4Examples": [],
@@ -11057,7 +11070,7 @@
               ],
               "floatMin": 0.09,
               "floatMax": 6.0,
-              "floatAvg": 0.78,
+              "floatAvg": 0.83,
               "floatMedian": 0.4,
               "intMin": null,
               "intMax": null,
@@ -11211,7 +11224,7 @@
               ],
               "floatMin": 0.025,
               "floatMax": 1.0,
-              "floatAvg": 0.79,
+              "floatAvg": 0.74,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -11234,7 +11247,7 @@
               ],
               "floatMin": 0.086,
               "floatMax": 2.0,
-              "floatAvg": 0.76,
+              "floatAvg": 0.74,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -11257,7 +11270,7 @@
               ],
               "floatMin": 0.125,
               "floatMax": 1.0,
-              "floatAvg": 0.98,
+              "floatAvg": 0.95,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -11297,7 +11310,7 @@
               ],
               "floatMin": 0.3,
               "floatMax": 0.55,
-              "floatAvg": 0.35,
+              "floatAvg": 0.36,
               "floatMedian": 0.3,
               "intMin": null,
               "intMax": null,
@@ -11384,7 +11397,7 @@
               ],
               "floatMin": 0.0,
               "floatMax": 2.0,
-              "floatAvg": 0.4,
+              "floatAvg": 0.38,
               "floatMedian": 0.0,
               "intMin": null,
               "intMax": null,
@@ -11673,7 +11686,7 @@
     "Render\\Shaders\\basic_windows.fx": {
       "techniques": {
         "Basic": {
-          "filesSeen": 2137,
+          "filesSeen": 2189,
           "defines": [
             "DETAIL_MAPPING",
             "DISABLE_EMISSIVE_CONTROL",
@@ -11741,8 +11754,8 @@
             "specularTexture",
             "tintColour",
             "tintAlpha",
-            "normalTexture",
             "emissiveTexture",
+            "normalTexture",
             "AOTexture",
             "emissiveTexture2",
             "detailTexture",
@@ -11778,7 +11791,7 @@
               ],
               "floatMin": 1.0,
               "floatMax": 256.0,
-              "floatAvg": 12.9,
+              "floatAvg": 12.99,
               "floatMedian": 12.0,
               "intMin": null,
               "intMax": null,
@@ -11801,7 +11814,7 @@
               ],
               "floatMin": 1.0,
               "floatMax": 1024.0,
-              "floatAvg": 155.41,
+              "floatAvg": 155.09,
               "floatMedian": 128.0,
               "intMin": null,
               "intMax": null,
@@ -11824,7 +11837,7 @@
               ],
               "floatMin": 0.1,
               "floatMax": 10.0,
-              "floatAvg": 1.55,
+              "floatAvg": 1.53,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -11847,7 +11860,7 @@
               ],
               "floatMin": 0.01,
               "floatMax": 1.0,
-              "floatAvg": 0.77,
+              "floatAvg": 0.78,
               "floatMedian": 0.9,
               "intMin": null,
               "intMax": null,
@@ -11870,7 +11883,7 @@
               ],
               "floatMin": 0.0,
               "floatMax": 64.0,
-              "floatAvg": 2.06,
+              "floatAvg": 2.1,
               "floatMedian": 0.3,
               "intMin": null,
               "intMax": null,
@@ -12383,7 +12396,7 @@
     "Render\\Shaders\\rz_treelines.fx": {
       "techniques": {
         "rz_treelines": {
-          "filesSeen": 577,
+          "filesSeen": 607,
           "defines": [
             "ADDITIONAL_LIGHTING_PARAMS",
             "DISABLE_NORMAL_FLIP",
@@ -12441,7 +12454,7 @@
               ],
               "floatMin": 0.0,
               "floatMax": 3.224,
-              "floatAvg": 2.72,
+              "floatAvg": 2.69,
               "floatMedian": 3.2,
               "intMin": null,
               "intMax": null,
@@ -12592,9 +12605,9 @@
               "types": [
                 "EPT_F32"
               ],
-              "floatMin": 64.0,
+              "floatMin": 16.0,
               "floatMax": 80.0,
-              "floatAvg": 72.57,
+              "floatAvg": 65.98,
               "floatMedian": 70.0,
               "intMin": null,
               "intMax": null,
@@ -12606,6 +12619,7 @@
               "sampleValues": [
                 80.0,
                 70.0,
+                16.0,
                 64.0
               ]
             },
@@ -12613,10 +12627,10 @@
               "types": [
                 "EPT_F32"
               ],
-              "floatMin": 0.25,
+              "floatMin": 0.05,
               "floatMax": 0.8,
-              "floatAvg": 0.61,
-              "floatMedian": 0.8,
+              "floatAvg": 0.55,
+              "floatMedian": 0.5,
               "intMin": null,
               "intMax": null,
               "vec4Examples": [],
@@ -12627,6 +12641,8 @@
               "sampleValues": [
                 0.25,
                 0.8,
+                0.05,
+                0.3,
                 0.5
               ]
             },
@@ -12635,8 +12651,8 @@
                 "EPT_F32"
               ],
               "floatMin": 0.0,
-              "floatMax": 0.8,
-              "floatAvg": 0.67,
+              "floatMax": 0.9,
+              "floatAvg": 0.64,
               "floatMedian": 0.7,
               "intMin": null,
               "intMax": null,
@@ -12648,6 +12664,7 @@
               "sampleValues": [
                 0.8,
                 0.7,
+                0.9,
                 0.0
               ]
             },
@@ -12656,8 +12673,8 @@
                 "EPT_F32"
               ],
               "floatMin": 0.0,
-              "floatMax": 0.8,
-              "floatAvg": 0.67,
+              "floatMax": 1.0,
+              "floatAvg": 0.65,
               "floatMedian": 0.7,
               "intMin": null,
               "intMax": null,
@@ -12669,6 +12686,7 @@
               "sampleValues": [
                 0.8,
                 0.7,
+                1.0,
                 0.0
               ]
             },
@@ -12755,7 +12773,7 @@
     "Render\\Shaders\\basic_instanced.fx": {
       "techniques": {
         "Basic": {
-          "filesSeen": 169,
+          "filesSeen": 175,
           "defines": [
             "ENVMAP_SCALED_SPEC_A",
             "ENV_MAPPING",
@@ -12829,7 +12847,7 @@
               ],
               "floatMin": 1.0,
               "floatMax": 120.0,
-              "floatAvg": 18.96,
+              "floatAvg": 18.65,
               "floatMedian": 19.0,
               "intMin": null,
               "intMax": null,
@@ -12852,7 +12870,7 @@
               ],
               "floatMin": 15.0,
               "floatMax": 256.0,
-              "floatAvg": 154.38,
+              "floatAvg": 151.33,
               "floatMedian": 250.0,
               "intMin": null,
               "intMax": null,
@@ -12875,7 +12893,7 @@
               ],
               "floatMin": 0.01,
               "floatMax": 4.0,
-              "floatAvg": 1.38,
+              "floatAvg": 1.42,
               "floatMedian": 0.9,
               "intMin": null,
               "intMax": null,
@@ -15686,7 +15704,7 @@
     "Render\\Shaders\\basic_anim.fx": {
       "techniques": {
         "Basic": {
-          "filesSeen": 30,
+          "filesSeen": 31,
           "defines": [
             "ENV_MAPPING",
             "SCALE_EMISSIVE",
@@ -15745,7 +15763,7 @@
               ],
               "floatMin": 0.3,
               "floatMax": 0.6,
-              "floatAvg": 0.51,
+              "floatAvg": 0.5,
               "floatMedian": 0.6,
               "intMin": null,
               "intMax": null,
@@ -15832,7 +15850,7 @@
               ],
               "floatMin": 0.35,
               "floatMax": 1.0,
-              "floatAvg": 0.75,
+              "floatAvg": 0.72,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -15876,7 +15894,7 @@
               ],
               "floatMin": 0.5,
               "floatMax": 10.0,
-              "floatAvg": 1.5,
+              "floatAvg": 1.49,
               "floatMedian": 0.9,
               "intMin": null,
               "intMax": null,
@@ -15899,7 +15917,7 @@
               ],
               "floatMin": 0.0,
               "floatMax": 1.0,
-              "floatAvg": 0.14,
+              "floatAvg": 0.13,
               "floatMedian": 0.0,
               "intMin": null,
               "intMax": null,
@@ -15985,7 +16003,7 @@
               ],
               "floatMin": 0.4,
               "floatMax": 20.0,
-              "floatAvg": 9.25,
+              "floatAvg": 9.04,
               "floatMedian": 3.0,
               "intMin": null,
               "intMax": null,
@@ -16304,7 +16322,7 @@
     "Render\\Shaders\\rz_treelines_directAO.fx": {
       "techniques": {
         "rz_treelines": {
-          "filesSeen": 122,
+          "filesSeen": 154,
           "defines": [
             "ADDITIONAL_LIGHTING_PARAMS",
             "DISABLE_NORMAL_FLIP",
@@ -16328,8 +16346,8 @@
             "INCLUDE_IN_SHADOWS",
             "USE_UV2",
             "ADDITIONAL_LIGHTING_PARAMS",
-            "USE_SPHERICAL_NORMALS",
-            "VC_SCALES_DIFFUSE"
+            "VC_SCALES_DIFFUSE",
+            "USE_SPHERICAL_NORMALS"
           ],
           "baseDefines": [],
           "baseParameters": [
@@ -16379,9 +16397,9 @@
               "types": [
                 "EPT_F32"
               ],
-              "floatMin": 5.0,
+              "floatMin": 2.0,
               "floatMax": 5.0,
-              "floatAvg": 5.0,
+              "floatAvg": 4.92,
               "floatMedian": 5.0,
               "intMin": null,
               "intMax": null,
@@ -16391,7 +16409,8 @@
               "textureExtensions": [],
               "boolValues": [],
               "sampleValues": [
-                5.0
+                5.0,
+                2.0
               ]
             },
             "backlitExp": {
@@ -16419,8 +16438,8 @@
               ],
               "floatMin": 0.0,
               "floatMax": 3.224,
-              "floatAvg": 2.13,
-              "floatMedian": 2.0,
+              "floatAvg": 2.34,
+              "floatMedian": 3.2,
               "intMin": null,
               "intMax": null,
               "vec4Examples": [],
@@ -16442,7 +16461,7 @@
               ],
               "floatMin": 1.0039999,
               "floatMax": 2.004,
-              "floatAvg": 1.48,
+              "floatAvg": 1.45,
               "floatMedian": 1.3,
               "intMin": null,
               "intMax": null,
@@ -16513,8 +16532,8 @@
               ],
               "floatMin": 64.0,
               "floatMax": 128.0,
-              "floatAvg": 95.46,
-              "floatMedian": 120.0,
+              "floatAvg": 88.55,
+              "floatMedian": 70.0,
               "intMin": null,
               "intMax": null,
               "vec4Examples": [],
@@ -16535,7 +16554,7 @@
               ],
               "floatMin": 0.3,
               "floatMax": 1.0,
-              "floatAvg": 0.64,
+              "floatAvg": 0.58,
               "floatMedian": 0.5,
               "intMin": null,
               "intMax": null,
@@ -16557,7 +16576,7 @@
               ],
               "floatMin": 0.0,
               "floatMax": 1.0,
-              "floatAvg": 0.57,
+              "floatAvg": 0.59,
               "floatMedian": 0.8,
               "intMin": null,
               "intMax": null,
@@ -16578,7 +16597,7 @@
               ],
               "floatMin": 0.0,
               "floatMax": 1.0,
-              "floatAvg": 0.57,
+              "floatAvg": 0.59,
               "floatMedian": 0.8,
               "intMin": null,
               "intMax": null,
@@ -16882,7 +16901,7 @@
     "Render\\Shaders\\locator.fx": {
       "techniques": {
         "locator": {
-          "filesSeen": 41,
+          "filesSeen": 44,
           "defines": [],
           "defineOrder": [],
           "baseDefines": [],
@@ -17527,7 +17546,7 @@
     "Render\\Shaders\\rz_basic_instanced.fx": {
       "techniques": {
         "rz_basic": {
-          "filesSeen": 28,
+          "filesSeen": 38,
           "defines": [
             "EMISSIVE_AS_LIGHTMAP",
             "ENVMAP_SCALED_DIFFUSE_A",
@@ -17555,17 +17574,17 @@
             "USE_SPECULAR_MAP",
             "USE_COLOURISATION",
             "USE_AO_MAP",
+            "USE_ALPHATEST",
             "SPECULAR_FROM_DIFFUSE_ALPHA",
             "USE_EMISSIVE_MAPS",
-            "USE_ALPHATEST",
+            "SPECULAR_FROM_NORMAL_ALPHA",
             "USE_ENV_MAP",
             "SPECULAR_POWER_FROM_DIFFUSE_ALPHA",
-            "USE_FRESNEL",
-            "USE_COLOURISATION_EMISSIVE",
-            "SPECULAR_FROM_NORMAL_ALPHA",
-            "USE_COLOURISATION_WITH_MASK",
-            "ENVMAP_USE_SPECULAR_COLOR",
             "SPECULAR_POWER_FROM_NORMAL_ALPHA",
+            "USE_FRESNEL",
+            "ENVMAP_USE_SPECULAR_COLOR",
+            "USE_COLOURISATION_EMISSIVE",
+            "USE_COLOURISATION_WITH_MASK",
             "ENVMAP_SCALED_DIFFUSE_A",
             "USE_CUSTOMFRESNEL",
             "EMISSIVE_AS_LIGHTMAP",
@@ -17693,7 +17712,7 @@
               ],
               "floatMin": 0.25,
               "floatMax": 1.0,
-              "floatAvg": 0.69,
+              "floatAvg": 0.78,
               "floatMedian": 0.8,
               "intMin": null,
               "intMax": null,
@@ -17714,9 +17733,9 @@
               "types": [
                 "EPT_F32"
               ],
-              "floatMin": 0.07,
+              "floatMin": 0.039999999,
               "floatMax": 5.0,
-              "floatAvg": 0.61,
+              "floatAvg": 0.49,
               "floatMedian": 0.1,
               "intMin": null,
               "intMax": null,
@@ -17739,7 +17758,7 @@
               ],
               "floatMin": 3.0,
               "floatMax": 512.0,
-              "floatAvg": 35.54,
+              "floatAvg": 32.13,
               "floatMedian": 10.0,
               "intMin": null,
               "intMax": null,
@@ -17762,8 +17781,8 @@
               ],
               "floatMin": 10.0,
               "floatMax": 1024.0,
-              "floatAvg": 141.79,
-              "floatMedian": 42.0,
+              "floatAvg": 124.89,
+              "floatMedian": 28.5,
               "intMin": null,
               "intMax": null,
               "vec4Examples": [],
@@ -17849,7 +17868,7 @@
               ],
               "floatMin": 0.65,
               "floatMax": 9.0,
-              "floatAvg": 6.22,
+              "floatAvg": 5.69,
               "floatMedian": 9.0,
               "intMin": null,
               "intMax": null,
@@ -18056,7 +18075,7 @@
     "Render\\Shaders\\rz_treelines_directAO_instanced.fx": {
       "techniques": {
         "rz_treelines": {
-          "filesSeen": 56,
+          "filesSeen": 62,
           "defines": [
             "ADDITIONAL_LIGHTING_PARAMS",
             "DISABLE_NORMAL_FLIP",
@@ -18173,7 +18192,7 @@
               ],
               "floatMin": 0.35800001,
               "floatMax": 3.224,
-              "floatAvg": 0.56,
+              "floatAvg": 0.82,
               "floatMedian": 0.4,
               "intMin": null,
               "intMax": null,
@@ -18195,7 +18214,7 @@
               ],
               "floatMin": 1.0039999,
               "floatMax": 1.3,
-              "floatAvg": 1.01,
+              "floatAvg": 1.04,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -18215,7 +18234,7 @@
               ],
               "floatMin": 0.52,
               "floatMax": 2.0,
-              "floatAvg": 0.63,
+              "floatAvg": 0.67,
               "floatMedian": 0.5,
               "intMin": null,
               "intMax": null,
@@ -18238,7 +18257,7 @@
               ],
               "floatMin": -11.12,
               "floatMax": -0.39199999,
-              "floatAvg": -3.82,
+              "floatAvg": -3.52,
               "floatMedian": -0.4,
               "intMin": null,
               "intMax": null,
@@ -18284,7 +18303,7 @@
               ],
               "floatMin": 1.0,
               "floatMax": 1.7,
-              "floatAvg": 1.16,
+              "floatAvg": 1.15,
               "floatMedian": 1.1,
               "intMin": null,
               "intMax": null,
@@ -18307,7 +18326,7 @@
               ],
               "floatMin": 64.0,
               "floatMax": 128.0,
-              "floatAvg": 93.22,
+              "floatAvg": 89.85,
               "floatMedian": 64.0,
               "intMin": null,
               "intMax": null,
@@ -18327,7 +18346,7 @@
               ],
               "floatMin": 0.5,
               "floatMax": 6.0,
-              "floatAvg": 1.85,
+              "floatAvg": 1.75,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -18350,7 +18369,7 @@
               ],
               "floatMin": 0.5,
               "floatMax": 0.8,
-              "floatAvg": 0.72,
+              "floatAvg": 0.73,
               "floatMedian": 0.7,
               "intMin": null,
               "intMax": null,
@@ -18442,16 +18461,22 @@
     "Render\\Shaders\\livegrassblade.fx": {
       "techniques": {
         "Basic_AlphaTest": {
-          "filesSeen": 8,
+          "filesSeen": 20,
           "defines": [
             "DISABLESNOWLTCOLOURING",
             "USE_ANISO",
+            "USE_DISTANCE_FADE",
+            "USE_FADE_TEXTURE",
+            "USE_FAKE_SPECULAR_SCALE",
             "USE_SPECULAR"
           ],
           "defineOrder": [
             "USE_ANISO",
             "DISABLESNOWLTCOLOURING",
-            "USE_SPECULAR"
+            "USE_SPECULAR",
+            "USE_DISTANCE_FADE",
+            "USE_FAKE_SPECULAR_SCALE",
+            "USE_FADE_TEXTURE"
           ],
           "baseDefines": [],
           "baseParameters": [
@@ -18466,8 +18491,12 @@
             "maxSpecPower",
             "globalSpecularFactor",
             "fakeSpecularScale",
+            "minDistance",
+            "maxDistance",
+            "fadeTexScale",
             "diffuseTexture",
-            "specularTexture"
+            "specularTexture",
+            "fadeNoiseTexture"
           ],
           "parameters": {
             "minSpecPower": {
@@ -18513,8 +18542,29 @@
                 "EPT_F32"
               ],
               "floatMin": 0.0,
+              "floatMax": 4.0,
+              "floatAvg": 3.5,
+              "floatMedian": 4.0,
+              "intMin": null,
+              "intMax": null,
+              "vec4Examples": [],
+              "vec4Avg": null,
+              "vec4Median": null,
+              "textureExtensions": [],
+              "boolValues": [],
+              "sampleValues": [
+                4.0,
+                0.0,
+                1.0
+              ]
+            },
+            "fakeSpecularScale": {
+              "types": [
+                "EPT_F32"
+              ],
+              "floatMin": 0.015,
               "floatMax": 1.0,
-              "floatAvg": 0.88,
+              "floatAvg": 0.68,
               "floatMedian": 1.0,
               "intMin": null,
               "intMax": null,
@@ -18525,7 +18575,68 @@
               "boolValues": [],
               "sampleValues": [
                 1.0,
-                0.0
+                0.1,
+                0.05,
+                0.015
+              ]
+            },
+            "minDistance": {
+              "types": [
+                "EPT_F32"
+              ],
+              "floatMin": 90.0,
+              "floatMax": 100.0,
+              "floatAvg": 92.35,
+              "floatMedian": 90.0,
+              "intMin": null,
+              "intMax": null,
+              "vec4Examples": [],
+              "vec4Avg": null,
+              "vec4Median": null,
+              "textureExtensions": [],
+              "boolValues": [],
+              "sampleValues": [
+                90.0,
+                100.0
+              ]
+            },
+            "maxDistance": {
+              "types": [
+                "EPT_F32"
+              ],
+              "floatMin": 160.0,
+              "floatMax": 163.0,
+              "floatAvg": 160.88,
+              "floatMedian": 160.0,
+              "intMin": null,
+              "intMax": null,
+              "vec4Examples": [],
+              "vec4Avg": null,
+              "vec4Median": null,
+              "textureExtensions": [],
+              "boolValues": [],
+              "sampleValues": [
+                163.0,
+                160.0
+              ]
+            },
+            "fadeTexScale": {
+              "types": [
+                "EPT_F32"
+              ],
+              "floatMin": 0.013,
+              "floatMax": 0.013,
+              "floatAvg": 0.01,
+              "floatMedian": 0.0,
+              "intMin": null,
+              "intMax": null,
+              "vec4Examples": [],
+              "vec4Avg": null,
+              "vec4Median": null,
+              "textureExtensions": [],
+              "boolValues": [],
+              "sampleValues": [
+                0.013
               ]
             },
             "diffuseTexture": {
@@ -18546,11 +18657,11 @@
               ],
               "boolValues": [],
               "sampleValues": [
-                "tracks\\textures\\autograss\\autograss_blades_1_dif.dds",
+                "tracks\\textures\\autograss\\autograss_blades_2b_dif.dds",
+                "tracks\\textures\\autograss\\lg_clower_1_mips.dds",
+                "tracks\\textures\\autograss\\lg_dandelion_1b_mips.dds",
                 "tracks\\textures\\autograss\\autograss_willowspring_1_dif.dds",
-                "tracks\\textures\\autograss\\autograss_long_1_dif.dds",
-                "tracks\\textures\\autograss\\livegrass_rocks.dds",
-                "tracks\\textures\\autograss\\livegrass_reizaflowers1.dds"
+                "tracks\\textures\\autograss\\lg_fireweed_1_mips.dds"
               ]
             },
             "specularTexture": {
@@ -18571,31 +18682,32 @@
               ],
               "boolValues": [],
               "sampleValues": [
-                "tracks\\textures\\autograss\\autograss_blades_1_spec.dds",
+                "tracks\\textures\\autograss\\autograss_blades_2b_spec.dds",
+                "tracks\\textures\\autograss\\lg_clower_1_spec_mips.dds",
+                "tracks\\textures\\autograss\\lg_dandelion_1b_spec_mips.dds",
                 "tracks\\textures\\autograss\\autograss_willowspring_1_dif.dds",
-                "tracks\\textures\\autograss\\autograss_long_1_spec.dds",
-                "tracks\\textures\\autograss\\livegrass_rocks_spec.dds",
-                "tracks\\textures\\autograss\\livegrass_reizaflowers1_s.dds"
+                "tracks\\textures\\autograss\\lg_fireweed_1_s_mips.dds"
               ]
             },
-            "fakeSpecularScale": {
+            "fadeNoiseTexture": {
               "types": [
-                "EPT_F32"
+                "EPT_TEXTURE"
               ],
-              "floatMin": 0.05,
-              "floatMax": 1.0,
-              "floatAvg": 0.76,
-              "floatMedian": 1.0,
+              "floatMin": null,
+              "floatMax": null,
+              "floatAvg": null,
+              "floatMedian": null,
               "intMin": null,
               "intMax": null,
               "vec4Examples": [],
               "vec4Avg": null,
               "vec4Median": null,
-              "textureExtensions": [],
+              "textureExtensions": [
+                ".dds"
+              ],
               "boolValues": [],
               "sampleValues": [
-                0.05,
-                1.0
+                "tracks\\textures\\autograss\\livegrass_distance_mask.dds"
               ]
             }
           }
@@ -19504,6 +19616,68 @@
         }
       }
     },
+    "render\\shaders\\textured_skydome_4waycrossfade_sun.fx": {
+      "techniques": {
+        "textured_skydome": {
+          "filesSeen": 1,
+          "defines": [],
+          "defineOrder": [],
+          "baseDefines": [],
+          "baseParameters": [
+            "colourTexture",
+            "intensityTexture"
+          ],
+          "paramOrder": [
+            "colourTexture",
+            "intensityTexture"
+          ],
+          "parameters": {
+            "colourTexture": {
+              "types": [
+                "EPT_TEXTURE"
+              ],
+              "floatMin": null,
+              "floatMax": null,
+              "floatAvg": null,
+              "floatMedian": null,
+              "intMin": null,
+              "intMax": null,
+              "vec4Examples": [],
+              "vec4Avg": null,
+              "vec4Median": null,
+              "textureExtensions": [
+                ".dds"
+              ],
+              "boolValues": [],
+              "sampleValues": [
+                "Tracks\\Textures\\grey.dds"
+              ]
+            },
+            "intensityTexture": {
+              "types": [
+                "EPT_TEXTURE"
+              ],
+              "floatMin": null,
+              "floatMax": null,
+              "floatAvg": null,
+              "floatMedian": null,
+              "intMin": null,
+              "intMax": null,
+              "vec4Examples": [],
+              "vec4Avg": null,
+              "vec4Median": null,
+              "textureExtensions": [
+                ".dds"
+              ],
+              "boolValues": [],
+              "sampleValues": [
+                "Tracks\\Textures\\grey.dds"
+              ]
+            }
+          }
+        }
+      }
+    },
     "Render\\Shaders\\cloud_model.fx": {
       "techniques": {
         "Basic": {
@@ -19698,7 +19872,7 @@
     "Render\\Shaders\\skintest.fx": {
       "techniques": {
         "skintest": {
-          "filesSeen": 49,
+          "filesSeen": 50,
           "defines": [
             "APPLY_DYNAMIC_LIGHTING_SCALERS",
             "DISABLE_SSAO",
@@ -19715,8 +19889,8 @@
             "USE_SPECULAR",
             "APPLY_DYNAMIC_LIGHTING_SCALERS",
             "NORMAL_MAPPING",
-            "ENV_MAPPING",
             "USE_ALPHATEST",
+            "ENV_MAPPING",
             "TINT_USE_SIMPLE",
             "USE_LIGHT_CONTROL",
             "USE_COLOURISATION",
@@ -19738,8 +19912,8 @@
             "numCellsU",
             "globalSpecularFactor",
             "numCellsV",
-            "colourMultiplier",
             "globalEMapFactor",
+            "colourMultiplier",
             "jumpSpeed"
           ],
           "parameters": {
@@ -19858,7 +20032,7 @@
               ],
               "floatMin": 1.0,
               "floatMax": 64.0,
-              "floatAvg": 16.5,
+              "floatAvg": 16.37,
               "floatMedian": 10.0,
               "intMin": null,
               "intMax": null,
@@ -19881,7 +20055,7 @@
               ],
               "floatMin": 25.0,
               "floatMax": 525.0,
-              "floatAvg": 107.62,
+              "floatAvg": 110.02,
               "floatMedian": 30.0,
               "intMin": null,
               "intMax": null,
@@ -19904,7 +20078,7 @@
               ],
               "floatMin": 0.1,
               "floatMax": 3.65,
-              "floatAvg": 1.17,
+              "floatAvg": 1.21,
               "floatMedian": 0.5,
               "intMin": null,
               "intMax": null,
@@ -22038,7 +22212,7 @@
     "Render\\Shaders\\livegrass1_0.fx": {
       "techniques": {
         "Basic": {
-          "filesSeen": 598,
+          "filesSeen": 647,
           "defines": [
             "FLIP_DENSITY"
           ],

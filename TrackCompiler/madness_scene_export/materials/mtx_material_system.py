@@ -1,5 +1,6 @@
 import bpy  # type: ignore
 from bpy.props import StringProperty, BoolProperty, FloatProperty, EnumProperty, PointerProperty, CollectionProperty  # type: ignore
+from bpy.app.handlers import persistent  # type: ignore
 from pathlib import Path
 import xml.etree.ElementTree as ET
 from typing import Optional
@@ -7,6 +8,8 @@ from .shader_definitions import (
     SHADER_TECHNIQUES,
     SHADER_DEFINES,
     get_shader_items,
+    get_shader_database_items,
+    load_shader_database,
     get_technique_items,
     update_shader_params,
     update_shader_change,
@@ -15,6 +18,59 @@ from .shader_definitions import (
     get_param_stats,
 )
 from ..utils import sanitize
+
+SCENE_SHADER_DB_KEY = "mtx_shader_database_id"
+
+
+def _available_shader_database_ids():
+    return [item[0] for item in get_shader_database_items(None, None)]
+
+
+def _refresh_materials_for_current_database(context):
+    for material in bpy.data.materials:
+        if not hasattr(material, "mtx_settings"):
+            continue
+        settings = material.mtx_settings
+        if settings.shader_path in SHADER_TECHNIQUES:
+            try:
+                update_shader_change(settings, context)
+            except Exception as exc:
+                print(f"Skipping shader refresh for material '{material.name}': {exc}")
+
+
+@persistent
+def _restore_scene_shader_database(_dummy):
+    scene = bpy.context.scene
+    if scene is None or not hasattr(scene, "mtx_shader_database"):
+        return
+    available_ids = _available_shader_database_ids()
+    if not available_ids:
+        return
+
+    stored_id = scene.get(SCENE_SHADER_DB_KEY, "")
+    selected_id = stored_id if stored_id in available_ids else scene.mtx_shader_database
+    if selected_id not in available_ids:
+        selected_id = available_ids[0]
+    if scene.mtx_shader_database != selected_id:
+        scene.mtx_shader_database = selected_id
+
+    scene[SCENE_SHADER_DB_KEY] = selected_id
+    if load_shader_database(selected_id):
+        _refresh_materials_for_current_database(bpy.context)
+
+
+def update_shader_database_selection(self, context):
+    """Switch active shader database and refresh valid material shader UIs."""
+    selected_database = getattr(self, "mtx_shader_database", "")
+    if not selected_database:
+        return
+
+    self[SCENE_SHADER_DB_KEY] = selected_database
+
+    if not load_shader_database(selected_database):
+        return
+
+    _refresh_materials_for_current_database(context)
 
 
 def resolve_texture_path(texture_path_str, context=None):
@@ -144,7 +200,6 @@ class MTXMaterialSettings(bpy.types.PropertyGroup):
         name="Shader",
         description="Shader file path",
         items=get_shader_items,
-        default=0,
         update=update_shader_change,
     )  # type: ignore
 
@@ -302,6 +357,14 @@ class MTX_PT_material_settings(bpy.types.Panel):
         row = box.row()
         row.label(text="MTX Name:")
         row.label(text=mtx.material_name)
+
+        if context.scene and hasattr(context.scene, "mtx_shader_database"):
+            box.prop(context.scene, "mtx_shader_database", text="Shader Database")
+
+        if mtx.shader_path not in SHADER_TECHNIQUES:
+            warn_row = box.row()
+            warn_row.alert = True
+            warn_row.label(text="Current shader is missing from active database", icon="ERROR")
 
         box.prop(mtx, "shader_path")
         box.prop(mtx, "technique")
@@ -1016,9 +1079,20 @@ def register():
 
     # Add MTX settings to materials
     bpy.types.Material.mtx_settings = PointerProperty(type=MTXMaterialSettings)
-
+    bpy.types.Scene.mtx_shader_database = EnumProperty(
+        name="Shader Database",
+        description="Select the active shader database",
+        items=get_shader_database_items,
+        default=0,
+        update=update_shader_database_selection,
+    )
+    if _restore_scene_shader_database not in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.append(_restore_scene_shader_database)
 
 def unregister():
+    if _restore_scene_shader_database in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.remove(_restore_scene_shader_database)
+    del bpy.types.Scene.mtx_shader_database
     del bpy.types.Material.mtx_settings
 
     bpy.utils.unregister_class(MTX_OT_copy_define_to_selected)

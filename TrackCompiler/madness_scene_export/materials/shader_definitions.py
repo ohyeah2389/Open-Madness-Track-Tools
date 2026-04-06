@@ -2,445 +2,47 @@ import bpy # type: ignore
 from pathlib import Path
 import json
 
-# Valid shader/technique combinations based on analysis
-SHADER_TECHNIQUES = {
-    'Render\\Shaders\\baked_instance_tree.fx': ['Basic_AlphaTest'],
-    'Render\\Shaders\\basic.fx': ['Basic', 'Basic_DoubleSided'],
-    'Render\\Shaders\\basic_anim.fx': ['Basic'],
-    'Render\\Shaders\\basic_instanced.fx': ['Basic'],
-    'Render\\Shaders\\basic_translucent.fx': ['Basic_Translucent', 'Basic_Translucent_DoubleSided'],
-    'Render\\Shaders\\basic_windows.fx': ['Basic'],
-    'Render\\Shaders\\billboard_instance_tree.fx': ['Basic_AlphaTest'],
-    'Render\\Shaders\\lightglow_billboard.fx': ['Lightglow'],
-    'Render\\Shaders\\locator.fx': ['locator'],
-    'Render\\Shaders\\new_ground.fx': ['Ground'],
-    'Render\\Shaders\\new_ground_transition.fx': ['Ground_Transition'],
-    'Render\\Shaders\\overlay.fx': ['Overlay', 'Overlay_floatingMesh', 'SolidOverlay'],
-    'Render\\Shaders\\road_dbv.fx': ['road_dbv'],
-    'Render\\Shaders\\skintest.fx': ['skintest'],
-    'Render\\Shaders\\water.fx': ['Water'],
-}
-
-# Shader parameters by technique (from analysis)
-SHADER_PARAMETERS = {
-    'Render\\Shaders\\baked_instance_tree.fx': {
-        'Basic_AlphaTest': [
-            ('alphaTestParam', 'EPT_F32'),
-            ('diffuseTexture', 'EPT_TEXTURE'),
-            ('horizontalFramesNr', 'EPT_F32'),
-            ('normalTexture', 'EPT_TEXTURE'),
-            ('specialNormalMap', 'EPT_BOOL'),
-            ('treeThickness', 'EPT_F32'),
-        ],
-    },
-    'Render\\Shaders\\basic.fx': {
-        'Basic': [
-            ('AOTexture', 'EPT_TEXTURE'),
-            ('diffuseTexture', 'EPT_TEXTURE'),
-            ('emissiveTexture', 'EPT_TEXTURE'),
-            ('emissiveTexture2', 'EPT_TEXTURE'),
-            ('emissive_scale', 'EPT_F32'),
-            ('fresnelFactor', 'EPT_F32'),
-            ('globalEMapFactor', 'EPT_F32'),
-            ('globalSpecularFactor', 'EPT_F32'),
-            ('logoTexture', 'EPT_TEXTURE'),
-            ('maxSpecPower', 'EPT_F32'),
-            ('minSpecPower', 'EPT_F32'),
-            ('normalTexture', 'EPT_TEXTURE'),
-            ('specialNormalMap', 'EPT_BOOL'),
-            ('specularTexture', 'EPT_TEXTURE'),
-            ('tintAlpha', 'EPT_F32'),
-            ('tintColour', 'EPT_VEC4'),
-            ('tintForeground', 'EPT_F32'),
-            ('tintMaskFromR', 'EPT_F32'),
-        ],
-        'Basic_DoubleSided': [
-            ('diffuseTexture', 'EPT_TEXTURE'),
-            ('fresnelFactor', 'EPT_F32'),
-            ('globalEMapFactor', 'EPT_F32'),
-            ('globalSpecularFactor', 'EPT_F32'),
-            ('maxSpecPower', 'EPT_F32'),
-            ('minSpecPower', 'EPT_F32'),
-            ('normalTexture', 'EPT_TEXTURE'),
-            ('specialNormalMap', 'EPT_BOOL'),
-            ('specularTexture', 'EPT_TEXTURE'),
-        ],
-    },
-    'Render\\Shaders\\basic_anim.fx': {
-        'Basic': [
-            ('animationMode', 'EPT_S32'),
-            ('diffuseTexture', 'EPT_TEXTURE'),
-            ('emissiveTexture', 'EPT_TEXTURE'),
-            ('emissive_scale', 'EPT_F32'),
-            ('frameDimX', 'EPT_S32'),
-            ('frameDimY', 'EPT_S32'),
-            ('frameDisplayTime', 'EPT_F32'),
-            ('frameInitialTimeOffset', 'EPT_F32'),
-            ('frameTransitionTime', 'EPT_F32'),
-            ('fresnelFactor', 'EPT_F32'),
-            ('globalEMapFactor', 'EPT_F32'),
-        ],
-    },
-    'Render\\Shaders\\basic_translucent.fx': {
-        'Basic_Translucent': [
-            ('AOTexture', 'EPT_TEXTURE'),
-            ('diffuseTexture', 'EPT_TEXTURE'),
-            ('fresnelFactor', 'EPT_F32'),
-            ('globalEMapFactor', 'EPT_F32'),
-            ('globalSpecularFactor', 'EPT_F32'),
-            ('maxSpecPower', 'EPT_F32'),
-            ('minSpecPower', 'EPT_F32'),
-            ('normalTexture', 'EPT_TEXTURE'),
-            ('specialNormalMap', 'EPT_BOOL'),
-            ('specularTexture', 'EPT_TEXTURE'),
-        ],
-        'Basic_Translucent_DoubleSided': [
-            ('diffuseTexture', 'EPT_TEXTURE'),
-            ('fresnelFactor', 'EPT_F32'),
-            ('globalSpecularFactor', 'EPT_F32'),
-            ('maxSpecPower', 'EPT_F32'),
-            ('minSpecPower', 'EPT_F32'),
-            ('normalTexture', 'EPT_TEXTURE'),
-            ('specialNormalMap', 'EPT_BOOL'),
-            ('specularTexture', 'EPT_TEXTURE'),
-        ],
-    },
-    'Render\\Shaders\\basic_windows.fx': {
-        'Basic': [
-            ('AOTexture', 'EPT_TEXTURE'),
-            ('diffuseTexture', 'EPT_TEXTURE'),
-            ('emissiveTexture', 'EPT_TEXTURE'),
-            ('emissiveTexture2', 'EPT_TEXTURE'),
-            ('emissive_scale', 'EPT_F32'),
-            ('fresnelFactor', 'EPT_F32'),
-            ('globalEMapFactor', 'EPT_F32'),
-            ('globalSpecularFactor', 'EPT_F32'),
-            ('maxSpecPower', 'EPT_F32'),
-            ('minSpecPower', 'EPT_F32'),
-            ('normalTexture', 'EPT_TEXTURE'),
-            ('specialNormalMap', 'EPT_BOOL'),
-            ('specularTexture', 'EPT_TEXTURE'),
-            ('tint_maskTexture', 'EPT_TEXTURE'),
-            ('tint_tintB', 'EPT_VEC4'),
-            ('tint_tintG', 'EPT_VEC4'),
-            ('tint_tintR', 'EPT_VEC4'),
-        ],
-    },
-    'Render\\Shaders\\billboard_instance_tree.fx': {
-        'Basic_AlphaTest': [
-            ('alphaTestParam', 'EPT_F32'),
-            ('diffuseTexture', 'EPT_TEXTURE'),
-        ],
-    },
-    'Render\\Shaders\\lightglow_billboard.fx': {
-        'Lightglow': [
-            ('diffuseTexture', 'EPT_TEXTURE'),
-            ('distanceScale', 'EPT_F32'),
-        ],
-    },
-    'Render\\Shaders\\locator.fx': {
-        'locator': [],
-    },
-    'Render\\Shaders\\new_ground.fx': {
-        'Ground': [
-            ('broadDiffuseTexture', 'EPT_TEXTURE'),
-            ('detailDiffuseTexture', 'EPT_TEXTURE'),
-            ('detailUScale', 'EPT_F32'),
-            ('detailVScale', 'EPT_F32'),
-            ('globalSpecularFactor', 'EPT_F32'),
-            ('middleDiffuseTexture', 'EPT_TEXTURE'),
-            ('normalTexture', 'EPT_TEXTURE'),
-            ('puddleTexture', 'EPT_TEXTURE'),
-            ('specularTexture', 'EPT_TEXTURE'),
-            ('uvScaleForWetMasks', 'EPT_F32'),
-        ],
-    },
-    'Render\\Shaders\\new_ground_transition.fx': {
-        'Ground_Transition': [
-            ('additiveDetail2', 'EPT_BOOL'),
-            ('blendInvert', 'EPT_BOOL'),
-            ('blendTexture', 'EPT_TEXTURE'),
-            ('broadDiffuseTexture1', 'EPT_TEXTURE'),
-            ('broadDiffuseTexture2', 'EPT_TEXTURE'),
-            ('detailDiffuseTexture1', 'EPT_TEXTURE'),
-            ('detailDiffuseTexture2', 'EPT_TEXTURE'),
-            ('detailUScale1', 'EPT_F32'),
-            ('detailUScale2', 'EPT_F32'),
-            ('detailVScale1', 'EPT_F32'),
-            ('detailVScale2', 'EPT_F32'),
-            ('globalSpecularFactor1', 'EPT_F32'),
-            ('globalSpecularFactor2', 'EPT_F32'),
-            ('middleDiffuseTexture1', 'EPT_TEXTURE'),
-            ('middleDiffuseTexture2', 'EPT_TEXTURE'),
-            ('normalTexture2', 'EPT_TEXTURE'),
-            ('puddleTexture', 'EPT_TEXTURE'),
-            ('specularTexture1', 'EPT_TEXTURE'),
-            ('specularTexture2', 'EPT_TEXTURE'),
-            ('uvScaleForWetMasks', 'EPT_F32'),
-        ],
-    },
-    'Render\\Shaders\\overlay.fx': {
-        'Overlay': [
-            ('blendTexture', 'EPT_TEXTURE'),
-            ('diffuseTexture', 'EPT_TEXTURE'),
-            ('fresnelFactor', 'EPT_F32'),
-            ('globalSpecularFactor', 'EPT_F32'),
-            ('maxSpecPower', 'EPT_F32'),
-            ('minSpecPower', 'EPT_F32'),
-            ('specularTexture', 'EPT_TEXTURE'),
-        ],
-        'Overlay_floatingMesh': [
-            ('blendTexture', 'EPT_TEXTURE'),
-            ('diffuseTexture', 'EPT_TEXTURE'),
-            ('fresnelFactor', 'EPT_F32'),
-            ('globalSpecularFactor', 'EPT_F32'),
-            ('maxSpecPower', 'EPT_F32'),
-            ('minSpecPower', 'EPT_F32'),
-            ('normalTexture', 'EPT_TEXTURE'),
-            ('specularTexture', 'EPT_TEXTURE'),
-        ],
-        'SolidOverlay': [
-            ('blendTexture', 'EPT_TEXTURE'),
-            ('diffuseTexture', 'EPT_TEXTURE'),
-            ('fresnelFactor', 'EPT_F32'),
-            ('globalSpecularFactor', 'EPT_F32'),
-            ('maxSpecPower', 'EPT_F32'),
-            ('minSpecPower', 'EPT_F32'),
-            ('specularTexture', 'EPT_TEXTURE'),
-        ],
-    },
-    'Render\\Shaders\\road_dbv.fx': {
-        'road_dbv': [
-            ('broadNormalStrength', 'EPT_F32'),
-            ('globalSpecularFactor', 'EPT_F32'),
-            ('specularPower', 'EPT_F32'),
-            ('fresnelFactor', 'EPT_F32'),
-            ('baseDSTexture', 'EPT_TEXTURE'),
-            ('broadNormalTexture', 'EPT_TEXTURE'),
-            ('detailDSTexture', 'EPT_TEXTURE'),
-            ('detailNormalTexture', 'EPT_TEXTURE'),
-            ('puddleTexture', 'EPT_TEXTURE'),
-            ('uvScaleForWetMasks', 'EPT_F32'),
-        ],
-    },
-    'Render\\Shaders\\water.fx': {
-        'Water': [
-            ('diffuseTexture', 'EPT_TEXTURE'),
-            ('environmentTexture', 'EPT_TEXTURE'),
-            ('fresnelFactor', 'EPT_F32'),
-            ('globalEMapFactor', 'EPT_F32'),
-            ('globalSpecularFactor', 'EPT_F32'),
-            ('maxSpecPower', 'EPT_F32'),
-            ('minSpecPower', 'EPT_F32'),
-            ('normal1USpeed', 'EPT_F32'),
-            ('normal1VSpeed', 'EPT_F32'),
-            ('normal2USpeed', 'EPT_F32'),
-            ('normal2VSpeed', 'EPT_F32'),
-            ('normalTexture1', 'EPT_TEXTURE'),
-            ('normalTexture2', 'EPT_TEXTURE'),
-            ('riverbedTexture', 'EPT_TEXTURE'),
-            ('riverbedTransmissionCoeff', 'EPT_F32'),
-            ('specularTexture', 'EPT_TEXTURE'),
-        ],
-    },
-    'Render\\Shaders\\basic_instanced.fx': {
-        'Basic': [
-            ('diffuseTexture', 'EPT_TEXTURE'),
-            ('fresnelFactor', 'EPT_F32'),
-            ('globalEMapFactor', 'EPT_F32'),
-            ('globalSpecularFactor', 'EPT_F32'),
-            ('maxSpecPower', 'EPT_F32'),
-            ('minSpecPower', 'EPT_F32'),
-            ('normalTexture', 'EPT_TEXTURE'),
-            ('specialNormalMap', 'EPT_BOOL'),
-            ('specularTexture', 'EPT_TEXTURE'),
-            ('tint_maskTexture', 'EPT_TEXTURE'),
-            ('tint_tintB', 'EPT_VEC4'),
-            ('tint_tintG', 'EPT_VEC4'),
-            ('tint_tintR', 'EPT_VEC4'),
-        ],
-    },
-    'Render\\Shaders\\skintest.fx': {
-        'skintest': [
-            ('colourMultiplier', 'EPT_VEC4'),
-            ('diffuseTexture', 'EPT_TEXTURE'),
-            ('globalSpecularFactor', 'EPT_F32'),
-            ('maxSpecPower', 'EPT_F32'),
-            ('minSpecPower', 'EPT_F32'),
-            ('normalTexture', 'EPT_TEXTURE'),
-            ('specularTexture', 'EPT_TEXTURE'),
-        ],
-    },
-}
-
-# Shader defines (by shader and technique)
-SHADER_DEFINES = {
-    'Render\\Shaders\\baked_instance_tree.fx': {
-        'Basic_AlphaTest': [
-            'USE_ALPHATESTPARAM',
-            'LOCK_Z',
-            'USE_CAMERA_DEPENDET_ANIMATION',
-            'USE_NORMAL_COLOURING_LERP',
-            'NORMAL_MAPPING',
-        ],
-    },
-    'Render\\Shaders\\basic.fx': {
-        'Basic': [
-            'USE_ALPHATEST',
-            'USE_ANISO',
-            'USE_SPECULAR',
-            'NORMAL_MAPPING',
-            'USE_FRESNEL',
-            'USE_AO_MAP',
-            'ENVMAP_SCALED_SPEC_A',
-        ],
-        'Basic_DoubleSided': [
-            'USE_ALPHATEST',
-            'USE_ANISO',
-            'USE_SPECULAR',
-            'NORMAL_MAPPING',
-            'USE_FRESNEL',
-        ],
-    },
-    'Render\\Shaders\\basic_anim.fx': {
-        'Basic': [
-            'USE_ANISO',
-            'USE_LIGHT_CONTROL',
-            'USE_EXTRA_WTC_EMISSIVE_SCALER',
-            'ENV_MAPPING',
-            'USE_FRESNEL',
-            'SCALE_EMISSIVE',
-        ],
-    },
-    'Render\\Shaders\\basic_instanced.fx': {
-        'Basic': [
-            'NORMAL_MAPPING',
-            'ENV_MAPPING',
-            'TINT_USE_TINT',
-            'TINT_USE_SIMPLE',
-            'USE_FRESNEL',
-            'ENVMAP_SCALED_SPEC_A',
-        ],
-    },
-    'Render\\Shaders\\basic_translucent.fx': {
-        'Basic_Translucent': [
-            'USE_ALPHATEST',
-            'USE_COLOURISATION',
-            'USE_SPECULAR',
-            'USE_FRESNEL',
-            'USE_AO_MAP',
-        ],
-        'Basic_Translucent_DoubleSided': [
-            'USE_ANISO',
-            'USE_SPECULAR',
-            'NORMAL_MAPPING',
-            'USE_FRESNEL',
-        ],
-    },
-    'Render\\Shaders\\basic_windows.fx': {
-        'Basic': [
-            'TINT_USE_SIMPLE',
-            'USE_EMISSIVEASLIGHTMAP',
-            'USE_COLOURISATION',
-            'USE_ANISO',
-        ],
-    },
-    'Render\\Shaders\\billboard_instance_tree.fx': {
-        'Basic_AlphaTest': [
-            'USE_ALPHATESTPARAM',
-            'LOCK_YAW_PITCH',
-        ],
-    },
-    'Render\\Shaders\\lightglow_billboard.fx': {
-        'Lightglow': [
-            'TRACKSIDE_LIGHT',
-        ],
-    },
-    'Render\\Shaders\\locator.fx': {
-        'locator': [],
-    },
-    'Render\\Shaders\\new_ground.fx': {
-        'Ground': [
-            'USE_COLOURISATION',
-            'USE_SPECULAR',
-            'NORMAL_MAPPING',
-            'APPLYLIVETRACKMASKS',
-            'UVSCALEFORWETMASKS',
-            'USESURFACECAMERAFACINGNORMALBIAS',
-        ],
-    },
-    'Render\\Shaders\\new_ground_transition.fx': {
-        'Ground_Transition': [
-            'USE_SPECULAR_1',
-            'BROAD_NORMAL_MAP_1',
-            'USE_SPECULAR_2',
-            'BROAD_NORMAL_MAP_2',
-            'GRASSLIVETRACKRENDERING',
-            'APPLYLIVETRACKMASKS',
-            'UVSCALEFORWETMASKS',
-            'USESURFACECAMERAFACINGNORMALBIAS',
-        ],
-    },
-    'Render\\Shaders\\overlay.fx': {
-        'Overlay': [
-            'USE_SPECULAR',
-            'USE_FRESNEL',
-            'DEFAULTLIVETRACKRENDERING',
-            'USESURFACECAMERAFACINGNORMALBIAS',
-        ],
-        'Overlay_floatingMesh': [
-            'USE_SPECULAR',
-            'USE_FRESNEL',
-            'DEFAULTLIVETRACKRENDERING',
-            'USESURFACECAMERAFACINGNORMALBIAS',
-        ],
-        'SolidOverlay': [
-            'USE_SPECULAR',
-            'USE_FRESNEL',
-            'GRASSLIVETRACKRENDERING',
-            'USESURFACECAMERAFACINGNORMALBIAS',
-        ],
-    },
-    'Render\\Shaders\\road_dbv.fx': {
-        'road_dbv': [
-            'BROAD_NORMAL_MAPPING',
-            'NORMAL_MAPPING',
-            'USE_FRESNEL',
-            'DEFAULTLIVETRACKRENDERING',
-            'APPLYLIVETRACKMASKS',
-            'UVSCALEFORWETMASKS',
-            'USESURFACECAMERAFACINGNORMALBIAS',
-            'FULL_TANGENT',
-            'COLOURED_DETAIL',
-        ],
-    },
-    'Render\\Shaders\\skintest.fx': {
-        'skintest': [
-            'USE_SPECULAR',
-            'NORMAL_MAPPING',
-            'TINT_USE_SIMPLE',
-        ],
-    },
-    'Render\\Shaders\\water.fx': {
-        'Water': [],
-    },
-}
+SHADER_TECHNIQUES = {}
+SHADER_PARAMETERS = {}
+SHADER_DEFINES = {}
 
 ALWAYS_ON_PARAMETERS = {}
 ALWAYS_ON_DEFINES = {}
 DEFAULT_PARAM_VALUES = {}
 PARAM_METADATA = {}
 
-DATABASE_PATH = Path(__file__).resolve().parent.parent / "database" / "mtx_shader_database.json"
+DATABASE_DIR = Path(__file__).resolve().parent.parent / "database"
+SHADER_DATABASE_DIR = DATABASE_DIR / "shaders"
+DATABASE_REGISTRY = {}
 LOADED_SHADER_DATABASE = None
+LOADED_SHADER_DATABASE_ID = ""
+
+
+def _shader_display_name(shader_value):
+    """Return a safe display name for shader enum labels."""
+    shader_text = str(shader_value or "").replace("/", "\\")
+    if not shader_text:
+        return "unknown"
+    leaf = shader_text.rsplit("\\", 1)[-1]
+    return leaf[:-3] if leaf.lower().endswith(".fx") else leaf
 
 
 def get_shader_items(self, context):
-    """Dynamic shader list driven by the loaded database (or fallback table)."""
-    shader_paths = sorted(SHADER_TECHNIQUES.keys())
-    if shader_paths:
-        return [(shader, Path(shader).stem, shader) for shader in shader_paths]
-    return [('Render\\Shaders\\basic.fx', 'basic', 'Render\\Shaders\\basic.fx')]
+    """Shader list from the active database only."""
+    items = [
+        (shader, _shader_display_name(shader), shader)
+        for shader in sorted(str(shader_path) for shader_path in SHADER_TECHNIQUES.keys())
+    ]
+    return items or [('Render\\Shaders\\basic.fx', 'basic', 'Render\\Shaders\\basic.fx')]
+
+
+def get_shader_database_items(self, context):
+    """List available shader databases from database/shaders."""
+    _discover_shader_databases()
+    return [
+        (db_id, db_info["label"], str(db_info["path"]))
+        for db_id, db_info in DATABASE_REGISTRY.items()
+    ] or [("builtin", "Built-in", "Built-in shader table")]
 
 
 def _normalize_loaded_database(db_dict):
@@ -562,40 +164,78 @@ def _normalize_loaded_database(db_dict):
     return techniques, parameters, defines, always_params, always_defines, default_param_values, param_metadata
 
 
-def _try_apply_external_database():
-    """Load shader data from the generated database file if it exists."""
-    global SHADER_TECHNIQUES, SHADER_PARAMETERS, SHADER_DEFINES, ALWAYS_ON_PARAMETERS, ALWAYS_ON_DEFINES, DEFAULT_PARAM_VALUES, PARAM_METADATA, LOADED_SHADER_DATABASE
+def _discover_shader_databases():
+    """Populate shader database registry from database/shaders."""
+    DATABASE_REGISTRY.clear()
 
-    if not DATABASE_PATH.exists():
-        return
+    if SHADER_DATABASE_DIR.exists():
+        for path in sorted(SHADER_DATABASE_DIR.glob("*.json")):
+            db_id = f"shaders/{path.name}"
+            label = path.stem.replace("_", " ").replace("-", " ").upper()
+            DATABASE_REGISTRY[db_id] = {"path": path, "label": label}
 
+
+def get_default_shader_database_id():
+    """Get the preferred default database id."""
+    _discover_shader_databases()
+    if DATABASE_REGISTRY:
+        return next(iter(DATABASE_REGISTRY))
+    return "builtin"
+
+
+def load_shader_database(database_id=None):
+    """Load shader data from selected database. Returns True on success."""
+    global LOADED_SHADER_DATABASE, LOADED_SHADER_DATABASE_ID
+
+    _discover_shader_databases()
+    if database_id is None or database_id == "builtin":
+        database_id = get_default_shader_database_id()
+    if database_id == "builtin":
+        return False
+    if database_id not in DATABASE_REGISTRY:
+        database_id = get_default_shader_database_id()
+        if database_id == "builtin":
+            return False
+
+    db_path = DATABASE_REGISTRY[database_id]["path"]
     try:
-        with open(DATABASE_PATH, "r", encoding="utf-8") as f:
-            db_content = json.load(f)
+        with open(db_path, "r", encoding="utf-8") as file_handle:
+            db_content = json.load(file_handle)
     except Exception as exc:
-        print(f"Failed to read shader database at {DATABASE_PATH}: {exc}")
-        return
+        print(f"Failed to read shader database at {db_path}: {exc}")
+        return False
 
     try:
         techniques, parameters, defines, always_params, always_defines, default_param_values, param_metadata = _normalize_loaded_database(db_content)
     except Exception as exc:
-        print(f"Failed to normalize shader database from {DATABASE_PATH}: {exc}")
-        return
+        print(f"Failed to normalize shader database from {db_path}: {exc}")
+        return False
 
-    # Only override if we actually found usable techniques
-    if techniques:
-        SHADER_TECHNIQUES = techniques
-        SHADER_PARAMETERS = parameters
-        SHADER_DEFINES = defines
-        ALWAYS_ON_PARAMETERS = always_params
-        ALWAYS_ON_DEFINES = always_defines
-        DEFAULT_PARAM_VALUES = default_param_values
-        PARAM_METADATA = param_metadata
-        LOADED_SHADER_DATABASE = db_content
-        print(f"Loaded shader database: {len(SHADER_TECHNIQUES)} shaders from {DATABASE_PATH}")
+    if not techniques:
+        return False
+
+    SHADER_TECHNIQUES.clear()
+    SHADER_TECHNIQUES.update(techniques)
+    SHADER_PARAMETERS.clear()
+    SHADER_PARAMETERS.update(parameters)
+    SHADER_DEFINES.clear()
+    SHADER_DEFINES.update(defines)
+    ALWAYS_ON_PARAMETERS.clear()
+    ALWAYS_ON_PARAMETERS.update(always_params)
+    ALWAYS_ON_DEFINES.clear()
+    ALWAYS_ON_DEFINES.update(always_defines)
+    DEFAULT_PARAM_VALUES.clear()
+    DEFAULT_PARAM_VALUES.update(default_param_values)
+    PARAM_METADATA.clear()
+    PARAM_METADATA.update(param_metadata)
+
+    LOADED_SHADER_DATABASE = db_content
+    LOADED_SHADER_DATABASE_ID = database_id
+    print(f"Loaded shader database: {len(SHADER_TECHNIQUES)} shaders from {db_path}")
+    return True
 
 
-_try_apply_external_database()
+load_shader_database()
 
 
 def is_param_required(shader: str, technique: str, param_name: str) -> bool:
@@ -613,22 +253,31 @@ def get_param_stats(shader: str, technique: str, param_name: str):
     return PARAM_METADATA.get(shader, {}).get(technique, {}).get(param_name, None)
 
 def get_technique_items(self, context):
-    """Dynamic technique items based on selected shader"""
-    shader = self.shader_path
-    if shader in SHADER_TECHNIQUES:
-        return [(name, name, f'{name} technique') for name in SHADER_TECHNIQUES[shader]]
-    return [('Basic', 'Basic', 'Basic technique')]
+    """Technique list for the currently selected shader."""
+    shader = ""
+    try:
+        value = self.shader_path
+        if isinstance(value, str):
+            shader = value
+    except Exception:
+        shader = ""
+
+    techniques = SHADER_TECHNIQUES.get(shader, [])
+    if not techniques:
+        return [('Basic', 'Basic', 'Fallback technique')]
+    return [(name, name, f'{name} technique') for name in techniques]
 
 def update_shader_params(self, context):
     """Update available parameters when technique changes"""
-    if not context.material or not hasattr(context.material, 'mtx_settings'):
+    if not hasattr(self, "shader_params"):
         return
-        
-    mtx_settings = context.material.mtx_settings
+
+    mtx_settings = self
     shader = mtx_settings.shader_path
     technique = mtx_settings.technique
-    
-    print(f"Updating parameters for {shader} / {technique}")
+
+    if shader not in SHADER_PARAMETERS or technique not in SHADER_PARAMETERS[shader]:
+        return
     
     # Preserve existing parameter values by name and type
     existing_params = {}
@@ -653,83 +302,83 @@ def update_shader_params(self, context):
     }
     
     # Add parameters for current shader/technique combination
-    if shader in SHADER_PARAMETERS and technique in SHADER_PARAMETERS[shader]:
-        param_entries = list(SHADER_PARAMETERS[shader][technique])
-        type_order = {
-            "EPT_TEXTURE": 0,
-            "EPT_F32": 1,
-            "EPT_VEC4": 2,
-            "EPT_BOOL": 3,
-        }
-        param_entries.sort(
-            key=lambda item: (
-                type_order.get(item[1], 4),
-                0 if is_param_required(shader, technique, item[0]) else 1,
-                item[0].lower(),
-            )
+    param_entries = list(SHADER_PARAMETERS[shader][technique])
+    type_order = {
+        "EPT_TEXTURE": 0,
+        "EPT_F32": 1,
+        "EPT_VEC4": 2,
+        "EPT_BOOL": 3,
+    }
+    param_entries.sort(
+        key=lambda item: (
+            type_order.get(item[1], 4),
+            0 if is_param_required(shader, technique, item[0]) else 1,
+            item[0].lower(),
         )
+    )
 
-        for param_name, param_type in param_entries:
-            param = mtx_settings.shader_params.add()
-            param.name = param_name
-            param.param_type = param_type
-            param_defaults = DEFAULT_PARAM_VALUES.get(shader, {}).get(technique, {})
+    for param_name, param_type in param_entries:
+        param = mtx_settings.shader_params.add()
+        param.name = param_name
+        param.param_type = param_type
+        param_defaults = DEFAULT_PARAM_VALUES.get(shader, {}).get(technique, {})
+        
+        # Check if we have existing values for this parameter
+        key = (param_name, param_type)
+        if key in existing_params:
+            # Restore existing values
+            existing = existing_params[key]
+            param.enabled = existing['enabled']
+            param.float_value = existing['float_value']
+            param.int_value = existing['int_value']
+            param.vec4_value = existing['vec4_value']
+            param.texture_value = existing['texture_value']
+            param.bool_value = existing['bool_value']
+        else:
+            # Set default values for new parameters
+            param.enabled = param_name in common_params
             
-            # Check if we have existing values for this parameter
-            key = (param_name, param_type)
-            if key in existing_params:
-                # Restore existing values
-                existing = existing_params[key]
-                param.enabled = existing['enabled']
-                param.float_value = existing['float_value']
-                param.int_value = existing['int_value']
-                param.vec4_value = existing['vec4_value']
-                param.texture_value = existing['texture_value']
-                param.bool_value = existing['bool_value']
-                print(f"Carried over parameter: {param_name} ({param_type})")
-            else:
-                # Set default values for new parameters
-                param.enabled = param_name in common_params
-                
-                if param_type == 'EPT_F32':
-                    if param_name in param_defaults and param_defaults[param_name][0] == 'EPT_F32':
-                        param.float_value = float(param_defaults[param_name][1])
-                    elif 'Factor' in param_name or 'Power' in param_name:
-                        param.float_value = 1.0
-                    elif 'Scale' in param_name:
-                        param.float_value = 1.0
-                    else:
-                        param.float_value = 0.0
-                elif param_type == 'EPT_S32':
-                    if 'Mode' in param_name:
-                        param.int_value = 0
-                    elif 'Dim' in param_name:
-                        param.int_value = 1
-                    else:
-                        param.int_value = 0
-                elif param_type == 'EPT_VEC4':
-                    if param_name in param_defaults and param_defaults[param_name][0] == 'EPT_VEC4':
-                        param.vec4_value = param_defaults[param_name][1]
-                    else:
-                        param.vec4_value = (1.0, 1.0, 1.0, 1.0)
-                elif param_type == 'EPT_BOOL':
-                    param.bool_value = False
-                # EPT_TEXTURE gets empty string by default
+            if param_type == 'EPT_F32':
+                if param_name in param_defaults and param_defaults[param_name][0] == 'EPT_F32':
+                    param.float_value = float(param_defaults[param_name][1])
+                elif 'Factor' in param_name or 'Power' in param_name:
+                    param.float_value = 1.0
+                elif 'Scale' in param_name:
+                    param.float_value = 1.0
+                else:
+                    param.float_value = 0.0
+            elif param_type == 'EPT_S32':
+                if 'Mode' in param_name:
+                    param.int_value = 0
+                elif 'Dim' in param_name:
+                    param.int_value = 1
+                else:
+                    param.int_value = 0
+            elif param_type == 'EPT_VEC4':
+                if param_name in param_defaults and param_defaults[param_name][0] == 'EPT_VEC4':
+                    param.vec4_value = param_defaults[param_name][1]
+                else:
+                    param.vec4_value = (1.0, 1.0, 1.0, 1.0)
+            elif param_type == 'EPT_BOOL':
+                param.bool_value = False
+            # EPT_TEXTURE gets empty string by default
 
-            # Force always-on parameters
-            always_params = ALWAYS_ON_PARAMETERS.get(shader, {}).get(technique, set())
-            if param.name in always_params:
-                param.enabled = True
+        # Force always-on parameters
+        always_params = ALWAYS_ON_PARAMETERS.get(shader, {}).get(technique, set())
+        if param.name in always_params:
+            param.enabled = True
 
 def update_shader_defines(self, context):
     """Update shader defines based on selected shader and technique."""
-    material = context.material
-    if not material or not hasattr(material, 'mtx_settings'):
+    if not hasattr(self, "defines"):
         return
-    
-    settings = material.mtx_settings
+
+    settings = self
     shader = settings.shader_path
     technique = settings.technique
+
+    if shader not in SHADER_DEFINES or technique not in SHADER_DEFINES[shader]:
+        return
     
     # Preserve existing define states by name
     existing_defines = {}
@@ -749,7 +398,6 @@ def update_shader_defines(self, context):
             if define_name in existing_defines:
                 # Restore existing state
                 new_define.enabled = existing_defines[define_name]
-                print(f"Carried over define: {define_name} (enabled: {new_define.enabled})")
             else:
                 # Default to disabled; always-on set will override below
                 new_define.enabled = False
@@ -761,13 +409,13 @@ def update_shader_defines(self, context):
 def update_shader_change(self, context):
     """Update technique, parameters, and defines when shader changes"""
     shader = self.shader_path
-    
-    print(f"Shader changed to: {shader}")
-    
-    # Keep existing technique if still valid; otherwise fall back to first valid
-    if shader in SHADER_TECHNIQUES and SHADER_TECHNIQUES[shader]:
-        if self.technique not in SHADER_TECHNIQUES[shader]:
-            self.technique = SHADER_TECHNIQUES[shader][0]
+
+    if shader not in SHADER_TECHNIQUES or not SHADER_TECHNIQUES[shader]:
+        return
+
+    valid_techniques = list(SHADER_TECHNIQUES[shader])
+    if self.technique not in valid_techniques:
+        self.technique = valid_techniques[0]
     
     # Update both parameters and defines
     update_shader_params(self, context)

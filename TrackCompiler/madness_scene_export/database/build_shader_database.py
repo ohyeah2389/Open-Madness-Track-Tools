@@ -9,7 +9,7 @@ writes a JSON database that the Blender add-on can consume.
 import argparse
 import json
 import math
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Any, Iterable
 import xml.etree.ElementTree as ET
@@ -315,7 +315,7 @@ class ShaderDatabaseBuilder:
             return round((vals_sorted[mid - 1] + vals_sorted[mid]) / 2.0, 1)
 
         serialized = {
-            "generatedAt": datetime.utcnow().isoformat() + "Z",
+            "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "sourceRoot": source_roots[0] if source_roots else "",
             "sourceRoots": source_roots,
             "mtxFiles": self.raw_db["mtxFiles"],
@@ -401,8 +401,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path(__file__).with_name("mtx_shader_database.json"),
-        help="Path to write the JSON database (default: database/mtx_shader_database.json).",
+        default=Path(__file__).with_name("shaders") / "mtx_shader_database.json",
+        help="Path to write the JSON database (default: database/shaders/mtx_shader_database.json).",
     )
     parser.add_argument(
         "--max-examples",
@@ -411,6 +411,19 @@ def parse_args() -> argparse.Namespace:
         help="Maximum number of example values to keep per parameter.",
     )
     return parser.parse_args()
+
+
+def resolve_output_path(output_arg: Path) -> Path:
+    """Resolve output relative to this script and tolerate `database/...` prefix."""
+    output_path = output_arg.expanduser()
+    if output_path.is_absolute():
+        return output_path
+
+    relative = output_path
+    if relative.parts and relative.parts[0].lower() == "database":
+        relative = Path(*relative.parts[1:]) if len(relative.parts) > 1 else Path("mtx_shader_database.json")
+
+    return (Path(__file__).resolve().parent / relative).resolve()
 
 
 def main() -> None:
@@ -427,7 +440,7 @@ def main() -> None:
     builder = ShaderDatabaseBuilder(mtx_roots=roots, max_examples=args.max_examples)
     database = builder.build()
 
-    output_path = args.output.expanduser()
+    output_path = resolve_output_path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with output_path.open("w", encoding="utf-8") as handle:
