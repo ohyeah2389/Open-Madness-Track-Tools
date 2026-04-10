@@ -13,7 +13,7 @@ from .object_export import (
     TEMP_EXPORT_TAG,
     collect_empty_objects_with_meb,
     sanitize,
-    is_object_in_visible_collection,
+    iter_visible_scene_objects,
     parse_kstree_group,
     parse_sms_group,
     combine_objects_into_mesh,
@@ -224,8 +224,6 @@ def export_objects_to_meb(
     Export mesh objects to MEB format, grouping KSTREE_GROUP and SMS_GRP objects.
     """
     objects = []
-    view_layer = context.view_layer
-
     # Track temporary objects for cleanup
     temp_objects_to_cleanup = []
     original_selection = context.selected_objects[:]
@@ -241,10 +239,8 @@ def export_objects_to_meb(
 
             # Collect all visible mesh objects (and curves with bevel depth as temporary meshes)
             export_entries = []
-            for obj in context.scene.objects:
+            for obj in iter_visible_scene_objects(context.view_layer):
                 if obj.type not in {"MESH", "CURVE"}:
-                    continue
-                if not is_object_in_visible_collection(obj, view_layer):
                     continue
                 if obj.hide_get():
                     print(f"Skipping {obj.name} - object is hidden")

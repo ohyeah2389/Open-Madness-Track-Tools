@@ -1,7 +1,7 @@
 import bpy  # type: ignore
 import bmesh  # type: ignore
 from pathlib import Path
-from typing import List, Tuple
+from typing import Iterable, List, Tuple
 import numpy as np
 import re
 from ..utils.coordinate_transforms import decompose_matrix
@@ -96,6 +96,30 @@ def is_object_in_visible_collection(obj, view_layer):
         return not view_layer.layer_collection.exclude
 
     return False
+
+
+def _iter_visible_layer_collections(root_layer_collection):
+    """Yield only layer collections that are visible in the current view layer."""
+    stack = [root_layer_collection]
+    while stack:
+        layer_collection = stack.pop()
+        collection = layer_collection.collection
+        if (layer_collection.exclude):
+            continue
+        yield layer_collection
+        stack.extend(layer_collection.children)
+
+
+def iter_visible_scene_objects(view_layer) -> Iterable:
+    """Yield unique objects from visible layer collections only."""
+    seen = set()
+    for layer_collection in _iter_visible_layer_collections(view_layer.layer_collection):
+        for obj in layer_collection.collection.objects:
+            obj_ptr = obj.as_pointer()
+            if obj_ptr in seen:
+                continue
+            seen.add(obj_ptr)
+            yield obj
 
 
 def parse_kstree_group(obj_name: str) -> str:
@@ -247,14 +271,10 @@ def collect_empty_objects_with_meb(context):
 
     Returns: List of (object_name, meb_path, translation, quaternion, sphere_radius, userflags)
     """
-    view_layer = context.view_layer
     results = []
 
-    for obj in context.scene.objects:
+    for obj in iter_visible_scene_objects(context.view_layer):
         if obj.type != "EMPTY":
-            continue
-
-        if not is_object_in_visible_collection(obj, view_layer):
             continue
 
         if obj.hide_get():
