@@ -3,6 +3,7 @@ from bpy.props import StringProperty, BoolProperty, FloatProperty, EnumProperty,
 from bpy.app.handlers import persistent  # type: ignore
 from pathlib import Path
 import xml.etree.ElementTree as ET
+import struct
 from typing import Optional
 from .shader_definitions import (
     SHADER_TECHNIQUES,
@@ -20,6 +21,8 @@ from .shader_definitions import (
 from ..utils import sanitize
 
 SCENE_SHADER_DB_KEY = "mtx_shader_database_id"
+SUPPORTED_DDS_FOURCC = {"DXT1", "DXT5"}
+SUPPORTED_DDS_DXGI_BC7 = {98, 99}  # BC7_UNORM / BC7_UNORM_SRGB
 
 
 def _available_shader_database_ids():
@@ -147,6 +150,71 @@ def texture_value_update(self, context):
         pass
 
 
+def _inspect_dds_format(texture_path: Path):
+    """Return (is_supported, detected_format_label) from a DDS file header."""
+    try:
+        with open(texture_path, "rb") as handle:
+            header = handle.read(132)
+    except OSError:
+        return False, "unreadable file"
+
+    if len(header) < 128 or header[:4] != b"DDS ":
+        return False, "invalid DDS header"
+
+    # DDS_PIXELFORMAT starts 72 bytes into the 124-byte DDS header.
+    # File layout is: 4-byte "DDS " magic + 124-byte header.
+    # So dwFourCC (8 bytes into DDS_PIXELFORMAT) is at file offset 84.
+    fourcc = header[84:88].decode("ascii", "ignore").strip("\x00 ").upper()
+    if fourcc in SUPPORTED_DDS_FOURCC:
+        return True, fourcc
+    if fourcc == "DX10" and len(header) >= 132:
+        dxgi_format = struct.unpack("<I", header[128:132])[0]
+        if dxgi_format in SUPPORTED_DDS_DXGI_BC7:
+            return True, f"BC7 (DXGI {dxgi_format})"
+        return False, f"DX10 (DXGI {dxgi_format})"
+    return False, fourcc or "unknown"
+
+
+def get_texture_param_warning(param, context=None):
+    """Return warning tuple (level, message) for enabled texture params."""
+    if param.param_type != "EPT_TEXTURE" or not param.enabled:
+        return None
+    if not param.texture_value:
+        return ("missing", "Texture path is empty")
+
+    resolved_path, exists = resolve_texture_path(param.texture_value, context)
+    if not resolved_path or not exists:
+        return ("missing", "Texture path could not be resolved")
+    if resolved_path.suffix.lower() != ".dds":
+        detected_ext = (resolved_path.suffix or "no extension").upper()
+        return ("unsupported", f"Unsupported image file (detected {detected_ext}; DDS only)")
+    is_supported, detected_format = _inspect_dds_format(resolved_path)
+    if not is_supported:
+        return (
+            "unsupported",
+            f"Unsupported DDS format: {detected_format} (use DXT1, DXT5, or BC7)",
+        )
+    return None
+
+
+def summarize_texture_warnings_for_material_names(material_names, context=None):
+    """Summarize texture issues for the provided exported material names."""
+    missing = 0
+    unsupported = 0
+    for material in bpy.data.materials:
+        if sanitize(material.name) not in material_names or not hasattr(material, "mtx_settings"):
+            continue
+        for param in material.mtx_settings.shader_params:
+            warning = get_texture_param_warning(param, context)
+            if not warning:
+                continue
+            if warning[0] == "missing":
+                missing += 1
+            elif warning[0] == "unsupported":
+                unsupported += 1
+    return {"missing": missing, "unsupported": unsupported}
+
+
 # MTX Support Classes
 class MTXShaderParam(bpy.types.PropertyGroup):
     """Individual shader parameter for MTX materials"""
@@ -262,7 +330,15 @@ class MTX_UL_shader_params(bpy.types.UIList):
             toggle_col.prop(item, "enabled", text="")
 
             display_name = f"(Req.) {item.name}" if required else item.name or "<unnamed>"
-            row.label(text=display_name)
+            warning = get_texture_param_warning(item, context)
+            name_row = row.row(align=True)
+            if warning and warning[0] == "missing":
+                name_row.alert = True
+                name_row.label(text=display_name, icon="ERROR")
+            elif warning and warning[0] == "unsupported":
+                name_row.label(text=display_name, icon="QUESTION")
+            else:
+                name_row.label(text=display_name)
             row.label(text=item.param_type)
             
             # Add copy button on the right
@@ -483,6 +559,7 @@ class MTX_PT_shader_parameters(bpy.types.Panel):
                         param.texture_value, context
                     )
                     original_path = Path(param.texture_value)
+                    warning = get_texture_param_warning(param, context)
 
                     if exists and resolved_path:
                         col.label(
@@ -499,6 +576,17 @@ class MTX_PT_shader_parameters(bpy.types.Panel):
                             col.label(
                                 text="(Try absolute path or relative to .blend file)"
                             )
+                    if warning:
+                        warn_row = col.row()
+                        warn_row.alert = warning[0] == "missing"
+                        warn_row.label(
+                            text=warning[1],
+                            icon="ERROR" if warning[0] == "missing" else "QUESTION",
+                        )
+                elif param.enabled:
+                    warn_row = col.row()
+                    warn_row.alert = True
+                    warn_row.label(text="Texture path is empty", icon="ERROR")
 
                 # Clear button
                 # (Handled by button row above)

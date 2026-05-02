@@ -76,13 +76,26 @@ class MadnessSceneExporter(bpy.types.Operator, ExportHelper):
         resource_prefix = f"tracks/{track_name}/"
 
         try:
-            export_madness_scene(
+            export_result = export_madness_scene(
                 filepath=self.filepath,
                 resource_prefix=resource_prefix,
                 placeholder_mtx=Path(self.placeholder_mtx),
                 context=context,
             )
             self.report({"INFO"}, "Madness scene exported successfully")
+            texture_warnings = export_result.get("texture_warnings", {}) if isinstance(export_result, dict) else {}
+            missing = int(texture_warnings.get("missing", 0))
+            unsupported = int(texture_warnings.get("unsupported", 0))
+            if missing or unsupported:
+                warning_parts = []
+                if missing:
+                    warning_parts.append(f"{missing} unresolved/unfilled texture path(s)")
+                if unsupported:
+                    warning_parts.append(f"{unsupported} unsupported texture format/file(s)")
+                self.report(
+                    {"WARNING"},
+                    "Texture warnings on exported materials: " + ", ".join(warning_parts),
+                )
             return {"FINISHED"}
         except Exception as e:
             self.report({"ERROR"}, f"Export failed: {str(e)}")

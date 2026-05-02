@@ -22,6 +22,7 @@ from ..meshes import MeshExportOptions
 from ..meshes.blender_meb_export import extract_mesh_data_from_blender
 from ..meshes.meb_writer import write_meb_file
 from ..materials.mtx_processor import prepare_mtx_files_from_materials
+from ..materials.mtx_material_system import summarize_texture_warnings_for_material_names
 from ..utils.coordinate_transforms import decompose_matrix
 
 
@@ -461,6 +462,9 @@ def export_madness_scene(
 
         # Generate list of unique materials
         unique_materials = sorted(set(all_materials))
+        texture_warning_summary = summarize_texture_warnings_for_material_names(
+            set(unique_materials), context
+        )
 
         # Prepare texture mapping (resolves paths and calculates game-relative paths)
         print("Preparing texture mapping...")
@@ -486,7 +490,7 @@ def export_madness_scene(
         build_sgx(objects, sgx_path, resource_prefix)
         print(f"Generated SGX file: {sgx_path}")
 
-    return {"FINISHED"}
+    return {"status": "FINISHED", "texture_warnings": texture_warning_summary}
 
 
 def determine_texture_export_path(output_dir: Path, track_name: str) -> Path:
