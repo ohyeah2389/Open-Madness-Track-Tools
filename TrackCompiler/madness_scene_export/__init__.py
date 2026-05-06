@@ -96,6 +96,22 @@ class MadnessSceneExporter(bpy.types.Operator, ExportHelper):
                     {"WARNING"},
                     "Texture warnings on exported materials: " + ", ".join(warning_parts),
                 )
+                self.report({"WARNING"}, "Problem materials (shader | material | issue counts | objects):")
+                for detail in texture_warnings.get("details", []):
+                    issue_parts = []
+                    if detail.get("missing", 0):
+                        issue_parts.append(f"missing={detail['missing']}")
+                    if detail.get("unsupported", 0):
+                        issue_parts.append(f"unsupported={detail['unsupported']}")
+                    objects = detail.get("objects", [])[:3]
+                    object_list = ", ".join(objects) if objects else "<unknown object>"
+                    self.report(
+                        {"WARNING"},
+                        f"{detail.get('shader', '<unknown shader>')} | "
+                        f"{detail.get('material', '<unknown material>')} | "
+                        f"{', '.join(issue_parts)} | "
+                        f"{object_list}",
+                    )
             return {"FINISHED"}
         except Exception as e:
             self.report({"ERROR"}, f"Export failed: {str(e)}")

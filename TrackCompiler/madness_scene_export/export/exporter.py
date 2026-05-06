@@ -457,6 +457,11 @@ def export_madness_scene(
             f"Total objects: {len(objects)} ({mesh_objects} compiled, {empty_objects} referenced)"
         )
 
+        material_to_objects = {}
+        for obj in objects:
+            for mat_name in obj.materials:
+                material_to_objects.setdefault(mat_name, []).append(obj.name)
+
         # Determine texture export path based on SGX location (needed before MTX generation)
         texture_export_dir = determine_texture_export_path(output_dir, track_name)
 
@@ -465,6 +470,9 @@ def export_madness_scene(
         texture_warning_summary = summarize_texture_warnings_for_material_names(
             set(unique_materials), context
         )
+        for detail in texture_warning_summary.get("details", []):
+            users = material_to_objects.get(detail["material"], [])
+            detail["objects"] = sorted(set(users))[:3] or ["<unknown object>"]
 
         # Prepare texture mapping (resolves paths and calculates game-relative paths)
         print("Preparing texture mapping...")

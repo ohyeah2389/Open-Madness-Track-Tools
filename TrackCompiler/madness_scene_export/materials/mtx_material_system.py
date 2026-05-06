@@ -197,14 +197,17 @@ def get_texture_param_warning(param, context=None):
     return None
 
 
-def summarize_texture_warnings_for_material_names(material_names, context=None):
-    """Summarize texture issues for the provided exported material names."""
-    missing = 0
-    unsupported = 0
+def get_texture_warning_details_for_material_names(material_names, context=None):
+    """Return per-material texture warning details for exported material names."""
+    details = []
     for material in bpy.data.materials:
-        if sanitize(material.name) not in material_names or not hasattr(material, "mtx_settings"):
+        material_key = sanitize(material.name)
+        if material_key not in material_names or not hasattr(material, "mtx_settings"):
             continue
-        for param in material.mtx_settings.shader_params:
+        mtx = material.mtx_settings
+        missing = 0
+        unsupported = 0
+        for param in mtx.shader_params:
             warning = get_texture_param_warning(param, context)
             if not warning:
                 continue
@@ -212,7 +215,27 @@ def summarize_texture_warnings_for_material_names(material_names, context=None):
                 missing += 1
             elif warning[0] == "unsupported":
                 unsupported += 1
-    return {"missing": missing, "unsupported": unsupported}
+        if missing or unsupported:
+            details.append(
+                {
+                    "material": material_key,
+                    "shader": mtx.shader_path,
+                    "missing": missing,
+                    "unsupported": unsupported,
+                }
+            )
+    return details
+
+
+def summarize_texture_warnings_for_material_names(material_names, context=None):
+    """Summarize texture issues for the provided exported material names."""
+    missing = 0
+    unsupported = 0
+    details = get_texture_warning_details_for_material_names(material_names, context)
+    for item in details:
+        missing += item["missing"]
+        unsupported += item["unsupported"]
+    return {"missing": missing, "unsupported": unsupported, "details": details}
 
 
 # MTX Support Classes
