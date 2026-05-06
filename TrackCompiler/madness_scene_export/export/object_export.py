@@ -8,6 +8,28 @@ from ..utils.coordinate_transforms import decompose_matrix
 from ..utils import sanitize
 
 TEMP_EXPORT_TAG = "_omtt_temp_export"
+TEMP_EXPORT_PREFIXES = ("TEMP_MESH", "TEMP_CURVE_MESH", "TEMP_COMBINED")
+
+
+def tag_temp_export_datablock(datablock):
+    """Mark an object or mesh as exporter-owned scratch data."""
+    datablock[TEMP_EXPORT_TAG] = True
+
+
+def is_temp_export_datablock(datablock) -> bool:
+    if not datablock:
+        return False
+    return bool(datablock.get(TEMP_EXPORT_TAG, False))
+
+
+def is_temp_export_name(name: str) -> bool:
+    return name.split(".", 1)[0].startswith(TEMP_EXPORT_PREFIXES)
+
+
+def has_temp_export_name(datablock) -> bool:
+    if not datablock:
+        return False
+    return is_temp_export_name(datablock.name)
 
 
 class ObjectInfo:
@@ -150,9 +172,11 @@ def combine_objects_into_mesh(objects: List, group_name: str, context, group_typ
 
     print(f"Combining {len(objects)} objects for group {group_name}...")
 
+    bm = bmesh.new()
+    source_meshes_to_cleanup = []
+
     try:
         depsgraph = context.evaluated_depsgraph_get()
-
         # Build unified material list from all objects to combine
         combined_materials = []
         material_mapping = {}  # old_material -> new_index
@@ -165,10 +189,6 @@ def combine_objects_into_mesh(objects: List, group_name: str, context, group_typ
                         combined_materials.append((mat, obj.name))
 
         print(f"  Combined materials: {[mat.name if mat else 'None' for mat, _ in combined_materials]}")
-
-        # Build one in-memory merged mesh from evaluated object meshes.
-        bm = bmesh.new()
-        source_meshes_to_cleanup = []
 
         for obj in objects:
             eval_obj = obj.evaluated_get(depsgraph)
@@ -187,6 +207,7 @@ def combine_objects_into_mesh(objects: List, group_name: str, context, group_typ
                 if mesh_data:
                     bpy.data.meshes.remove(mesh_data)
                 continue
+            tag_temp_export_datablock(mesh_data)
 
             # Bake world transform into vertex positions so merged object can stay at identity.
             mesh_data.transform(obj.matrix_world)
@@ -211,18 +232,16 @@ def combine_objects_into_mesh(objects: List, group_name: str, context, group_typ
             return None, [], None
 
         combined_mesh = bpy.data.meshes.new(f"TEMP_COMBINED_{group_name}")
+        tag_temp_export_datablock(combined_mesh)
         bm.to_mesh(combined_mesh)
         bm.free()
         combined_mesh.update()
 
-        for mesh_data in source_meshes_to_cleanup:
-            bpy.data.meshes.remove(mesh_data)
-
         for mat, _ in combined_materials:
             combined_mesh.materials.append(mat)
 
-        combined_obj = bpy.data.objects.new(f"COMBINED_{group_name}", combined_mesh)
-        combined_obj[TEMP_EXPORT_TAG] = True
+        combined_obj = bpy.data.objects.new(f"TEMP_COMBINED_OBJECT_{group_name}", combined_mesh)
+        tag_temp_export_datablock(combined_obj)
         context.collection.objects.link(combined_obj)
 
         # Verify material assignments
@@ -264,6 +283,14 @@ def combine_objects_into_mesh(objects: List, group_name: str, context, group_typ
 
         traceback.print_exc()
         return None, [], None
+    finally:
+        if bm.is_valid:
+            bm.free()
+        for mesh_data in source_meshes_to_cleanup:
+            try:
+                bpy.data.meshes.remove(mesh_data)
+            except ReferenceError:
+                pass
 
 
 def collect_empty_objects_with_meb(context):

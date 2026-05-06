@@ -10,13 +10,16 @@ import xml.etree.ElementTree as ET
 import numpy as np
 from .object_export import (
     ObjectInfo,
-    TEMP_EXPORT_TAG,
     collect_empty_objects_with_meb,
+    has_temp_export_name,
+    is_temp_export_datablock,
+    is_temp_export_name,
     sanitize,
     iter_visible_scene_objects,
     parse_kstree_group,
     parse_sms_group,
     combine_objects_into_mesh,
+    tag_temp_export_datablock,
 )
 from ..meshes import MeshExportOptions
 from ..meshes.blender_meb_export import extract_mesh_data_from_blender
@@ -35,6 +38,13 @@ class _PendingObjectExport:
     materials: List[str]
     userflags: int
     future: Future
+
+
+@dataclass
+class _OriginalMeshBinding:
+    obj: object
+    mesh: object
+    mesh_name: str
 
 
 def _build_maybe_overridden_options(obj, resource_prefix: str) -> MeshExportOptions:
@@ -123,6 +133,69 @@ def _write_meb_from_extracted(meb_path: Path, mesh_name: str, options: MeshExpor
     )
 
 
+def _mesh_datablock_exists(mesh) -> bool:
+    try:
+        return mesh.name in bpy.data.meshes
+    except ReferenceError:
+        return False
+
+
+def _snapshot_original_mesh_bindings() -> List[_OriginalMeshBinding]:
+    return [
+        _OriginalMeshBinding(obj, obj.data, obj.data.name)
+        for obj in bpy.data.objects
+        if obj.type == "MESH" and obj.data
+    ]
+
+
+def _restore_original_mesh_bindings(bindings: List[_OriginalMeshBinding]):
+    for binding in bindings:
+        obj = binding.obj
+        if obj.name not in bpy.data.objects or not _mesh_datablock_exists(binding.mesh):
+            continue
+
+        if obj.data != binding.mesh and (
+            is_temp_export_datablock(obj.data) or has_temp_export_name(obj.data)
+        ):
+            print(f"Restoring original mesh on {obj.name}: {obj.data.name} -> {binding.mesh_name}")
+            obj.data = binding.mesh
+
+        if (
+            obj.data == binding.mesh
+            and binding.mesh.name != binding.mesh_name
+            and not is_temp_export_name(binding.mesh_name)
+            and has_temp_export_name(binding.mesh)
+        ):
+            print(f"Restoring original mesh name on {obj.name}: {binding.mesh.name} -> {binding.mesh_name}")
+            binding.mesh.name = binding.mesh_name
+
+
+def _remove_temp_export_data(temp_objects):
+    temp_meshes = set()
+
+    for temp_obj in temp_objects:
+        try:
+            if temp_obj.name not in bpy.data.objects:
+                continue
+            if not (is_temp_export_datablock(temp_obj) or has_temp_export_name(temp_obj)):
+                print(f"Skipping cleanup of non-temp object: {temp_obj.name}")
+                continue
+            if temp_obj.type == "MESH" and temp_obj.data:
+                temp_meshes.add(temp_obj.data)
+            bpy.data.objects.remove(temp_obj, do_unlink=True)
+        except ReferenceError:
+            pass
+        except Exception as e:
+            print(f"Warning: Could not delete temporary object {getattr(temp_obj, 'name', '<removed>')}: {e}")
+
+    for mesh in list(temp_meshes) + list(bpy.data.meshes):
+        try:
+            if mesh.users == 0 and (is_temp_export_datablock(mesh) or has_temp_export_name(mesh)):
+                bpy.data.meshes.remove(mesh)
+        except ReferenceError:
+            pass
+
+
 def _complete_next_pending_export(pending_exports, objects_list):
     pending = pending_exports.pop(0)
     bounds = pending.future.result()
@@ -204,8 +277,9 @@ def _curve_to_temp_mesh_object(curve_obj, context):
             bpy.data.meshes.remove(mesh_data)
         return None
 
+    tag_temp_export_datablock(mesh_data)
     temp_obj = bpy.data.objects.new(f"TEMP_CURVE_MESH_{curve_obj.name}", mesh_data)
-    temp_obj[TEMP_EXPORT_TAG] = True
+    tag_temp_export_datablock(temp_obj)
     context.scene.collection.objects.link(temp_obj)
     temp_obj.matrix_world = curve_obj.matrix_world.copy()
 
@@ -227,6 +301,7 @@ def export_objects_to_meb(
     objects = []
     # Track temporary objects for cleanup
     temp_objects_to_cleanup = []
+    original_mesh_bindings = _snapshot_original_mesh_bindings()
     original_selection = context.selected_objects[:]
     original_active = context.active_object
 
@@ -241,6 +316,9 @@ def export_objects_to_meb(
             # Collect all visible mesh objects (and curves with bevel depth as temporary meshes)
             export_entries = []
             for obj in iter_visible_scene_objects(context.view_layer):
+                if is_temp_export_datablock(obj) or has_temp_export_name(obj):
+                    temp_objects_to_cleanup.append(obj)
+                    continue
                 if obj.type not in {"MESH", "CURVE"}:
                     continue
                 if obj.hide_get():
@@ -347,23 +425,12 @@ def export_objects_to_meb(
                 _complete_next_pending_export(pending_exports, objects)
 
     finally:
-        # Clean up temporary combined objects
+        _restore_original_mesh_bindings(original_mesh_bindings)
+
+        # Clean up temporary combined/curve objects and their mesh datablocks directly.
         if temp_objects_to_cleanup:
             print(f"Cleaning up {len(temp_objects_to_cleanup)} temporary objects...")
-            bpy.ops.object.select_all(action="DESELECT")
-            has_selected_temp = False
-            for temp_obj in temp_objects_to_cleanup:
-                if temp_obj and temp_obj.name in bpy.data.objects:
-                    try:
-                        if bool(temp_obj.get(TEMP_EXPORT_TAG, False)):
-                            temp_obj.select_set(True)
-                            has_selected_temp = True
-                        else:
-                            print(f"Skipping cleanup of non-temp object: {temp_obj.name}")
-                    except Exception as e:
-                        print(f"Warning: Could not delete temporary object {temp_obj.name}: {e}")
-            if has_selected_temp:
-                bpy.ops.object.delete()
+            _remove_temp_export_data(temp_objects_to_cleanup)
 
         # Restore selection
         bpy.ops.object.select_all(action="DESELECT")
