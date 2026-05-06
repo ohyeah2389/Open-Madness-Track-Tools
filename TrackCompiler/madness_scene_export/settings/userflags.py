@@ -3,6 +3,13 @@
 from typing import List, Tuple
 
 
+DEFAULT_USERFLAGS = 0b00000000000100000000000001110101
+
+
+def userflags_to_bool_vector(value: int = DEFAULT_USERFLAGS) -> List[bool]:
+    return [bool(value & (1 << i)) for i in range(32)]
+
+
 # Index in this list maps directly to the bit index (0-31).
 USERFLAG_DEFINITIONS: List[Tuple[str, str]] = [
     ("Far Distant Mesh", "Draws beyond the usual automatic LOD cutoff limits."),

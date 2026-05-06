@@ -1,7 +1,12 @@
 import bpy
 from pathlib import Path
 from bpy.props import StringProperty, PointerProperty, FloatProperty, BoolVectorProperty, IntProperty
-from .userflags import USERFLAG_CATEGORIES, get_userflag_name, get_userflag_description
+from .userflags import (
+    USERFLAG_CATEGORIES,
+    get_userflag_name,
+    get_userflag_description,
+    userflags_to_bool_vector,
+)
 
 
 class EmptyMEBSettings(bpy.types.PropertyGroup):
@@ -27,7 +32,7 @@ class EmptyMEBSettings(bpy.types.PropertyGroup):
         name="User Flags",
         description="32-bit bitmask for SGX object userflags",
         size=32,
-        default=[False] * 32,
+        default=userflags_to_bool_vector(),
     )  # type: ignore
 
 

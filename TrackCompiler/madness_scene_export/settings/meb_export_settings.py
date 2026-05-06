@@ -1,16 +1,17 @@
 import bpy
 from bpy.props import BoolProperty, IntProperty, StringProperty, EnumProperty, PointerProperty, BoolVectorProperty
 from typing import List
-from .userflags import USERFLAG_CATEGORIES, get_userflag_name, get_userflag_description
+from .userflags import (
+    USERFLAG_CATEGORIES,
+    get_userflag_name,
+    get_userflag_description,
+    userflags_to_bool_vector,
+)
+
 
 def _get_default_userflags():
     """Get default userflags as boolean array."""
-    default_value = 0b00000000000100000000000001110101
-    flags = [False] * 32
-    for i in range(32):
-        if default_value & (1 << i):
-            flags[i] = True
-    return flags
+    return userflags_to_bool_vector()
 
 class MEBExportSettings(bpy.types.PropertyGroup):
     """MEB Exporter settings attached to mesh objects"""

@@ -26,6 +26,7 @@ from ..meshes.blender_meb_export import extract_mesh_data_from_blender
 from ..meshes.meb_writer import write_meb_file
 from ..materials.mtx_processor import prepare_mtx_files_from_materials
 from ..materials.mtx_material_system import summarize_texture_warnings_for_material_names
+from ..settings.userflags import DEFAULT_USERFLAGS
 from ..utils.coordinate_transforms import decompose_matrix
 
 
@@ -38,6 +39,12 @@ class _PendingObjectExport:
     materials: List[str]
     userflags: int
     future: Future
+
+
+@dataclass
+class _MeshValidationIssue:
+    mesh: str
+    issues: List[str]
 
 
 @dataclass
@@ -90,7 +97,82 @@ def _get_userflags(obj) -> int:
     if hasattr(obj.data, "meb_export_settings"):
         from ..settings.meb_export_settings import get_userflags_value
         return get_userflags_value(obj.data.meb_export_settings)
-    return 0b00000000000100000000000001110101
+    return DEFAULT_USERFLAGS
+
+
+def _get_group_userflags(group_name: str, group_objects: List[object]) -> int:
+    values = [_get_userflags(obj) for obj in group_objects]
+    unique_values = sorted(set(values))
+    if len(unique_values) > 1:
+        print(
+            f"  Warning: {group_name} has mixed source userflags; "
+            f"using {values[0]} from {group_objects[0].name}"
+        )
+    return values[0] if values else DEFAULT_USERFLAGS
+
+
+def _count_nonfinite(array) -> int:
+    return int(np.size(array) - np.count_nonzero(np.isfinite(array)))
+
+
+def _validate_extracted_mesh(mesh_name: str, extracted_data) -> _MeshValidationIssue | None:
+    (
+        vertices,
+        normals,
+        colors,
+        uv_layers,
+        material_names,
+        indices_by_material,
+        _vertices_by_material,
+        tangents,
+        bitangents,
+    ) = extracted_data
+    issues = []
+
+    checks = [("vertices", vertices), ("normals", normals), ("colors", colors)]
+    checks.extend((f"uv{slot_idx}", uv_data) for slot_idx, uv_data in uv_layers)
+    if tangents is not None:
+        checks.append(("tangents", tangents))
+    if bitangents is not None:
+        checks.append(("bitangents", bitangents))
+
+    for label, array in checks:
+        bad_count = _count_nonfinite(array)
+        if bad_count:
+            issues.append(f"{label} has {bad_count} non-finite value(s)")
+
+    vertex_count = len(vertices)
+    for mat_name, indices in zip(material_names, indices_by_material):
+        if len(indices) == 0:
+            issues.append(f"{sanitize(mat_name)} has no assigned triangles")
+            continue
+        if len(indices) % 3:
+            issues.append(f"{sanitize(mat_name)} index buffer is not divisible by 3")
+            continue
+        if np.any(indices >= vertex_count):
+            issues.append(f"{sanitize(mat_name)} references vertex index outside 0..{vertex_count - 1}")
+            continue
+
+        tris = indices.reshape(-1, 3)
+        repeated_index_tris = np.count_nonzero(
+            (tris[:, 0] == tris[:, 1]) | (tris[:, 1] == tris[:, 2]) | (tris[:, 0] == tris[:, 2])
+        )
+        tri_vertices = vertices[tris]
+        areas = np.linalg.norm(
+            np.cross(tri_vertices[:, 1] - tri_vertices[:, 0], tri_vertices[:, 2] - tri_vertices[:, 0]),
+            axis=1,
+        )
+        zero_area_tris = int(np.count_nonzero(areas <= 1e-10))
+        degenerate_tris = max(int(repeated_index_tris), zero_area_tris)
+        if degenerate_tris:
+            issues.append(f"{sanitize(mat_name)} has {degenerate_tris} degenerate triangle(s)")
+
+    if issues:
+        print(f"  Warning: Mesh validation issues in {mesh_name}:")
+        for issue in issues:
+            print(f"    - {issue}")
+        return _MeshValidationIssue(mesh=sanitize(mesh_name), issues=issues)
+    return None
 
 
 def _write_meb_from_extracted(meb_path: Path, mesh_name: str, options: MeshExportOptions, extracted_data) -> object:
@@ -223,6 +305,8 @@ def _export_single_object(
     resource_prefix,
     pending_exports,
     writer_pool: ThreadPoolExecutor,
+    mesh_validation_issues: List[_MeshValidationIssue],
+    userflags_override: int | None = None,
 ):
     """Queue a single object for pipelined MEB export."""
     world_matrix = obj.matrix_world.copy()
@@ -230,12 +314,15 @@ def _export_single_object(
     translation, quaternion = decompose_matrix(matrix)
     materials = _collect_material_names(obj)
     options = _build_maybe_overridden_options(obj, resource_prefix)
-    userflags = _get_userflags(obj)
+    userflags = _get_userflags(obj) if userflags_override is None else userflags_override
 
     print(f"Exporting {obj_name} to MEB... (tangents={options.generate_tangent_space}, bodywork={options.bodywork_data}, UVs={options.uv_map_indices})")
     meb_path = output_dir / f"{sanitize(obj_name)}.meb"
     sanitized_name = sanitize(obj_name)
     extracted_data = extract_mesh_data_from_blender(obj, options)
+    validation_issue = _validate_extracted_mesh(sanitized_name, extracted_data)
+    if validation_issue:
+        mesh_validation_issues.append(validation_issue)
 
     pending_exports.append(
         _PendingObjectExport(
@@ -293,7 +380,8 @@ def _curve_to_temp_mesh_object(curve_obj, context):
 def export_objects_to_meb(
     context,
     output_dir: Path,
-    resource_prefix: str
+    resource_prefix: str,
+    mesh_validation_issues: List[_MeshValidationIssue],
 ) -> List[ObjectInfo]:
     """
     Export mesh objects to MEB format, grouping KSTREE_GROUP and SMS_GRP objects.
@@ -366,6 +454,7 @@ def export_objects_to_meb(
                     combined_obj, _, _ = combine_objects_into_mesh(group_objects, group_id, context, "KSTREE_GROUP")
                     if combined_obj:
                         temp_objects_to_cleanup.append(combined_obj)
+                        group_userflags = _get_group_userflags(group_name, group_objects)
                         _export_single_object(
                             combined_obj,
                             group_name,
@@ -373,6 +462,8 @@ def export_objects_to_meb(
                             resource_prefix,
                             pending_exports,
                             writer_pool,
+                            mesh_validation_issues,
+                            userflags_override=group_userflags,
                         )
                         if len(pending_exports) >= max_in_flight:
                             _complete_next_pending_export(pending_exports, objects)
@@ -388,6 +479,7 @@ def export_objects_to_meb(
                     combined_obj, _, _ = combine_objects_into_mesh(group_objects, group_name, context, "SMS_GRP")
                     if combined_obj:
                         temp_objects_to_cleanup.append(combined_obj)
+                        group_userflags = _get_group_userflags(full_group_name, group_objects)
                         _export_single_object(
                             combined_obj,
                             full_group_name,
@@ -395,6 +487,8 @@ def export_objects_to_meb(
                             resource_prefix,
                             pending_exports,
                             writer_pool,
+                            mesh_validation_issues,
+                            userflags_override=group_userflags,
                         )
                         if len(pending_exports) >= max_in_flight:
                             _complete_next_pending_export(pending_exports, objects)
@@ -413,6 +507,7 @@ def export_objects_to_meb(
                         resource_prefix,
                         pending_exports,
                         writer_pool,
+                        mesh_validation_issues,
                     )
                     if len(pending_exports) >= max_in_flight:
                         _complete_next_pending_export(pending_exports, objects)
@@ -470,10 +565,11 @@ def export_madness_scene(
     with tempfile.TemporaryDirectory() as temp_dir_str:
         temp_dir = Path(temp_dir_str)
         print(f"Using temporary directory: {temp_dir}")
+        mesh_validation_issues = []
 
         # Export mesh objects to MEB format
         print("Exporting mesh objects to MEB...")
-        objects = export_objects_to_meb(context, output_dir, resource_prefix)
+        objects = export_objects_to_meb(context, output_dir, resource_prefix, mesh_validation_issues)
         print(f"MEB export completed. Exported {len(objects)} objects")
 
         # Collect all materials used
@@ -565,7 +661,19 @@ def export_madness_scene(
         build_sgx(objects, sgx_path, resource_prefix)
         print(f"Generated SGX file: {sgx_path}")
 
-    return {"status": "FINISHED", "texture_warnings": texture_warning_summary}
+    mesh_validation_summary = {
+        "meshes": len(mesh_validation_issues),
+        "issues": sum(len(item.issues) for item in mesh_validation_issues),
+        "details": [
+            {"mesh": item.mesh, "issues": item.issues}
+            for item in mesh_validation_issues
+        ],
+    }
+    return {
+        "status": "FINISHED",
+        "texture_warnings": texture_warning_summary,
+        "mesh_warnings": mesh_validation_summary,
+    }
 
 
 def determine_texture_export_path(output_dir: Path, track_name: str) -> Path:

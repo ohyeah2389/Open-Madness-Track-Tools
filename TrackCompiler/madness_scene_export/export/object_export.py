@@ -6,6 +6,7 @@ import numpy as np
 import re
 from ..utils.coordinate_transforms import decompose_matrix
 from ..utils import sanitize
+from ..settings.userflags import DEFAULT_USERFLAGS
 
 TEMP_EXPORT_TAG = "_omtt_temp_export"
 TEMP_EXPORT_PREFIXES = ("TEMP_MESH", "TEMP_CURVE_MESH", "TEMP_COMBINED")
@@ -44,7 +45,7 @@ class ObjectInfo:
         materials: List[str],
         bb_min: np.ndarray = np.array([0, 0, 0]),
         bb_max: np.ndarray = np.array([0, 0, 0]),
-        userflags: int = 0b10000000000100000001000001110101,
+        userflags: int = DEFAULT_USERFLAGS,
     ):
         self.name = name
         self.meb_path = meb_path
@@ -179,13 +180,14 @@ def combine_objects_into_mesh(objects: List, group_name: str, context, group_typ
         depsgraph = context.evaluated_depsgraph_get()
         # Build unified material list from all objects to combine
         combined_materials = []
-        material_mapping = {}  # old_material -> new_index
+        material_mapping = {}  # sanitized material name -> new_index
 
         for obj in objects:
             if obj.data.materials:
                 for mat in obj.data.materials:
-                    if mat and mat not in material_mapping:
-                        material_mapping[mat] = len(combined_materials)
+                    mat_key = sanitize(mat.name) if mat else "DefaultMaterial"
+                    if mat_key not in material_mapping:
+                        material_mapping[mat_key] = len(combined_materials)
                         combined_materials.append((mat, obj.name))
 
         print(f"  Combined materials: {[mat.name if mat else 'None' for mat, _ in combined_materials]}")
@@ -214,15 +216,16 @@ def combine_objects_into_mesh(objects: List, group_name: str, context, group_typ
 
             # Remap material slots to the shared group material layout.
             source_materials = list(mesh_data.materials)
+            source_material_indices = [poly.material_index for poly in mesh_data.polygons]
             mesh_data.materials.clear()
             for mat, _ in combined_materials:
                 mesh_data.materials.append(mat)
 
             if combined_materials:
-                for poly in mesh_data.polygons:
-                    src_idx = poly.material_index
+                for poly, src_idx in zip(mesh_data.polygons, source_material_indices):
                     src_mat = source_materials[src_idx] if src_idx < len(source_materials) else None
-                    poly.material_index = material_mapping.get(src_mat, 0)
+                    src_key = sanitize(src_mat.name) if src_mat else "DefaultMaterial"
+                    poly.material_index = material_mapping.get(src_key, 0)
 
             bm.from_mesh(mesh_data)
             source_meshes_to_cleanup.append(mesh_data)

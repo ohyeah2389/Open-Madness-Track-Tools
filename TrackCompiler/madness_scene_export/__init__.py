@@ -112,6 +112,21 @@ class MadnessSceneExporter(bpy.types.Operator, ExportHelper):
                         f"{', '.join(issue_parts)} | "
                         f"{object_list}",
                     )
+            mesh_warnings = export_result.get("mesh_warnings", {}) if isinstance(export_result, dict) else {}
+            mesh_count = int(mesh_warnings.get("meshes", 0))
+            issue_count = int(mesh_warnings.get("issues", 0))
+            if mesh_count or issue_count:
+                self.report(
+                    {"WARNING"},
+                    f"Mesh validation warnings: {issue_count} issue(s) across {mesh_count} mesh(es)",
+                )
+                self.report({"WARNING"}, "Problem meshes (mesh | issues):")
+                for detail in mesh_warnings.get("details", []):
+                    issues = "; ".join(detail.get("issues", []))
+                    self.report(
+                        {"WARNING"},
+                        f"{detail.get('mesh', '<unknown mesh>')} | {issues}",
+                    )
             return {"FINISHED"}
         except Exception as e:
             self.report({"ERROR"}, f"Export failed: {str(e)}")
