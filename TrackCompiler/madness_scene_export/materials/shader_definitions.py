@@ -18,6 +18,49 @@ LOADED_SHADER_DATABASE = None
 LOADED_SHADER_DATABASE_ID = ""
 
 
+def _norm_name(value: str) -> str:
+    return str(value or "").strip().lower()
+
+
+def _coerce_param_value(existing, param_type):
+    if param_type == "EPT_F32":
+        if existing["old_type"] == "EPT_F32":
+            return {"float_value": existing["float_value"]}
+        if existing["old_type"] == "EPT_S32":
+            return {"float_value": float(existing["int_value"])}
+        if existing["old_type"] == "EPT_BOOL":
+            return {"float_value": 1.0 if existing["bool_value"] else 0.0}
+    elif param_type == "EPT_S32":
+        if existing["old_type"] == "EPT_S32":
+            return {"int_value": existing["int_value"]}
+        if existing["old_type"] == "EPT_F32":
+            return {"int_value": int(existing["float_value"])}
+        if existing["old_type"] == "EPT_BOOL":
+            return {"int_value": 1 if existing["bool_value"] else 0}
+    elif param_type == "EPT_VEC4":
+        if existing["old_type"] == "EPT_VEC4":
+            return {"vec4_value": existing["vec4_value"]}
+        if existing["old_type"] == "EPT_F32":
+            f = float(existing["float_value"])
+            return {"vec4_value": (f, f, f, f)}
+        if existing["old_type"] == "EPT_S32":
+            f = float(existing["int_value"])
+            return {"vec4_value": (f, f, f, f)}
+        if existing["old_type"] == "EPT_BOOL":
+            f = 1.0 if existing["bool_value"] else 0.0
+            return {"vec4_value": (f, f, f, f)}
+    elif param_type == "EPT_BOOL":
+        if existing["old_type"] == "EPT_BOOL":
+            return {"bool_value": existing["bool_value"]}
+        if existing["old_type"] == "EPT_F32":
+            return {"bool_value": bool(existing["float_value"])}
+        if existing["old_type"] == "EPT_S32":
+            return {"bool_value": bool(existing["int_value"])}
+    elif param_type == "EPT_TEXTURE" and existing["old_type"] == "EPT_TEXTURE":
+        return {"texture_value": existing["texture_value"]}
+    return {}
+
+
 def _shader_display_name(shader_value):
     """Return a safe display name for shader enum labels."""
     shader_text = str(shader_value or "").replace("/", "\\")
@@ -281,16 +324,20 @@ def update_shader_params(self, context):
     
     # Preserve existing parameter values by name and type
     existing_params = {}
+    existing_params_by_name = {}
     for param in mtx_settings.shader_params:
         key = (param.name, param.param_type)
-        existing_params[key] = {
+        existing = {
             'enabled': param.enabled,
             'float_value': param.float_value,
             'int_value': param.int_value,
             'vec4_value': tuple(param.vec4_value),
             'texture_value': param.texture_value,
-            'bool_value': param.bool_value
+            'bool_value': param.bool_value,
+            'old_type': param.param_type,
         }
+        existing_params[key] = existing
+        existing_params_by_name[_norm_name(param.name)] = existing
     
     # Clear existing parameters
     mtx_settings.shader_params.clear()
@@ -334,6 +381,20 @@ def update_shader_params(self, context):
             param.vec4_value = existing['vec4_value']
             param.texture_value = existing['texture_value']
             param.bool_value = existing['bool_value']
+        elif _norm_name(param_name) in existing_params_by_name:
+            existing = existing_params_by_name[_norm_name(param_name)]
+            param.enabled = existing['enabled']
+            coerced = _coerce_param_value(existing, param_type)
+            if "float_value" in coerced:
+                param.float_value = coerced["float_value"]
+            if "int_value" in coerced:
+                param.int_value = coerced["int_value"]
+            if "vec4_value" in coerced:
+                param.vec4_value = coerced["vec4_value"]
+            if "texture_value" in coerced:
+                param.texture_value = coerced["texture_value"]
+            if "bool_value" in coerced:
+                param.bool_value = coerced["bool_value"]
         else:
             # Set default values for new parameters
             param.enabled = param_name in common_params
@@ -382,8 +443,10 @@ def update_shader_defines(self, context):
     
     # Preserve existing define states by name
     existing_defines = {}
+    existing_defines_ci = {}
     for define in settings.defines:
         existing_defines[define.name] = define.enabled
+        existing_defines_ci[_norm_name(define.name)] = define.enabled
     
     # Clear existing defines
     settings.defines.clear()
@@ -398,6 +461,8 @@ def update_shader_defines(self, context):
             if define_name in existing_defines:
                 # Restore existing state
                 new_define.enabled = existing_defines[define_name]
+            elif _norm_name(define_name) in existing_defines_ci:
+                new_define.enabled = existing_defines_ci[_norm_name(define_name)]
             else:
                 # Default to disabled; always-on set will override below
                 new_define.enabled = False
@@ -415,7 +480,9 @@ def update_shader_change(self, context):
 
     valid_techniques = list(SHADER_TECHNIQUES[shader])
     if self.technique not in valid_techniques:
-        self.technique = valid_techniques[0]
+        desired = _norm_name(self.technique)
+        matched = next((name for name in valid_techniques if _norm_name(name) == desired), None)
+        self.technique = matched or valid_techniques[0]
     
     # Update both parameters and defines
     update_shader_params(self, context)

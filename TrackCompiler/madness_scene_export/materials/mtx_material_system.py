@@ -29,11 +29,20 @@ def _available_shader_database_ids():
     return [item[0] for item in get_shader_database_items(None, None)]
 
 
+def _norm_shader_path(path: str) -> str:
+    return str(path or "").replace("/", "\\").lower()
+
+
 def _refresh_materials_for_current_database(context):
+    shader_lookup = {_norm_shader_path(shader): shader for shader in SHADER_TECHNIQUES}
     for material in bpy.data.materials:
         if not hasattr(material, "mtx_settings"):
             continue
         settings = material.mtx_settings
+        if settings.shader_path not in SHADER_TECHNIQUES:
+            remapped_shader = shader_lookup.get(_norm_shader_path(settings.shader_path))
+            if remapped_shader:
+                settings.shader_path = remapped_shader
         if settings.shader_path in SHADER_TECHNIQUES:
             try:
                 update_shader_change(settings, context)
