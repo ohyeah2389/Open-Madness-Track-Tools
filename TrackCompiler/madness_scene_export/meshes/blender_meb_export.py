@@ -19,6 +19,7 @@ except ImportError:
     BLENDER_AVAILABLE = False
 
 from .meb_writer import BoundingInfo, write_meb_file
+from ..utils.utils import sanitize
 
 
 @dataclass
@@ -136,7 +137,7 @@ def extract_mesh_data_from_blender(
         if eval_mesh.materials:
             for mat in eval_mesh.materials:
                 if mat:
-                    material_names.append(mat.name)
+                    material_names.append(sanitize(mat.name))
                 else:
                     material_names.append("DefaultMaterial")
         else:
@@ -233,11 +234,25 @@ def extract_mesh_data_from_blender(
             for uv_idx in unique_source_uv_indices
         }
 
-        for mat_idx in range(len(material_names)):
+        non_empty_material_names = []
+        non_empty_indices_by_material = []
+        non_empty_vertices_by_material = []
+        for mat_idx, mat_name in enumerate(material_names):
             mat_loop_indices = inverse[material_per_loop == mat_idx].astype(np.uint16, copy=False)
-            indices_by_material.append(mat_loop_indices)
+            if len(mat_loop_indices) == 0:
+                continue
+            non_empty_material_names.append(mat_name)
+            non_empty_indices_by_material.append(mat_loop_indices)
             unique_vertex_indices = np.unique(mat_loop_indices)
-            vertices_by_material.append(vertices[unique_vertex_indices])
+            non_empty_vertices_by_material.append(vertices[unique_vertex_indices])
+
+        if len(non_empty_material_names) != len(material_names):
+            print(
+                f"  Dropped {len(material_names) - len(non_empty_material_names)} material slot(s) with zero triangles"
+            )
+        material_names = non_empty_material_names
+        indices_by_material = non_empty_indices_by_material
+        vertices_by_material = non_empty_vertices_by_material
 
         # Build UV layer list WITH DUPLICATES as specified in uv_indices_to_export
         # Each entry references the appropriate source UV data (may reference same data multiple times)

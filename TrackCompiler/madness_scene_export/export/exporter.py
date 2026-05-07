@@ -83,16 +83,6 @@ def _build_maybe_overridden_options(obj, resource_prefix: str) -> MeshExportOpti
     return options
 
 
-def _collect_material_names(obj) -> List[str]:
-    materials = []
-    if obj.data.materials:
-        for mat in obj.data.materials:
-            materials.append(sanitize(mat.name) if mat else "DefaultMaterial")
-    else:
-        materials.append("DefaultMaterial")
-    return materials
-
-
 def _get_userflags(obj) -> int:
     if hasattr(obj.data, "meb_export_settings"):
         from ..settings.meb_export_settings import get_userflags_value
@@ -312,7 +302,6 @@ def _export_single_object(
     world_matrix = obj.matrix_world.copy()
     matrix = np.array(world_matrix)
     translation, quaternion = decompose_matrix(matrix)
-    materials = _collect_material_names(obj)
     options = _build_maybe_overridden_options(obj, resource_prefix)
     userflags = _get_userflags(obj) if userflags_override is None else userflags_override
 
@@ -320,6 +309,7 @@ def _export_single_object(
     meb_path = output_dir / f"{sanitize(obj_name)}.meb"
     sanitized_name = sanitize(obj_name)
     extracted_data = extract_mesh_data_from_blender(obj, options)
+    materials = extracted_data[4]
     validation_issue = _validate_extracted_mesh(sanitized_name, extracted_data)
     if validation_issue:
         mesh_validation_issues.append(validation_issue)
