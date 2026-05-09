@@ -11,7 +11,7 @@ import json
 import math
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Any, Iterable
+from typing import Dict, List, Any, Iterable, Set, Tuple
 import xml.etree.ElementTree as ET
 
 
@@ -36,9 +36,12 @@ def _normalize_shader_display(shader_path: str) -> str:
 class ShaderDatabaseBuilder:
     """Collects shader metadata from MTX files and writes it to JSON."""
 
-    def __init__(self, mtx_roots: Iterable[Path], max_examples: int = 5) -> None:
+    def __init__(
+        self, mtx_roots: Iterable[Path], max_examples: int = 5, min_pairing_support: int = 2
+    ) -> None:
         self.mtx_roots = list(mtx_roots)
         self.max_examples = max_examples
+        self.min_pairing_support = max(1, int(min_pairing_support))
         self.raw_db: Dict[str, Any] = {
             "mtxFiles": 0,
             "shaders": {},
@@ -105,6 +108,7 @@ class ShaderDatabaseBuilder:
             self._record_define_order(tech_entry, define_order_this_file)
         if param_order_this_file:
             self._record_param_order(tech_entry, param_order_this_file)
+        self._record_option_pairings(tech_entry, params_seen_this_file, defines_seen_this_file)
 
         # Increment counts for always-on detection
         for pname in params_seen_this_file:
@@ -129,6 +133,8 @@ class ShaderDatabaseBuilder:
                 "defineOrderPositions": {},
                 "paramOrderPositions": {},
                 "paramFirstSeen": {},
+                "optionCounts": {},
+                "optionPairCounts": {},
             },
         )
 
@@ -261,6 +267,30 @@ class ShaderDatabaseBuilder:
         for i, name in enumerate(param_order):
             order_positions.setdefault(name, []).append(i)
 
+    def _record_option_pairings(
+        self,
+        technique_entry: Dict[str, Any],
+        params_seen_this_file: Set[str],
+        defines_seen_this_file: Set[str],
+    ) -> None:
+        """Track strict co-occurrence counts for per-technique option implications."""
+        options_seen: Set[Tuple[str, str]] = set()
+        for param_name in params_seen_this_file:
+            options_seen.add(("parameter", param_name))
+        for define_name in defines_seen_this_file:
+            options_seen.add(("define", define_name))
+        if not options_seen:
+            return
+
+        option_counts = technique_entry["optionCounts"]
+        pair_counts = technique_entry["optionPairCounts"]
+        for source in options_seen:
+            option_counts[source] = option_counts.get(source, 0) + 1
+            source_pairs = pair_counts.setdefault(source, {})
+            for target in options_seen:
+                if target != source:
+                    source_pairs[target] = source_pairs.get(target, 0) + 1
+
     @staticmethod
     def _median_index(indices: List[int]) -> float:
         if not indices:
@@ -300,6 +330,53 @@ class ShaderDatabaseBuilder:
             return (median_pos, first_seen.get(name, math.inf), name.lower())
 
         return sorted(params, key=_sort_key)
+
+    def _resolve_option_pairings(
+        self,
+        technique_entry: Dict[str, Any],
+        base_params: Set[str],
+        base_defines: Set[str],
+    ) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
+        """Build strict implication suggestions from observed co-occurrence."""
+        option_counts = technique_entry.get("optionCounts", {})
+        pair_counts = technique_entry.get("optionPairCounts", {})
+        grouped: Dict[str, Dict[str, List[Dict[str, Any]]]] = {"defines": {}, "parameters": {}}
+
+        for source, source_count in option_counts.items():
+            if source_count < self.min_pairing_support:
+                continue
+            source_kind, source_name = source
+            if source_kind not in {"define", "parameter"}:
+                continue
+            source_key = "defines" if source_kind == "define" else "parameters"
+            suggestions: List[Dict[str, Any]] = []
+
+            for target, co_count in pair_counts.get(source, {}).items():
+                if co_count != source_count:
+                    continue
+                target_kind, target_name = target
+                if target_kind == "parameter" and target_name in base_params:
+                    continue
+                if target_kind == "define" and target_name in base_defines:
+                    continue
+                suggestions.append(
+                    {
+                        "kind": target_kind,
+                        "name": target_name,
+                        "support": co_count,
+                        "confidence": 1.0,
+                    }
+                )
+
+            if suggestions:
+                suggestions.sort(key=lambda item: (item["kind"], item["name"].lower()))
+                grouped[source_key][source_name] = suggestions
+
+        grouped["defines"] = dict(sorted(grouped["defines"].items(), key=lambda item: item[0].lower()))
+        grouped["parameters"] = dict(
+            sorted(grouped["parameters"].items(), key=lambda item: item[0].lower())
+        )
+        return grouped
 
     def _serialize(self) -> Dict[str, Any]:
         source_roots = [str(r) for r in self.mtx_roots]
@@ -368,19 +445,25 @@ class ShaderDatabaseBuilder:
                         "sampleValues": param_data["sampleValues"],
                     }
 
-                techniques_out[technique] = {
+                base_defines = {
+                    d for d, count in technique_data["defineCounts"].items() if count == technique_data["filesSeen"]
+                }
+                base_params = {
+                    p for p, count in technique_data["paramCounts"].items() if count == technique_data["filesSeen"]
+                }
+                technique_out = {
                     "filesSeen": technique_data["filesSeen"],
                     "defines": sorted(technique_data["defines"]),
                     "defineOrder": self._resolve_define_order(technique_data),
-                    "baseDefines": sorted(
-                        d for d, count in technique_data["defineCounts"].items() if count == technique_data["filesSeen"]
-                    ),
-                    "baseParameters": sorted(
-                        p for p, count in technique_data["paramCounts"].items() if count == technique_data["filesSeen"]
-                    ),
+                    "baseDefines": sorted(base_defines),
+                    "baseParameters": sorted(base_params),
                     "paramOrder": self._resolve_param_order(technique_data),
                     "parameters": params_out,
                 }
+                pairings = self._resolve_option_pairings(technique_data, base_params, base_defines)
+                if pairings["defines"] or pairings["parameters"]:
+                    technique_out["optionPairings"] = pairings
+                techniques_out[technique] = technique_out
 
             serialized["shaders"][shader] = {"techniques": techniques_out}
 
@@ -410,6 +493,12 @@ def parse_args() -> argparse.Namespace:
         default=5,
         help="Maximum number of example values to keep per parameter.",
     )
+    parser.add_argument(
+        "--min-pairing-support",
+        type=int,
+        default=2,
+        help="Minimum source occurrences required before emitting strict option pairings.",
+    )
     return parser.parse_args()
 
 
@@ -437,7 +526,11 @@ def main() -> None:
         if not root.is_dir():
             raise SystemExit(f"MTX root must be a directory: {root}")
 
-    builder = ShaderDatabaseBuilder(mtx_roots=roots, max_examples=args.max_examples)
+    builder = ShaderDatabaseBuilder(
+        mtx_roots=roots,
+        max_examples=args.max_examples,
+        min_pairing_support=args.min_pairing_support,
+    )
     database = builder.build()
 
     output_path = resolve_output_path(args.output)

@@ -14,9 +14,12 @@ from .shader_definitions import (
     get_technique_items,
     update_shader_params,
     update_shader_change,
+    resolve_shader_path,
     is_param_required,
     is_define_required,
     get_param_stats,
+    get_option_pairings,
+    get_missing_pairings,
 )
 from ..utils import sanitize
 
@@ -33,16 +36,37 @@ def _norm_shader_path(path: str) -> str:
     return str(path or "").replace("/", "\\").lower()
 
 
+def _enabled_option_names(mtx_settings):
+    enabled_params = {param.name for param in mtx_settings.shader_params if param.enabled}
+    enabled_defines = {define.name for define in mtx_settings.defines if define.enabled}
+    return enabled_params, enabled_defines
+
+
+def _pairing_group_badge(pairings):
+    define_count = sum(1 for pairing in pairings if pairing.get("kind") == "define")
+    param_count = sum(1 for pairing in pairings if pairing.get("kind") == "parameter")
+    supports = sorted(
+        {int(pairing.get("support", 0) or 0) for pairing in pairings if int(pairing.get("support", 0) or 0) > 0}
+    )
+    support_text = ""
+    if supports:
+        support_text = f" S{supports[0]}" if len(supports) == 1 else f" S{supports[0]}-{supports[-1]}"
+    return f"D{define_count}/P{param_count}{support_text}"
+
+
+def _pairing_item_label(pairing):
+    kind_prefix = "Define" if pairing.get("kind") == "define" else "Param"
+    return f"{kind_prefix}: {pairing.get('name', '<unnamed>')}"
+
+
 def _refresh_materials_for_current_database(context):
-    shader_lookup = {_norm_shader_path(shader): shader for shader in SHADER_TECHNIQUES}
     for material in bpy.data.materials:
         if not hasattr(material, "mtx_settings"):
             continue
         settings = material.mtx_settings
-        if settings.shader_path not in SHADER_TECHNIQUES:
-            remapped_shader = shader_lookup.get(_norm_shader_path(settings.shader_path))
-            if remapped_shader:
-                settings.shader_path = remapped_shader
+        remapped_shader = resolve_shader_path(settings.shader_path)
+        if remapped_shader and remapped_shader != settings.shader_path:
+            settings.shader_path = remapped_shader
         if settings.shader_path in SHADER_TECHNIQUES:
             try:
                 update_shader_change(settings, context)
@@ -67,8 +91,8 @@ def _restore_scene_shader_database(_dummy):
         scene.mtx_shader_database = selected_id
 
     scene[SCENE_SHADER_DB_KEY] = selected_id
-    if load_shader_database(selected_id):
-        _refresh_materials_for_current_database(bpy.context)
+    # Loading a database on file open should not rewrite material settings.
+    load_shader_database(selected_id)
 
 
 def update_shader_database_selection(self, context):
@@ -356,6 +380,20 @@ class MTX_UL_shader_params(bpy.types.UIList):
             shader = data.shader_path if hasattr(data, "shader_path") else ""
             technique = data.technique if hasattr(data, "technique") else ""
             required = is_param_required(shader, technique, item.name)
+            enabled_params, enabled_defines = _enabled_option_names(data)
+            pairings = get_option_pairings(shader, technique, "parameter", item.name)
+            missing_pairings = (
+                get_missing_pairings(
+                    shader,
+                    technique,
+                    "parameter",
+                    item.name,
+                    enabled_defines,
+                    enabled_params,
+                )
+                if item.enabled
+                else []
+            )
 
             toggle_col = row.column(align=True)
             toggle_col.enabled = not required
@@ -367,10 +405,20 @@ class MTX_UL_shader_params(bpy.types.UIList):
             if warning and warning[0] == "missing":
                 name_row.alert = True
                 name_row.label(text=display_name, icon="ERROR")
+            elif missing_pairings:
+                name_row.alert = True
+                name_row.label(
+                    text=display_name,
+                    icon="ERROR",
+                )
             elif warning and warning[0] == "unsupported":
                 name_row.label(text=display_name, icon="QUESTION")
+            elif pairings:
+                name_row.label(text=display_name, icon="LINKED")
             else:
                 name_row.label(text=display_name)
+            if pairings:
+                row.label(text=_pairing_group_badge(pairings))
             row.label(text=item.param_type)
             
             # Add copy button on the right
@@ -402,13 +450,36 @@ class MTX_UL_defines(bpy.types.UIList):
             shader = data.shader_path if hasattr(data, "shader_path") else ""
             technique = data.technique if hasattr(data, "technique") else ""
             required = is_define_required(shader, technique, item.name)
+            enabled_params, enabled_defines = _enabled_option_names(data)
+            pairings = get_option_pairings(shader, technique, "define", item.name)
+            missing_pairings = (
+                get_missing_pairings(
+                    shader,
+                    technique,
+                    "define",
+                    item.name,
+                    enabled_defines,
+                    enabled_params,
+                )
+                if item.enabled
+                else []
+            )
 
             toggle_col = row.column(align=True)
             toggle_col.enabled = not required
             toggle_col.prop(item, "enabled", text="")
 
             display_name = f"(Req.) {item.name}" if required else item.name or "<unnamed>"
-            row.label(text=display_name)
+            if missing_pairings:
+                label_row = row.row(align=True)
+                label_row.alert = True
+                label_row.label(text=display_name, icon="ERROR")
+            elif pairings:
+                row.label(text=display_name, icon="LINKED")
+            else:
+                row.label(text=display_name)
+            if pairings:
+                row.label(text=_pairing_group_badge(pairings))
             
             # Add copy button on the right
             if len(context.selected_objects) > 1:
@@ -543,6 +614,20 @@ class MTX_PT_shader_parameters(bpy.types.Panel):
 
             # Show observed statistics if available
             stats = get_param_stats(mtx.shader_path, mtx.technique, param.name)
+            enabled_params, enabled_defines = _enabled_option_names(mtx)
+            pairings = get_option_pairings(mtx.shader_path, mtx.technique, "parameter", param.name)
+            missing_pairings = (
+                get_missing_pairings(
+                    mtx.shader_path,
+                    mtx.technique,
+                    "parameter",
+                    param.name,
+                    enabled_defines,
+                    enabled_params,
+                )
+                if param.enabled
+                else []
+            )
             if stats:
                 if param.param_type == "EPT_F32":
                     stats_line = []
@@ -563,6 +648,20 @@ class MTX_PT_shader_parameters(bpy.types.Panel):
                     if stats.get("vec4Median") is not None:
                         med = stats["vec4Median"]
                         box.label(text=f"Med: ({med[0]:.2f}, {med[1]:.2f}, {med[2]:.2f}, {med[3]:.2f})")
+            if pairings:
+                box.label(text=f"Paired with ({_pairing_group_badge(pairings)}):", icon="LINKED")
+                for pairing in pairings:
+                    box.label(text=_pairing_item_label(pairing))
+            else:
+                box.label(text="Item doesn't have any pairs", icon="INFO")
+            if missing_pairings:
+                warn_row = box.row()
+                warn_row.alert = True
+                warn_row.label(text="Missing companions:", icon="ERROR")
+                for pairing in missing_pairings:
+                    item_row = box.row()
+                    item_row.alert = True
+                    item_row.label(text=_pairing_item_label(pairing))
 
             if param.param_type == "EPT_F32":
                 box.prop(param, "float_value", text="Value")
@@ -656,6 +755,37 @@ class MTX_PT_shader_defines(bpy.types.Panel):
         layout.template_list(
             "MTX_UL_defines", "", mtx, "defines", mtx, "active_define_index", rows=len(mtx.defines)
         )
+        if mtx.defines and 0 <= mtx.active_define_index < len(mtx.defines):
+            define = mtx.defines[mtx.active_define_index]
+            box = layout.box()
+            enabled_params, enabled_defines = _enabled_option_names(mtx)
+            pairings = get_option_pairings(mtx.shader_path, mtx.technique, "define", define.name)
+            missing_pairings = (
+                get_missing_pairings(
+                    mtx.shader_path,
+                    mtx.technique,
+                    "define",
+                    define.name,
+                    enabled_defines,
+                    enabled_params,
+                )
+                if define.enabled
+                else []
+            )
+            if pairings:
+                box.label(text=f"Paired with ({_pairing_group_badge(pairings)}):", icon="LINKED")
+                for pairing in pairings:
+                    box.label(text=_pairing_item_label(pairing))
+            else:
+                box.label(text="Item doesn't have any pairs", icon="INFO")
+            if missing_pairings:
+                warn_row = box.row()
+                warn_row.alert = True
+                warn_row.label(text="Missing companions:", icon="ERROR")
+                for pairing in missing_pairings:
+                    item_row = box.row()
+                    item_row.alert = True
+                    item_row.label(text=_pairing_item_label(pairing))
 
 
 # MTX File I/O Functions
