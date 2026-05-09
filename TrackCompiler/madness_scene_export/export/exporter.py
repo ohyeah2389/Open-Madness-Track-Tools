@@ -105,7 +105,7 @@ def _count_nonfinite(array) -> int:
     return int(np.size(array) - np.count_nonzero(np.isfinite(array)))
 
 
-def _validate_extracted_mesh(mesh_name: str, extracted_data) -> _MeshValidationIssue | None:
+def _validate_extracted_mesh(mesh_name: str, extracted_data) -> Tuple[_MeshValidationIssue | None, bool]:
     (
         vertices,
         normals,
@@ -132,6 +132,13 @@ def _validate_extracted_mesh(mesh_name: str, extracted_data) -> _MeshValidationI
             issues.append(f"{label} has {bad_count} non-finite value(s)")
 
     vertex_count = len(vertices)
+    vertex_limit_exceeded = vertex_count > 65535
+    if vertex_limit_exceeded:
+        issues.append(
+            f"has {vertex_count} unique vertices (after deduplication and triangulation), "
+            "exceeding the MEB format limit of 65535, and was therefore not exported"
+        )
+
     for mat_name, indices in zip(material_names, indices_by_material):
         if len(indices) == 0:
             issues.append(f"{sanitize(mat_name)} has no assigned triangles")
@@ -161,8 +168,8 @@ def _validate_extracted_mesh(mesh_name: str, extracted_data) -> _MeshValidationI
         print(f"  Warning: Mesh validation issues in {mesh_name}:")
         for issue in issues:
             print(f"    - {issue}")
-        return _MeshValidationIssue(mesh=sanitize(mesh_name), issues=issues)
-    return None
+        return _MeshValidationIssue(mesh=sanitize(mesh_name), issues=issues), vertex_limit_exceeded
+    return None, False
 
 
 def _write_meb_from_extracted(meb_path: Path, mesh_name: str, options: MeshExportOptions, extracted_data) -> object:
@@ -178,12 +185,6 @@ def _write_meb_from_extracted(meb_path: Path, mesh_name: str, options: MeshExpor
         tangents,
         bitangents,
     ) = extracted_data
-
-    if len(vertices) > 65535:
-        raise ValueError(
-            f"Mesh {mesh_name} has {len(vertices)} unique vertices (after deduplication and triangulation), "
-            "which exceeds the MEB format limit of 65535. Split the mesh into smaller parts."
-        )
 
     return write_meb_file(
         output_path=meb_path,
@@ -310,9 +311,12 @@ def _export_single_object(
     sanitized_name = sanitize(obj_name)
     extracted_data = extract_mesh_data_from_blender(obj, options)
     materials = extracted_data[4]
-    validation_issue = _validate_extracted_mesh(sanitized_name, extracted_data)
+    validation_issue, skip_export = _validate_extracted_mesh(sanitized_name, extracted_data)
     if validation_issue:
         mesh_validation_issues.append(validation_issue)
+    if skip_export:
+        print(f"Skipping {sanitized_name} MEB export due to vertex limit")
+        return
 
     pending_exports.append(
         _PendingObjectExport(
