@@ -6,6 +6,7 @@ import numpy as np
 from pathlib import Path
 from typing import Any, List, Tuple, Optional
 from dataclasses import dataclass, field
+from contextlib import contextmanager
 
 try:
     import bpy  # type: ignore
@@ -20,6 +21,23 @@ except ImportError:
 
 from .meb_writer import BoundingInfo, write_meb_file
 from ..utils.utils import sanitize
+
+
+@contextmanager
+def _skip_viewport_disabled_modifiers(obj):
+    overrides = []
+    for modifier in getattr(obj, "modifiers", []):
+        if (not getattr(modifier, "show_viewport", True)) and getattr(modifier, "show_render", False):
+            overrides.append((modifier, modifier.show_render))
+            modifier.show_render = False
+    try:
+        yield
+    finally:
+        for modifier, show_render in overrides:
+            try:
+                modifier.show_render = show_render
+            except ReferenceError:
+                pass
 
 
 @dataclass
@@ -75,9 +93,10 @@ def extract_mesh_data_from_blender(
     if obj.type != 'MESH':
         raise ValueError(f"Object {obj.name} is not a mesh")
 
-    # Get mesh with modifiers applied
-    eval_obj = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
-    eval_mesh = eval_obj.to_mesh()
+    # Get mesh with modifiers applied, honoring viewport-disabled modifiers.
+    with _skip_viewport_disabled_modifiers(obj):
+        eval_obj = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
+        eval_mesh = eval_obj.to_mesh()
 
     try:
         # Apply ONLY scale to mesh vertices (rotation/location stay in SGX transform)

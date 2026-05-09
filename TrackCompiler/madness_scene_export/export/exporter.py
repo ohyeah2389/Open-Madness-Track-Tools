@@ -19,6 +19,7 @@ from .object_export import (
     parse_kstree_group,
     parse_sms_group,
     combine_objects_into_mesh,
+    skip_viewport_disabled_modifiers,
     tag_temp_export_datablock,
 )
 from ..meshes import MeshExportOptions
@@ -340,18 +341,19 @@ def _export_single_object(
 def _curve_to_temp_mesh_object(curve_obj, context):
     """Create a temporary mesh object from a curve object for export."""
     depsgraph = context.evaluated_depsgraph_get()
-    eval_obj = curve_obj.evaluated_get(depsgraph)
+    with skip_viewport_disabled_modifiers(curve_obj):
+        eval_obj = curve_obj.evaluated_get(depsgraph)
 
-    try:
-        mesh_data = bpy.data.meshes.new_from_object(
-            eval_obj, preserve_all_data_layers=True, depsgraph=depsgraph
-        )
-    except TypeError:
-        eval_mesh = eval_obj.to_mesh()
-        if not eval_mesh:
-            return None
-        mesh_data = eval_mesh.copy()
-        eval_obj.to_mesh_clear()
+        try:
+            mesh_data = bpy.data.meshes.new_from_object(
+                eval_obj, preserve_all_data_layers=True, depsgraph=depsgraph
+            )
+        except TypeError:
+            eval_mesh = eval_obj.to_mesh()
+            if not eval_mesh:
+                return None
+            mesh_data = eval_mesh.copy()
+            eval_obj.to_mesh_clear()
 
     if not mesh_data or not mesh_data.polygons:
         if mesh_data:

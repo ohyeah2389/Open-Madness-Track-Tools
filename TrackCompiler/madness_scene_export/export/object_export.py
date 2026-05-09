@@ -4,12 +4,30 @@ from pathlib import Path
 from typing import Iterable, List, Tuple
 import numpy as np
 import re
+from contextlib import contextmanager
 from ..utils.coordinate_transforms import decompose_matrix
 from ..utils import sanitize
 from ..settings.userflags import DEFAULT_USERFLAGS
 
 TEMP_EXPORT_TAG = "_omtt_temp_export"
 TEMP_EXPORT_PREFIXES = ("TEMP_MESH", "TEMP_CURVE_MESH", "TEMP_COMBINED")
+
+
+@contextmanager
+def skip_viewport_disabled_modifiers(obj):
+    overrides = []
+    for modifier in getattr(obj, "modifiers", []):
+        if (not getattr(modifier, "show_viewport", True)) and getattr(modifier, "show_render", False):
+            overrides.append((modifier, modifier.show_render))
+            modifier.show_render = False
+    try:
+        yield
+    finally:
+        for modifier, show_render in overrides:
+            try:
+                modifier.show_render = show_render
+            except ReferenceError:
+                pass
 
 
 def tag_temp_export_datablock(datablock):
@@ -193,17 +211,18 @@ def combine_objects_into_mesh(objects: List, group_name: str, context, group_typ
         print(f"  Combined materials: {[mat.name if mat else 'None' for mat, _ in combined_materials]}")
 
         for obj in objects:
-            eval_obj = obj.evaluated_get(depsgraph)
             mesh_data = None
-            try:
-                mesh_data = bpy.data.meshes.new_from_object(
-                    eval_obj, preserve_all_data_layers=True, depsgraph=depsgraph
-                )
-            except TypeError:
-                eval_mesh = eval_obj.to_mesh()
-                if eval_mesh:
-                    mesh_data = eval_mesh.copy()
-                    eval_obj.to_mesh_clear()
+            with skip_viewport_disabled_modifiers(obj):
+                eval_obj = obj.evaluated_get(depsgraph)
+                try:
+                    mesh_data = bpy.data.meshes.new_from_object(
+                        eval_obj, preserve_all_data_layers=True, depsgraph=depsgraph
+                    )
+                except TypeError:
+                    eval_mesh = eval_obj.to_mesh()
+                    if eval_mesh:
+                        mesh_data = eval_mesh.copy()
+                        eval_obj.to_mesh_clear()
 
             if not mesh_data or not mesh_data.polygons:
                 if mesh_data:
