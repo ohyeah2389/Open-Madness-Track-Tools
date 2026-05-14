@@ -117,8 +117,9 @@ def _validate_extracted_mesh(mesh_name: str, extracted_data) -> Tuple[_MeshValid
         _vertices_by_material,
         tangents,
         bitangents,
+        repair_notes,
     ) = extracted_data
-    issues = []
+    issues = list(repair_notes)
 
     checks = [("vertices", vertices), ("normals", normals), ("colors", colors)]
     checks.extend((f"uv{slot_idx}", uv_data) for slot_idx, uv_data in uv_layers)
@@ -185,6 +186,7 @@ def _write_meb_from_extracted(meb_path: Path, mesh_name: str, options: MeshExpor
         vertices_by_material,
         tangents,
         bitangents,
+        _repair_notes,
     ) = extracted_data
 
     return write_meb_file(

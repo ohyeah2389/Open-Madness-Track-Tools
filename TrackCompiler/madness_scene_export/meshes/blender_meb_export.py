@@ -67,7 +67,7 @@ def extract_mesh_data_from_blender(
     options: MeshExportOptions
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, List[Tuple[int, np.ndarray]],
            List[str], List[np.ndarray], List[np.ndarray],
-           Optional[np.ndarray], Optional[np.ndarray]]:
+           Optional[np.ndarray], Optional[np.ndarray], List[str]]:
     """Extract mesh data from a Blender object.
 
     Args:
@@ -85,6 +85,7 @@ def extract_mesh_data_from_blender(
         - vertices_by_material (list of vertex arrays for bounds calculation)
         - tangents (optional Nx3)
         - bitangents (optional Nx3)
+        - repair_notes (list of mesh repair warning strings)
     """
     if not BLENDER_AVAILABLE:
         raise RuntimeError("Blender is not available")
@@ -171,17 +172,62 @@ def extract_mesh_data_from_blender(
             mat_idx = tri.material_index
             tri_material_indices[tri_idx] = mat_idx if mat_idx < len(material_names) else 0
 
+        # Pull loop->vertex and vertex positions once so we can detect degenerates
+        # in the source triangulation before building export buffers.
+        loop_vertex_index_all = np.empty(len(eval_mesh.loops), dtype=np.int32)
+        eval_mesh.loops.foreach_get("vertex_index", loop_vertex_index_all)
+        vertex_co_all = np.empty(len(eval_mesh.vertices) * 3, dtype=np.float32)
+        eval_mesh.vertices.foreach_get("co", vertex_co_all)
+        vertex_co_all = vertex_co_all.reshape(-1, 3)
+
+        repair_notes = []
+        if tri_count:
+            tri_vertex_indices = loop_vertex_index_all[tri_loop_indices]
+            repeated_index_tris = (
+                (tri_vertex_indices[:, 0] == tri_vertex_indices[:, 1]) |
+                (tri_vertex_indices[:, 1] == tri_vertex_indices[:, 2]) |
+                (tri_vertex_indices[:, 0] == tri_vertex_indices[:, 2])
+            )
+            tri_vertices = vertex_co_all[tri_vertex_indices]
+            tri_areas = np.linalg.norm(
+                np.cross(
+                    tri_vertices[:, 1] - tri_vertices[:, 0],
+                    tri_vertices[:, 2] - tri_vertices[:, 0],
+                ),
+                axis=1,
+            )
+            zero_area_tris = tri_areas <= 1e-10
+            degenerate_mask = repeated_index_tris | zero_area_tris
+        else:
+            degenerate_mask = np.zeros(0, dtype=bool)
+
+        if np.any(degenerate_mask):
+            kept_mask = ~degenerate_mask
+            degenerate_total = int(np.count_nonzero(degenerate_mask))
+            print(
+                f"  Warning: {obj.name} original mesh has {degenerate_total} degenerate triangle(s); "
+                "repairing by removing them for export"
+            )
+            repaired_material_indices = tri_material_indices[degenerate_mask]
+            if len(repaired_material_indices):
+                unique_mat_indices, counts = np.unique(repaired_material_indices, return_counts=True)
+                for mat_idx, count in zip(unique_mat_indices, counts):
+                    mat_name = sanitize(material_names[int(mat_idx)]) if int(mat_idx) < len(material_names) else "DefaultMaterial"
+                    note = (
+                        f"{mat_name}: original mesh had {int(count)} degenerate triangle(s); "
+                        "removed during export repair"
+                    )
+                    repair_notes.append(note)
+                    print(f"    - {note}")
+
+            tri_loop_indices = tri_loop_indices[kept_mask]
+            tri_material_indices = tri_material_indices[kept_mask]
+
         loop_indices = tri_loop_indices.reshape(-1)
         material_per_loop = np.repeat(tri_material_indices, 3)
 
         # Gather positions from vertices via loop->vertex indirection.
-        loop_vertex_index_all = np.empty(len(eval_mesh.loops), dtype=np.int32)
-        eval_mesh.loops.foreach_get("vertex_index", loop_vertex_index_all)
         vertex_index_per_loop = loop_vertex_index_all[loop_indices]
-
-        vertex_co_all = np.empty(len(eval_mesh.vertices) * 3, dtype=np.float32)
-        eval_mesh.vertices.foreach_get("co", vertex_co_all)
-        vertex_co_all = vertex_co_all.reshape(-1, 3)
         loop_positions = vertex_co_all[vertex_index_per_loop]
 
         # Loop normals.
@@ -281,7 +327,7 @@ def extract_mesh_data_from_blender(
             # Store as (slot_index, uv_array) - slot_index determines which UV section header to use
             uv_layers.append((slot_idx, uv_array))
 
-        print(f"  Deduplicated {len(vertices)} unique vertices from {len(eval_mesh.loop_triangles) * 3} loops")
+        print(f"  Deduplicated {len(vertices)} unique vertices from {len(loop_indices)} loops")
         print(f"  Export options: tangent_space={options.generate_tangent_space}, bodywork={options.bodywork_data}, UV slots={len(uv_layers)} (source layers: {uv_indices_to_export})")
         print(f"  Returning tangents: {tangents_array is not None}, bitangents: {bitangents_array is not None}")
 
@@ -294,7 +340,8 @@ def extract_mesh_data_from_blender(
             indices_by_material,
             vertices_by_material,
             tangents_array,
-            bitangents_array
+            bitangents_array,
+            repair_notes
         )
 
     finally:
@@ -336,7 +383,8 @@ def export_object_to_meb(
         indices_by_material,
         vertices_by_material,
         tangents,
-        bitangents
+        bitangents,
+        _repair_notes,
     ) = extract_mesh_data_from_blender(obj, options)
 
     # Validate vertex count (MEB uses 16-bit indices)
