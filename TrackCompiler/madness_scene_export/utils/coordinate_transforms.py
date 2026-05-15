@@ -112,7 +112,19 @@ def fix_x_axis_rotation_direction(q: np.ndarray) -> np.ndarray:
 def decompose_matrix(m: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Returns (translation_vec3, quaternion_wxyz)"""
     translation = m[:3, 3]
-    rot_3x3 = m[:3, :3]
+    rot_scaled_3x3 = m[:3, :3]
+
+    # Remove scale so quaternion extraction receives a pure rotation matrix.
+    scales = np.linalg.norm(rot_scaled_3x3, axis=0)
+    safe_scales = np.where(scales > 1e-8, scales, 1.0)
+    rot_3x3 = rot_scaled_3x3 / safe_scales
+
+    # Re-orthonormalize to suppress numerical drift from non-uniform scaling.
+    u, _, vt = np.linalg.svd(rot_3x3)
+    rot_3x3 = u @ vt
+    if np.linalg.det(rot_3x3) < 0:
+        u[:, -1] *= -1
+        rot_3x3 = u @ vt
 
     translation_converted = convert_position(translation)
     rot_3x3_converted = convert_rotation_matrix(rot_3x3)
