@@ -112,7 +112,7 @@ Instructions on general track modeling are outside the scope of this tutorial, b
 	- Additionally, the naming pattern `SMS_GRP_groupname_objectname.123` can be used instead, where all objects with the `SMS_GRP_groupname_` prefix will be combined into an object named `groupname`. Ensure `groupname` is unique and will not overlap with any non-grouped object names.
 - The Madness Engine, similar to Assetto Corsa, has a limit of 65535 vertices per mesh.
 - The Madness Engine has been seen to support the following texture formats so far:
-	- DDS DXT5 Linear
+	- DDS DXT1/3/5 Linear
 	- DDS BC7 Linear
 - The Madness Engine has been seen to NOT support the following texture formats so far:
 	- DDS R8G8B8 Uncompressed
