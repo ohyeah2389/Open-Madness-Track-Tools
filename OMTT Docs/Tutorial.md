@@ -114,6 +114,7 @@ Instructions on general track modeling are outside the scope of this tutorial, b
 - The Madness Engine has been seen to support the following texture formats so far:
 	- DDS DXT1/3/5 Linear
 	- DDS BC7 Linear
+	- DDS BC5U
 - The Madness Engine has been seen to NOT support the following texture formats so far:
 	- DDS R8G8B8 Uncompressed
 # Step 3: Author the Materials

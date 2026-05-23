@@ -24,7 +24,7 @@ from .shader_definitions import (
 from ..utils import sanitize
 
 SCENE_SHADER_DB_KEY = "mtx_shader_database_id"
-SUPPORTED_DDS_FOURCC = {"DXT1", "DXT3", "DXT5"}
+SUPPORTED_DDS_FOURCC = {"DXT1", "DXT3", "DXT5", "BC5U"}
 SUPPORTED_DDS_DXGI_BC7 = {98, 99}  # BC7_UNORM / BC7_UNORM_SRGB
 
 
@@ -225,7 +225,7 @@ def get_texture_param_warning(param, context=None):
     if not is_supported:
         return (
             "unsupported",
-            f"Unsupported DDS format: {detected_format} (use DXT1, DXT3, DXT5, or BC7)",
+            f"Unsupported DDS format: {detected_format} (use DXT1, DXT3, DXT5, BC5U, or BC7)",
         )
     return None
 
