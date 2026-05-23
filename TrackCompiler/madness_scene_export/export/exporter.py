@@ -28,6 +28,7 @@ from ..meshes.meb_writer import write_meb_file
 from ..materials.mtx_processor import prepare_mtx_files_from_materials
 from ..materials.mtx_material_system import summarize_texture_warnings_for_material_names
 from ..settings.userflags import DEFAULT_USERFLAGS
+from ..utils import effective_materials_for_object
 from ..utils.coordinate_transforms import decompose_matrix
 
 
@@ -368,8 +369,9 @@ def _curve_to_temp_mesh_object(curve_obj, context):
     context.scene.collection.objects.link(temp_obj)
     temp_obj.matrix_world = curve_obj.matrix_world.copy()
 
-    if curve_obj.data.materials:
-        for mat in curve_obj.data.materials:
+    source_materials = effective_materials_for_object(curve_obj, getattr(curve_obj.data, "materials", []))
+    if source_materials:
+        for mat in source_materials:
             temp_obj.data.materials.append(mat)
 
     return temp_obj

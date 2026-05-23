@@ -6,7 +6,7 @@ import numpy as np
 import re
 from contextlib import contextmanager
 from ..utils.coordinate_transforms import decompose_matrix
-from ..utils import sanitize
+from ..utils import effective_materials_for_object, sanitize
 from ..settings.userflags import DEFAULT_USERFLAGS
 
 TEMP_EXPORT_TAG = "_omtt_temp_export"
@@ -201,8 +201,9 @@ def combine_objects_into_mesh(objects: List, group_name: str, context, group_typ
         material_mapping = {}  # sanitized material name -> new_index
 
         for obj in objects:
-            if obj.data.materials:
-                for mat in obj.data.materials:
+            source_materials = effective_materials_for_object(obj, getattr(obj.data, "materials", []))
+            if source_materials:
+                for mat in source_materials:
                     mat_key = sanitize(mat.name) if mat else "DefaultMaterial"
                     if mat_key not in material_mapping:
                         material_mapping[mat_key] = len(combined_materials)
@@ -234,7 +235,7 @@ def combine_objects_into_mesh(objects: List, group_name: str, context, group_typ
             mesh_data.transform(obj.matrix_world)
 
             # Remap material slots to the shared group material layout.
-            source_materials = list(mesh_data.materials)
+            source_materials = effective_materials_for_object(obj, list(mesh_data.materials))
             source_material_indices = [poly.material_index for poly in mesh_data.polygons]
             mesh_data.materials.clear()
             for mat, _ in combined_materials:

@@ -20,7 +20,7 @@ except ImportError:
     BLENDER_AVAILABLE = False
 
 from .meb_writer import BoundingInfo, write_meb_file
-from ..utils.utils import sanitize
+from ..utils import effective_materials_for_object, sanitize
 
 
 @contextmanager
@@ -153,9 +153,10 @@ def extract_mesh_data_from_blender(
         indices_by_material = []
         vertices_by_material = []
 
-        # Get material names
-        if eval_mesh.materials:
-            for mat in eval_mesh.materials:
+        # Get material names from effective object slots so OBJECT-linked materials export correctly.
+        effective_materials = effective_materials_for_object(obj, eval_mesh.materials)
+        if effective_materials:
+            for mat in effective_materials:
                 if mat:
                     material_names.append(sanitize(mat.name))
                 else:
