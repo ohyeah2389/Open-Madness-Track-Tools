@@ -1,8 +1,9 @@
 {
-  "accentColor": "#c81e1e",
+  "accentColor": "#0080ff",
   "interfaceFontFamily": "",
   "textFontFamily": "",
   "baseFontSize": 14,
   "showViewHeader": true,
-  "showRibbon": false
+  "showRibbon": false,
+  "monospaceFontFamily": "Monaspace Neon Var"
 }

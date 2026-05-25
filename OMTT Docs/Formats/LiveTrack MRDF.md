@@ -21,16 +21,12 @@ Contains the following channels:
 		* 7. Unseen
 * mask
 	* Areas with data
-
 ## File Format
-
 MRDF container with 3 sections:
 * PRIMARY_DATA (0x01) - grid metadata, cell data, row offset table
 * POINTER_RELOCATION (0x10) - pointers the game needs to relocate at runtime
 * RASTER_CELLS (0x50) - material type definitions
-
 ## PRIMARY_DATA Section
-
 Grid metadata header is 0x70 bytes:
 * 0x00: 8 bytes header prefix
 * 0x08: 4 floats for world bounds (min_x, min_y, max_x, max_y)
@@ -51,17 +47,13 @@ Cell data is 6 bytes per cell, sorted by Y then X:
 * uint8 surface flags
 
 Row offset table has (height + 1) uint32 entries, each pointing to first cell in that row
-
 ## RASTER_CELLS Section
-
 Material type definitions
 * Material types (0-15) stored in cell surface flags (bits 2-5)
 * Format: [material_type (uint32), property_value (float)] repeated, then total_count (uint32)
 * Example from stock files: Material 3 has 3 properties [0.01608, 0.0, 0.0]
 * Exact property meanings are unknown
-
 ## Initialization Cells
-
 Game expects these cells at specific indices:
 * Index 0: X=112, Y=0 (init marker)
 * Index 1: X=0, Y=1 (calibration with friction?)

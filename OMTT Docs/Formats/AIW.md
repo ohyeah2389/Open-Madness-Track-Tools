@@ -1,4 +1,5 @@
 AIW files define the AI waypoints, garage and pit spots, standing and rolling start spawn points, and other info about the track pertaining to AI drivers.
+The format of the AIW file is very similar to the formats used in Automobilista 1, rFactor 2, and other ISI-derived games, with some distinct differences.
 Waypoints should be spaced at least 3m apart; narrower spacing may result in jittery and overly cautions AI tracking.
 Corners must be assigned or the AI won't know when and where to slow down, resulting in them voluntarily flinging themselves off the track.
 

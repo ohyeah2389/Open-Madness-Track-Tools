@@ -1,5 +1,6 @@
-The CSM format contains the physical mesh data for each track. It is a simple wrapper around one or more PhysX 3.3.4 "cooked" triangle meshes. The header of the file is the version number of the CSM (1 or 330 are the only valid values, 330 used in the toolkit cooker), then each mesh chunk consists of the size of the chunk, the PhysX cooked triangle mesh, and the material index for the chunk.
-
+The CSM format contains the physical mesh data for each track. It is a simple wrapper around one or more PhysX 3.3.4 "cooked" triangle meshes. 
+The header of the file is the version number of the CSM (1 or 330 are the only valid values, 330 used in the toolkit cooker), then each mesh chunk consists of the size of the chunk, the PhysX cooked triangle mesh, and the material index for the chunk.
+The material index names should be self-explanatory except for odd ones like `ORION_ONLY` which have an unknown purpose.
 ## Material Indices
 
 1. ROADS

@@ -1,3 +1,5 @@
+The GCL file stores two datasets: the legal track area to define track cuts as a triangulated two-dimensional mesh (height data is stored, but all datasets appear with the same height for every vertex), and a seemingly LiveTrack-related dataset consisting of three different levels of "cells" which, if they overlap any triangles, contain index references to those triangles. 
+
 Path: `/tracks/trackname/track_cut/trackname.gcl`
 
 Format:

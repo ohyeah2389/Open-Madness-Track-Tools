@@ -1,4 +1,6 @@
-The MEB (Mesh Binary) format is the Madness engine's proprietary model format for non-instanced meshes. (Instanced meshes use their own, slightly different model format, IMB.) They support storing vertex colors, tangents/bitangents, and 6 UV and 2 UVW maps (max seen so far).
+The MEB (Mesh Binary) format is the Madness engine's proprietary model format for non-instanced meshes.
+Instanced meshes use their own, slightly different model format, IMB, which is very similar.
+They support storing vertex colors, tangents/bitangents, and 6 UV and 2 UVW maps (max seen so far).
 
 The files are chunked into sections with the following magic numbers:
 - Vertex positions
@@ -20,7 +22,7 @@ The files are chunked into sections with the following magic numbers:
 - UVW maps
 	- 02 00 00 00, 03 00 00 00, (00 - 01) 00 00 00
 
-The vertex positions can be "encrypted" through a transposition of the X coordinate. Further details will not be given.
+The vertex positions can be "encrypted" through a transposition of the X coordinate. Further details about this will not be given.
 ### Track Modeling Info
 MEB files defining the track surface need to contain extra information for certain visual attributes to work properly. This consists of a certain arrangement of UV maps and vertex colors.
 #### File name:
