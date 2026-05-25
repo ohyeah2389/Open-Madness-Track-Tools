@@ -5,25 +5,17 @@ A command-line tool that converts OBJ (Wavefront) mesh files into the Madness en
 ## System requirements
 
 - **OS**: Windows 10 or later (64-bit)
-- **Shell**: MSYS2 (for `build.sh`)
-- **Compiler**: Clang (clang++) targeting `x86_64-pc-windows-msvc` — **must be the standalone LLVM Windows installer**, not the MSYS2 clang64/ucrt64/mingw64 packages (those target the MinGW ABI and cannot link MSVC `.lib` files)
-- **Build system**: CMake 3.20 or later
+- **Shell**: PowerShell 7 (`pwsh`)
+- **Compiler**: Clang (clang++) targeting `x86_64-pc-windows-msvc` from the standalone LLVM Windows installer
+- **Build system**: CMake 3.20+ and Ninja
 - **Dependencies**:
   - NVIDIA PhysX SDK 3.3.4 (vc14win64 build)
 
 ## Setup
 
-### 1. Install MSYS2
+### 1. Install the standalone LLVM Windows toolchain
 
-Download and install MSYS2 from https://www.msys2.org/. The `build.sh` script must be run from an MSYS2 terminal. You also need `make` from MSYS2:
-
-```
-pacman -S make
-```
-
-### 2. Install the standalone LLVM Windows toolchain
-
-> **Important:** Do *not* use the MSYS2 `clang64`, `ucrt64`, or `mingw64` clang packages. Those target the MinGW ABI (`x86_64-w64-windows-gnu`) and cannot link against PhysX 3.3.4's MSVC-ABI `.lib` files.
+> **Important:** Do not use MinGW-ABI clang toolchains (`x86_64-w64-windows-gnu`). PhysX 3.3.4 `vc14win64` libraries require MSVC ABI (`x86_64-pc-windows-msvc`).
 
 Download and install the standalone LLVM Windows installer from:
 
@@ -33,15 +25,19 @@ https://github.com/llvm/llvm-project/releases
 
 Look for the file named `LLVM-<version>-win64.exe`. The default install path is `C:\Program Files\LLVM`. Its `clang++` targets `x86_64-pc-windows-msvc` and can link MSVC-built static libraries directly.
 
-After installing, either add `C:\Program Files\LLVM\bin` to your Windows `PATH`, or set the `LLVM_PATH` environment variable before running `build.sh`:
+After installing, add `C:\Program Files\LLVM\bin` to PATH or set `LLVM_PATH`.
 
-```
-export LLVM_PATH="C:/Program Files/LLVM"
-```
-
-### 3. Install CMake
+### 2. Install CMake
 
 CMake can be installed via the official installer (https://cmake.org/download/). The system-wide installer is recommended as it adds `cmake` to your PATH automatically.
+
+### 3. Install Ninja
+
+Install Ninja (recommended):
+
+```
+winget install --id Ninja-build.Ninja -e
+```
 
 ### 4. Install the Windows SDK
 
@@ -56,21 +52,21 @@ Download the PhysX 3.3.4 SDK and install or extract it so that the following pat
 <SDK root>\Lib\vc14win64\PhysX3DEBUG_x64.lib
 ```
 
-Set the `PHYSX_SDK_PATH` environment variable to the SDK root, for example (in your MSYS2 `~/.bashrc`):
+Set the `PHYSX_SDK_PATH` environment variable to the SDK root, for example:
 
 ```
-export PHYSX_SDK_PATH="C:/PhysX3.3.4"
+$env:PHYSX_SDK_PATH = "C:/PhysX3.3.4"
 ```
 
 
 
 ## Building
 
-Navigate to the `PhysicsMeshCooker` directory and run `build.sh`:
+Navigate to the `PhysicsMeshCooker` directory and run `build.ps1`:
 
 ```
 cd PhysicsMeshCooker
-bash build.sh
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
 The script will locate `clang++` and `cmake` automatically, configure the project, and produce the executable at:
@@ -79,32 +75,41 @@ The script will locate `clang++` and `cmake` automatically, configure the projec
 build/PhysicsMeshCooker.exe
 ```
 
+### VSCode / Cursor
+
+The workspace is configured to use editor features only (no auto-CMake configure) and provides explicit tasks that call `build.ps1`:
+
+- `PhysicsMeshCooker: Build (Debug)` (default build task / `Ctrl+Shift+B`)
+- `PhysicsMeshCooker: Clean + Build (Debug)`
+- `PhysicsMeshCooker: Build (Release)`
+
 ### Build options
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-r` / `--release` | Build in Release mode | Debug |
-| `-p` / `--physx PATH` | Path to PhysX 3.3.4 SDK root | `$PHYSX_SDK_PATH` or `C:/PhysX3.3.4` |
-| `-j` / `--jobs N` | Number of parallel compile jobs | CPU count |
-| `-c` / `--clean` | Delete the `build/` directory before configuring | off |
-| `-h` / `--help` | Show usage information | — |
+| `-Release` | Build in Release mode | Debug |
+| `-PhysxSdkPath <path>` | Path to PhysX 3.3.4 SDK root | `$env:PHYSX_SDK_PATH` or `C:/PhysX3.3.4` |
+| `-Jobs <n>` | Number of parallel compile jobs | CPU count |
+| `-Clean` | Delete the `build/` directory before configuring | off |
+
+> Note: `-Release` enables release compile flags for this project, but PhysX 3.3.4 `vc14win64` only provides `DEBUG`-suffixed libraries, so those are linked in all configurations.
 
 | Environment variable | Description |
 |----------------------|-------------|
-| `PHYSX_SDK_PATH` | PhysX 3.3.4 SDK root (equivalent to `--physx`) |
+| `PHYSX_SDK_PATH` | PhysX 3.3.4 SDK root (default for `-PhysxSdkPath`) |
 | `LLVM_PATH` | Root of the standalone LLVM installation (e.g. `C:/Program Files/LLVM`) |
 
 Examples:
 
 ```
 # Debug build (default)
-bash build.sh
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 # Release build with a custom PhysX path
-bash build.sh --release --physx D:/SDKs/PhysX3.3.4
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -Release -PhysxSdkPath D:/SDKs/PhysX3.3.4
 
 # Clean release build using 8 parallel jobs
-bash build.sh --clean --release --jobs 8
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -Clean -Release -Jobs 8
 ```
 
 ### Manual CMake invocation
@@ -112,14 +117,16 @@ bash build.sh --clean --release --jobs 8
 If you prefer to drive CMake directly:
 
 ```
-cmake -S . -B build \
-      -G "Unix Makefiles" \
-      -DCMAKE_BUILD_TYPE=Debug \
-      -DCMAKE_CXX_COMPILER=clang++ \
-      -DPHYSX_SDK_PATH="C:/PhysX3.3.4" \
+cmake -S . -B build `
+      -G Ninja `
+      -DCMAKE_BUILD_TYPE=Debug `
+      -DCMAKE_CXX_COMPILER="C:/Program Files/LLVM/bin/clang++.exe" `
+      -DCMAKE_MAKE_PROGRAM="ninja" `
+      -DCMAKE_RC_COMPILER="C:/Program Files (x86)/Windows Kits/10/bin/10.0.26100.0/x64/rc.exe" `
+      -DPHYSX_SDK_PATH="C:/PhysX3.3.4" `
       -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-cmake --build build -- -j4
+cmake --build build --config Debug -- -j4
 ```
 
 ## Usage
@@ -136,8 +143,10 @@ PhysicsMeshCooker.exe <input.obj> <output.csm>
 Example:
 
 ```
-./build/PhysicsMeshCooker.exe my_track.obj my_track.csm
+build/PhysicsMeshCooker.exe my_track.obj my_track.csm
 ```
+
+If DLL resolution fails when running from another directory, run from `PhysicsMeshCooker/build` or ensure that directory is on `PATH`.
 
 ### Material mapping
 
@@ -169,17 +178,14 @@ The CSM file has the following binary layout:
 
 ## IntelliSense / clangd
 
-After the first build, a `compile_commands.json` is generated in the `build/` directory. The `.clangd` file at the project root is configured to read from that directory, so clangd will pick up the correct include paths and flags automatically.
+After the first configure/build, `compile_commands.json` is generated in `build/`. The `.clangd` file points clangd at that compile database (`CompileDatabase: build`), so include paths and flags come from the real CMake build.
 
-If you haven't built yet, `.clangd` includes a `CompileFlags` fallback that points at `C:/PhysX3.3.4/Include` directly, so IntelliSense will still work before the first build.
+If you have not configured yet, run one build first so clangd has a compile database to read.
 
 ## Troubleshooting
 
-**`clang++ not found` / `No MSVC-ABI clang++ found`**
-Install the standalone LLVM Windows toolchain from https://github.com/llvm/llvm-project/releases (the file named `LLVM-<version>-win64.exe`). Do *not* use the MSYS2 clang64 package — it targets the MinGW ABI and cannot link PhysX `.lib` files.
-
-**`clang++ targets windows-gnu (MinGW ABI)`**
-The MSYS2 clang64/ucrt64/mingw64 `clang++` was found instead of the standalone LLVM installer. Either add `C:\Program Files\LLVM\bin` to the front of your PATH, or set `LLVM_PATH` before running the script: `export LLVM_PATH="C:/Program Files/LLVM"`.
+**`clang++ not found` / wrong target ABI**
+Install the standalone LLVM Windows toolchain from https://github.com/llvm/llvm-project/releases (`LLVM-<version>-win64.exe`), then put `C:\Program Files\LLVM\bin` on PATH or set `LLVM_PATH`.
 
 **`PxPhysicsAPI.h not found`**
 Verify `PHYSX_SDK_PATH` points to the root of the PhysX 3.3.4 installation and that `$PHYSX_SDK_PATH/Include/PxPhysicsAPI.h` exists.
