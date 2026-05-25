@@ -56,6 +56,13 @@ class _OriginalMeshBinding:
     mesh_name: str
 
 
+@dataclass
+class SingleMebExportSettings:
+    export_scope: str = "SELECTED"
+    transform_mode: str = "APPLY"
+    export_textures: bool = False
+
+
 def _build_maybe_overridden_options(obj, resource_prefix: str) -> MeshExportOptions:
     """Build MEB export options from object settings."""
     options = MeshExportOptions(
@@ -375,6 +382,146 @@ def _curve_to_temp_mesh_object(curve_obj, context):
             temp_obj.data.materials.append(mat)
 
     return temp_obj
+
+
+def _collect_single_meb_export_entries(context, export_scope: str):
+    if export_scope == "ALL":
+        source_objects = list(iter_visible_scene_objects(context.view_layer))
+    else:
+        source_objects = list(context.selected_objects)
+
+    export_entries = []
+    skipped_objects = []
+    temp_objects_to_cleanup = []
+    for obj in source_objects:
+        if is_temp_export_datablock(obj) or has_temp_export_name(obj):
+            temp_objects_to_cleanup.append(obj)
+            continue
+        if obj.type == "MESH":
+            if obj.data and obj.data.polygons:
+                export_entries.append((obj, obj.name))
+            else:
+                skipped_objects.append(f"{obj.name} (empty mesh)")
+            continue
+        if obj.type != "CURVE":
+            skipped_objects.append(f"{obj.name} ({obj.type})")
+            continue
+        if obj.data.bevel_depth <= 0:
+            skipped_objects.append(f"{obj.name} (curve without bevel depth)")
+            continue
+        temp_curve_mesh = _curve_to_temp_mesh_object(obj, context)
+        if not temp_curve_mesh:
+            print(f"Skipping {obj.name} - curve could not be converted to mesh")
+            skipped_objects.append(f"{obj.name} (curve conversion failed)")
+            continue
+        temp_objects_to_cleanup.append(temp_curve_mesh)
+        export_entries.append((temp_curve_mesh, obj.name))
+    return export_entries, temp_objects_to_cleanup, skipped_objects
+
+
+def export_single_meb_set(
+    filepath: str,
+    context,
+    settings: SingleMebExportSettings,
+):
+    output_path = Path(filepath)
+    output_dir = output_path.parent
+    output_dir.mkdir(parents=True, exist_ok=True)
+    track_name = output_dir.name if output_dir.name else output_path.stem
+    mesh_validation_issues = []
+    exported_count = 0
+    all_materials = []
+
+    original_selection = context.selected_objects[:]
+    original_active = context.active_object
+    original_mesh_bindings = _snapshot_original_mesh_bindings()
+
+    try:
+        export_entries, temp_objects_to_cleanup, skipped_objects = _collect_single_meb_export_entries(
+            context, settings.export_scope
+        )
+        print(
+            f"Single MEB export: {len(export_entries)} object(s), "
+            f"scope={settings.export_scope}, transform_mode={settings.transform_mode}"
+        )
+        if export_entries:
+            source_objects = [obj for obj, _ in export_entries]
+            bake_world_transform = settings.transform_mode == "APPLY"
+            combined_obj, _, _ = combine_objects_into_mesh(
+                source_objects,
+                output_path.stem,
+                context,
+                "SINGLE_MEB",
+                bake_world_transform=bake_world_transform,
+            )
+            if combined_obj:
+                temp_objects_to_cleanup.append(combined_obj)
+                options = _build_maybe_overridden_options(combined_obj, "")
+                options.vertex_transform_mode = "NONE"
+                # Standalone MEB should still use standard MEB axis conversion.
+                options.flip_coordinates = False
+                meb_path = output_path.with_suffix(".meb")
+                mesh_name = sanitize(output_path.stem)
+                extracted_data = extract_mesh_data_from_blender(combined_obj, options)
+                materials = extracted_data[4]
+                validation_issue, skip_export = _validate_extracted_mesh(mesh_name, extracted_data)
+                if validation_issue:
+                    mesh_validation_issues.append(validation_issue)
+                if not skip_export:
+                    _write_meb_from_extracted(meb_path, mesh_name, options, extracted_data)
+                    exported_count = 1
+                    all_materials.extend(materials)
+                    print(f"Successfully exported combined mesh -> {meb_path.name}")
+                else:
+                    print("Skipping combined MEB export due to vertex limit")
+
+        unique_materials = sorted(set(all_materials))
+        if unique_materials:
+            texture_mapping = {}
+            if settings.export_textures:
+                texture_export_dir = determine_texture_export_path(output_dir, track_name)
+                texture_mapping = prepare_texture_mapping(
+                    unique_materials, output_dir, texture_export_dir, track_name, context
+                )
+            prepare_mtx_files_from_materials(
+                unique_materials,
+                output_dir,
+                context,
+                track_name=track_name,
+                texture_mapping=texture_mapping,
+            )
+            if settings.export_textures and texture_mapping:
+                export_textures(texture_mapping, texture_export_dir)
+            print(f"Generated {len(unique_materials)} MTX file(s)")
+
+    finally:
+        _restore_original_mesh_bindings(original_mesh_bindings)
+        if "temp_objects_to_cleanup" in locals() and temp_objects_to_cleanup:
+            _remove_temp_export_data(temp_objects_to_cleanup)
+
+        bpy.ops.object.select_all(action="DESELECT")
+        for obj in original_selection:
+            if obj.name in bpy.data.objects:
+                obj.select_set(True)
+        if original_active and original_active.name in bpy.data.objects:
+            context.view_layer.objects.active = original_active
+
+    mesh_validation_summary = {
+        "meshes": len(mesh_validation_issues),
+        "issues": sum(len(item.issues) for item in mesh_validation_issues),
+        "details": [
+            {"mesh": item.mesh, "issues": item.issues}
+            for item in mesh_validation_issues
+        ],
+    }
+    return {
+        "status": "FINISHED",
+        "exported": exported_count,
+        "materials": len(sorted(set(all_materials))),
+        "skipped_objects": len(skipped_objects) if "skipped_objects" in locals() else 0,
+        "skipped_object_names": skipped_objects[:10] if "skipped_objects" in locals() else [],
+        "mesh_warnings": mesh_validation_summary,
+    }
 
 
 def export_objects_to_meb(

@@ -50,6 +50,7 @@ class MeshExportOptions:
 
     # Coordinate system
     flip_coordinates: bool = False
+    vertex_transform_mode: str = "SCALE_ONLY"
 
     # UV maps (indices into the mesh's UV layers)
     uv_map_indices: List[int] = field(default_factory=list)
@@ -100,10 +101,15 @@ def extract_mesh_data_from_blender(
         eval_mesh = eval_obj.to_mesh()
 
     try:
-        # Apply ONLY scale to mesh vertices (rotation/location stay in SGX transform)
-        # Extract scale from the world matrix
-        scale_matrix = mathutils.Matrix.Diagonal(obj.matrix_world.to_scale()).to_4x4()
-        eval_mesh.transform(scale_matrix)
+        # Control how object transforms are baked into exported vertices.
+        if options.vertex_transform_mode == "WORLD":
+            eval_mesh.transform(obj.matrix_world)
+        elif options.vertex_transform_mode == "NONE":
+            pass
+        else:
+            # Default: apply only scale (rotation/location stay in SGX transform).
+            scale_matrix = mathutils.Matrix.Diagonal(obj.matrix_world.to_scale()).to_4x4()
+            eval_mesh.transform(scale_matrix)
 
         # Use Blender's cached loop triangles instead of always triangulating with bmesh.
         eval_mesh.calc_loop_triangles()

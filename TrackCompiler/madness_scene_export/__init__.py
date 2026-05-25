@@ -10,7 +10,7 @@ bl_info = {
 }
 
 import bpy  # type: ignore
-from bpy.props import StringProperty, BoolProperty, FloatProperty  # type: ignore
+from bpy.props import StringProperty, BoolProperty, FloatProperty, EnumProperty  # type: ignore
 from bpy_extras.io_utils import ExportHelper  # type: ignore
 from pathlib import Path
 from .settings import meb_export_settings
@@ -29,7 +29,11 @@ from .properties import dynamic_properties
 from .ui import dynamic_ui
 from .properties import sound_properties
 from .ui import sound_ui
-from .export.exporter import export_madness_scene
+from .export.exporter import (
+    export_madness_scene,
+    export_single_meb_set,
+    SingleMebExportSettings,
+)
 from .export.environment_export import export_environment_xml
 from .export.lights_export import export_lights_sgx
 from .export.dynamic_export import export_dynamic_objects
@@ -162,6 +166,102 @@ class MadnessEnvironmentExporter(bpy.types.Operator, ExportHelper):
             return {"FINISHED"}
         except Exception as e:
             self.report({"ERROR"}, f"Environment XML export failed: {str(e)}")
+            return {"CANCELLED"}
+
+
+class MadnessSingleMebExporter(bpy.types.Operator, ExportHelper):
+    """Export standalone MEB mesh files (and matching MTX files)"""
+
+    bl_idname = "export_scene.madness_single_meb"
+    bl_label = "Export Single MEB"
+
+    filename_ext = ".meb"
+
+    filter_glob: StringProperty(
+        default="*.meb",
+        options={"HIDDEN"},
+        maxlen=255,
+    )  # type: ignore
+
+    export_scope: EnumProperty(
+        name="Objects",
+        description="Choose whether to export selected objects or all visible scene objects",
+        items=[
+            ("SELECTED", "Export Selected", "Export selected mesh objects"),
+            ("ALL", "Export All", "Export all visible mesh objects"),
+        ],
+        default="SELECTED",
+    )  # type: ignore
+
+    transform_mode: EnumProperty(
+        name="Transform Handling",
+        description="Choose whether to bake object transforms into vertices",
+        items=[
+            ("APPLY", "Apply Transforms", "Bake transforms into exported vertices"),
+            ("RESET", "Reset Transforms", "Export vertices in object-local space"),
+        ],
+        default="APPLY",
+    )  # type: ignore
+
+    export_textures: BoolProperty(
+        name="Copy Textures",
+        description=(
+            "Copy referenced textures to the game scaffold textures folder "
+            "(same behavior/path logic as Scene Graph export)"
+        ),
+        default=False,
+    )  # type: ignore
+
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(self, "export_scope")
+        layout.prop(self, "transform_mode")
+        layout.prop(self, "export_textures")
+
+    def execute(self, context):
+        try:
+            settings = SingleMebExportSettings(
+                export_scope=self.export_scope,
+                transform_mode=self.transform_mode,
+                export_textures=self.export_textures,
+            )
+            result = export_single_meb_set(
+                filepath=self.filepath,
+                context=context,
+                settings=settings,
+            )
+
+            exported_count = int(result.get("exported", 0))
+            material_count = int(result.get("materials", 0))
+            self.report(
+                {"INFO"},
+                f"Single MEB export finished: {exported_count} file, {material_count} MTX material(s)",
+            )
+            skipped_count = int(result.get("skipped_objects", 0))
+            if skipped_count:
+                skipped_names = ", ".join(result.get("skipped_object_names", []))
+                self.report(
+                    {"WARNING"},
+                    f"Skipped {skipped_count} non-exportable object(s): {skipped_names}",
+                )
+
+            mesh_warnings = result.get("mesh_warnings", {}) if isinstance(result, dict) else {}
+            mesh_count = int(mesh_warnings.get("meshes", 0))
+            issue_count = int(mesh_warnings.get("issues", 0))
+            if mesh_count or issue_count:
+                self.report(
+                    {"WARNING"},
+                    f"Mesh validation warnings: {issue_count} issue(s) across {mesh_count} mesh(es)",
+                )
+                for detail in mesh_warnings.get("details", []):
+                    issues = "; ".join(detail.get("issues", []))
+                    self.report(
+                        {"WARNING"},
+                        f"{detail.get('mesh', '<unknown mesh>')} | {issues}",
+                    )
+            return {"FINISHED"}
+        except Exception as e:
+            self.report({"ERROR"}, f"Single MEB export failed: {str(e)}")
             return {"CANCELLED"}
 
 
@@ -369,6 +469,9 @@ def menu_func_export(self, context):
         MadnessEnvironmentExporter.bl_idname, text="Madness Cameras (.xml)"
     )
     self.layout.operator(
+        MadnessSingleMebExporter.bl_idname, text="Madness Single MEB (.meb + .mtx)"
+    )
+    self.layout.operator(
         MadnessLightsExporter.bl_idname, text="Madness Lights (_lights.sgx)"
     )
     self.layout.operator(
@@ -406,6 +509,7 @@ def register():
         MadnessSceneExporterPreferences,
         MadnessSceneExporter,
         MadnessEnvironmentExporter,
+        MadnessSingleMebExporter,
         MadnessLightsExporter,
         MadnessGclExporter,
         MadnessDynamicObjectsExporter,
@@ -430,6 +534,7 @@ def unregister():
         MadnessSoundExporter,
         MadnessDynamicObjectsExporter,
         MadnessLightsExporter,
+        MadnessSingleMebExporter,
         MadnessEnvironmentExporter,
         MadnessSceneExporter,
         MadnessGclExporter,

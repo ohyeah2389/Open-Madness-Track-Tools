@@ -181,7 +181,13 @@ def parse_sms_group(obj_name: str) -> str:
     return match.group(1) if match else ""
 
 
-def combine_objects_into_mesh(objects: List, group_name: str, context, group_type: str = "KSTREE_GROUP") -> Tuple:
+def combine_objects_into_mesh(
+    objects: List,
+    group_name: str,
+    context,
+    group_type: str = "KSTREE_GROUP",
+    bake_world_transform: bool = True,
+) -> Tuple:
     """Combine multiple objects into a single temporary mesh object using fast join operations.
 
     Returns: (combined_object, combined_materials, combined_transform_data)
@@ -231,8 +237,9 @@ def combine_objects_into_mesh(objects: List, group_name: str, context, group_typ
                 continue
             tag_temp_export_datablock(mesh_data)
 
-            # Bake world transform into vertex positions so merged object can stay at identity.
-            mesh_data.transform(obj.matrix_world)
+            if bake_world_transform:
+                # Bake world transform into vertex positions so merged object can stay at identity.
+                mesh_data.transform(obj.matrix_world)
 
             # Remap material slots to the shared group material layout.
             source_materials = effective_materials_for_object(obj, list(mesh_data.materials))
