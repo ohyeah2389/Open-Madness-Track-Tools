@@ -24,11 +24,11 @@ struct RawMesh
     }
 };
 
-//  OBJ loader that preserves groups / objects
+// OBJ loader that preserves groups/objects
 struct ObjGroup
 {
     std::string name;
-    std::vector<PxU32> indices; // indices into the *global* vert list
+    std::vector<PxU32> indices; // indices into the global vert list
 };
 
 static bool loadOBJGroups(const char *path, std::vector<PxVec3> &verts, std::vector<ObjGroup> &groups, bool fixRotation)
@@ -62,7 +62,7 @@ static bool loadOBJGroups(const char *path, std::vector<PxVec3> &verts, std::vec
                 z = -z;
             verts.emplace_back(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z));
         }
-        else if (line.rfind("f ", 0) == 0) // polygon – triangulate
+        else if (line.rfind("f ", 0) == 0) // polygon, fan-triangulation for N-gons
         {
             char c;
             ss >> c;
@@ -120,16 +120,13 @@ static bool dump(const std::string &path, const std::vector<uint8_t> &data, bool
     return true;
 }
 
-// ----------------------------------------------------------------------------
-//  Terrain Material Lookup Table
-// ----------------------------------------------------------------------------
+// Terrain material lookup table
 struct MaterialMapping
 {
     std::string name;
     uint32_t index;
 };
 
-// Material lookup table based on terrainpool_materials.txt
 // Ordered by length (longest first) to avoid false matches
 static const std::vector<MaterialMapping> TERRAIN_MATERIALS = {
     {"PAINTCRETE_ILLEGAL", 49}, {"PCRETE_ILLEGAL", 49}, {"RDGREEN", 49},
@@ -186,7 +183,7 @@ static const std::vector<MaterialMapping> TERRAIN_MATERIALS = {
     {"DIRT", 17}
 };
 
-// Function to get material index from object name
+// Get material index from object name
 static uint32_t getMaterialIndex(const std::string &objectName)
 {
     // Convert to uppercase for case-insensitive matching
@@ -197,7 +194,8 @@ static uint32_t getMaterialIndex(const std::string &objectName)
     for (const auto &material : TERRAIN_MATERIALS)
     {
         if (upperName.find(material.name) == 0)
-        { // Check if name starts with material name
+        {
+            // Check if name starts with material name
             return material.index;
         }
     }
@@ -226,9 +224,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    /* ------------------------------------------------------------------ */
-    /*  PhysX initialisation (foundation, physics, cooking)               */
-    /* ------------------------------------------------------------------ */
+    // PhysX initialisation (foundation, physics, cooking)
     std::cout << "Initializing PhysX..." << std::endl;
 
     static PxDefaultErrorCallback gErrorCallback;
@@ -265,9 +261,7 @@ int main(int argc, char **argv)
 
     std::cout << "PhysX initialized successfully" << std::endl;
 
-    /* ------------------------------------------------------------------ */
-    /*  Build & cook one mesh per OBJ group                               */
-    /* ------------------------------------------------------------------ */
+    // Build & cook one mesh per OBJ group
     std::vector<std::vector<uint8_t>> chunks; // Store all chunks before writing
     size_t grpId = 0;
 
@@ -279,12 +273,13 @@ int main(int argc, char **argv)
             continue;
         }
 
-        // ----- compact vertices for this group -------------------------
+        // Compact the vertices for this group
         RawMesh raw;
         std::vector<PxU32> remap(globalVerts.size(), UINT32_MAX);
 
-        // Preserve all vertices
+        // Preserve all vertices?
         bool preserveAllVertices = true;
+
         if (preserveAllVertices)
         {
             // Include all vertices from the group's vertex range
@@ -330,8 +325,8 @@ int main(int argc, char **argv)
         }
 
         // Validate that cooking preserved vertex and triangle counts
-        std::cout << "  Input: " << desc.points.count << " vertices, " << desc.triangles.count << " triangles\n";
-        std::cout << "  Cooked size: " << cooked.getSize() << " bytes\n";
+        std::cout << "Input: " << desc.points.count << " vertices, " << desc.triangles.count << " triangles\n";
+        std::cout << "Cooked size: " << cooked.getSize() << " bytes\n";
 
         // Get material index from group name
         uint32_t materialIndex = getMaterialIndex(grp.name);
@@ -353,7 +348,7 @@ int main(int argc, char **argv)
 
         chunks.push_back(std::move(chunk));
 
-        std::cout << "  cooked group " << grpId << " (" << grp.name << ") : " << raw.verts.size() << " verts, " << desc.triangles.count << " tris, material: " << materialIndex << "\n";
+        std::cout << "Cooked group " << grpId << " (" << grp.name << ") : " << raw.verts.size() << " verts, " << desc.triangles.count << " tris, material: " << materialIndex << "\n";
         ++grpId;
     }
 
@@ -374,9 +369,7 @@ int main(int argc, char **argv)
             return 1;
     }
 
-    /* ------------------------------------------------------------------ */
-    /*  tidy up                                                           */
-    /* ------------------------------------------------------------------ */
+    // Tidy up
     cooking->release();
     physics->release();
     foundation->release();
