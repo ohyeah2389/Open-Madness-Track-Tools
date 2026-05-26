@@ -333,6 +333,7 @@ def write_meb_file(
     disable_materials: bool = False,
     bodywork_data: bool = False,
     w_sections: Optional[List[Tuple[int, int]]] = None,  # List of (uv_layer_idx, w_section_type)
+    log_prefix: str = "",
 ) -> BoundingInfo:
     """Write a complete MEB file.
     
@@ -353,6 +354,7 @@ def write_meb_file(
         disable_materials: If True, don't write material data
         bodywork_data: If True, write bodywork section
         w_sections: Optional list of UV layers to write as UVW instead of UV
+        log_prefix: Optional mesh label used to prefix log output
     
     Returns:
         BoundingInfo for the entire mesh
@@ -390,7 +392,17 @@ def write_meb_file(
     # NOTE: W sections don't add extra params - they're just UV layers with W component
     # The param count is based on SECTIONS written, not data format
     
-    print(f"  MEB param count: {param_count} (base 3 + {len(uv_layers)} UV + {2 if tangents is not None else 0} tangent space + {1 if bodywork_data else 0} bodywork)")
+    total_param_count = 3 + param_count
+    log_message = (
+        "MEB vertex params: "
+        f"additional={param_count}, total={total_param_count} "
+        f"(base=3, uv={len(uv_layers)}, tangent={2 if tangents is not None else 0}, "
+        f"bodywork={1 if bodywork_data else 0})"
+    )
+    if log_prefix:
+        print(f"[{log_prefix}] {log_message}")
+    else:
+        print(log_message)
     
     # Check color alpha usage
     has_alpha = bool(np.any(colors[:, 3] != 1.0)) if colors.shape[1] >= 4 else False

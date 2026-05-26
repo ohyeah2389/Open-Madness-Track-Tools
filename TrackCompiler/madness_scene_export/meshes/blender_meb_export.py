@@ -66,7 +66,8 @@ class MeshExportOptions:
 
 def extract_mesh_data_from_blender(
     obj,
-    options: MeshExportOptions
+    options: MeshExportOptions,
+    log_prefix: str = "",
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, List[Tuple[int, np.ndarray]],
            List[str], List[np.ndarray], List[np.ndarray],
            Optional[np.ndarray], Optional[np.ndarray], List[str]]:
@@ -75,6 +76,7 @@ def extract_mesh_data_from_blender(
     Args:
         obj: Blender mesh object
         options: Export options
+        log_prefix: Optional mesh label used to prefix log output
 
     Returns:
         Tuple of:
@@ -89,8 +91,15 @@ def extract_mesh_data_from_blender(
         - bitangents (optional Nx3)
         - repair_notes (list of mesh repair warning strings)
     """
+
     if not BLENDER_AVAILABLE:
         raise RuntimeError("Blender is not available")
+
+    def _log(message: str):
+        if log_prefix:
+            print(f"[{log_prefix}] {message}")
+        else:
+            print(message)
 
     # Ensure we're working with a mesh
     if obj.type != 'MESH':
@@ -121,7 +130,7 @@ def extract_mesh_data_from_blender(
         if options.generate_tangent_space and len(eval_mesh.uv_layers) > 0:
             has_ngons = any(poly.loop_total > 4 for poly in eval_mesh.polygons)
             if has_ngons:
-                print(f"  Warning: Tangent calc needs tris/quads on {obj.name}; triangulating fallback...")
+                _log(f"Warning: Tangent calc needs tris/quads on {obj.name}; triangulating fallback...")
                 bm = bmesh.new()
                 bm.from_mesh(eval_mesh)
                 bmesh.ops.triangulate(bm, faces=bm.faces)
@@ -212,8 +221,8 @@ def extract_mesh_data_from_blender(
         if np.any(degenerate_mask):
             kept_mask = ~degenerate_mask
             degenerate_total = int(np.count_nonzero(degenerate_mask))
-            print(
-                f"  Warning: {obj.name} original mesh has {degenerate_total} degenerate triangle(s); "
+            _log(
+                f"Warning: {obj.name} original mesh has {degenerate_total} degenerate triangle(s); "
                 "repairing by removing them for export"
             )
             repaired_material_indices = tri_material_indices[degenerate_mask]
@@ -226,7 +235,7 @@ def extract_mesh_data_from_blender(
                         "removed during export repair"
                     )
                     repair_notes.append(note)
-                    print(f"    - {note}")
+                    _log(f"  - {note}")
 
             tri_loop_indices = tri_loop_indices[kept_mask]
             tri_material_indices = tri_material_indices[kept_mask]
@@ -320,9 +329,7 @@ def extract_mesh_data_from_blender(
             non_empty_vertices_by_material.append(vertices[unique_vertex_indices])
 
         if len(non_empty_material_names) != len(material_names):
-            print(
-                f"  Dropped {len(material_names) - len(non_empty_material_names)} material slot(s) with zero triangles"
-            )
+            _log(f"Dropped {len(material_names) - len(non_empty_material_names)} material slot(s) with zero triangles")
         material_names = non_empty_material_names
         indices_by_material = non_empty_indices_by_material
         vertices_by_material = non_empty_vertices_by_material
@@ -335,9 +342,13 @@ def extract_mesh_data_from_blender(
             # Store as (slot_index, uv_array) - slot_index determines which UV section header to use
             uv_layers.append((slot_idx, uv_array))
 
-        print(f"  Deduplicated {len(vertices)} unique vertices from {len(loop_indices)} loops")
-        print(f"  Export options: tangent_space={options.generate_tangent_space}, bodywork={options.bodywork_data}, UV slots={len(uv_layers)} (source layers: {uv_indices_to_export})")
-        print(f"  Returning tangents: {tangents_array is not None}, bitangents: {bitangents_array is not None}")
+        _log(f"Deduplicated {len(vertices)} unique vertices from {len(loop_indices)} loops")
+        _log(
+            "Export options: "
+            f"tangent_space={options.generate_tangent_space}, bodywork={options.bodywork_data}, "
+            f"UV slots={len(uv_layers)} (source layers: {uv_indices_to_export})"
+        )
+        _log(f"Returning tangents: {tangents_array is not None}, bitangents: {bitangents_array is not None}")
 
         return (
             vertices,
