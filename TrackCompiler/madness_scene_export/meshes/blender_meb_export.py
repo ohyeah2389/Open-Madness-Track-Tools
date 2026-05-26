@@ -54,6 +54,7 @@ class MeshExportOptions:
 
     # UV maps (indices into the mesh's UV layers)
     uv_map_indices: List[int] = field(default_factory=list)
+    skip_uv_compression: bool = False
 
     # Tangent space
     generate_tangent_space: bool = False

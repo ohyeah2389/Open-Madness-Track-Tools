@@ -89,6 +89,8 @@ def _build_maybe_overridden_options(obj, resource_prefix: str) -> MeshExportOpti
         options.bodywork_data = meb_settings.bodywork
     if hasattr(meb_settings, "disable_material"):
         options.disable_materials = meb_settings.disable_material
+    if hasattr(meb_settings, "skip_uv_compression"):
+        options.skip_uv_compression = meb_settings.skip_uv_compression
     return options
 
 
@@ -97,6 +99,12 @@ def _get_userflags(obj) -> int:
         from ..settings.meb_export_settings import get_userflags_value
         return get_userflags_value(obj.data.meb_export_settings)
     return DEFAULT_USERFLAGS
+
+
+def _get_skip_uv_compression(obj) -> bool:
+    if hasattr(obj.data, "meb_export_settings") and hasattr(obj.data.meb_export_settings, "skip_uv_compression"):
+        return bool(obj.data.meb_export_settings.skip_uv_compression)
+    return False
 
 
 def _get_group_userflags(group_name: str, group_objects: List[object]) -> int:
@@ -108,6 +116,25 @@ def _get_group_userflags(group_name: str, group_objects: List[object]) -> int:
             f"using {values[0]} from {group_objects[0].name}"
         )
     return values[0] if values else DEFAULT_USERFLAGS
+
+
+def _get_group_skip_uv_compression(group_name: str, group_objects: List[object]) -> bool:
+    values = [_get_skip_uv_compression(obj) for obj in group_objects]
+    unique_values = sorted(set(values))
+    if len(unique_values) > 1:
+        print(
+            f"  Warning: {group_name} has mixed Skip UV Compression settings; "
+            "using enabled to preserve UV precision"
+        )
+    return any(values)
+
+
+def _build_export_mesh_stem(base_name: str, skip_uv_compression: bool) -> str:
+    if not skip_uv_compression:
+        return base_name
+    if base_name.lower().endswith("_no_uv_comp"):
+        return base_name
+    return f"{base_name}_no_uv_comp"
 
 
 def _count_nonfinite(array) -> int:
@@ -309,6 +336,7 @@ def _export_single_object(
     writer_pool: ThreadPoolExecutor,
     mesh_validation_issues: List[_MeshValidationIssue],
     userflags_override: int | None = None,
+    skip_uv_compression_override: bool | None = None,
 ):
     """Queue a single object for pipelined MEB export."""
     world_matrix = obj.matrix_world.copy()
@@ -316,10 +344,20 @@ def _export_single_object(
     translation, quaternion = decompose_matrix(matrix)
     options = _build_maybe_overridden_options(obj, resource_prefix)
     userflags = _get_userflags(obj) if userflags_override is None else userflags_override
+    skip_uv_compression = (
+        options.skip_uv_compression
+        if skip_uv_compression_override is None
+        else skip_uv_compression_override
+    )
 
-    print(f"Exporting {obj_name} to MEB... (tangents={options.generate_tangent_space}, bodywork={options.bodywork_data}, UVs={options.uv_map_indices})")
-    meb_path = output_dir / f"{sanitize(obj_name)}.meb"
     sanitized_name = sanitize(obj_name)
+    export_mesh_stem = _build_export_mesh_stem(sanitized_name, skip_uv_compression)
+    print(
+        f"Exporting {obj_name} to MEB... (tangents={options.generate_tangent_space}, "
+        f"bodywork={options.bodywork_data}, UVs={options.uv_map_indices}, "
+        f"skip_uv_comp={skip_uv_compression})"
+    )
+    meb_path = output_dir / f"{export_mesh_stem}.meb"
     extracted_data = extract_mesh_data_from_blender(obj, options)
     materials = extracted_data[4]
     validation_issue, skip_export = _validate_extracted_mesh(sanitized_name, extracted_data)
@@ -460,7 +498,12 @@ def export_single_meb_set(
                 options.vertex_transform_mode = "NONE"
                 # Standalone MEB should still use standard MEB axis conversion.
                 options.flip_coordinates = False
-                meb_path = output_path.with_suffix(".meb")
+                source_objects = [obj for obj, _ in export_entries]
+                options.skip_uv_compression = _get_group_skip_uv_compression(
+                    "Single MEB export", source_objects
+                )
+                mesh_stem = _build_export_mesh_stem(output_path.stem, options.skip_uv_compression)
+                meb_path = output_path.with_name(f"{mesh_stem}.meb")
                 mesh_name = sanitize(output_path.stem)
                 extracted_data = extract_mesh_data_from_blender(combined_obj, options)
                 materials = extracted_data[4]
@@ -602,6 +645,9 @@ def export_objects_to_meb(
                     if combined_obj:
                         temp_objects_to_cleanup.append(combined_obj)
                         group_userflags = _get_group_userflags(group_name, group_objects)
+                        group_skip_uv_compression = _get_group_skip_uv_compression(
+                            group_name, group_objects
+                        )
                         _export_single_object(
                             combined_obj,
                             group_name,
@@ -611,6 +657,7 @@ def export_objects_to_meb(
                             writer_pool,
                             mesh_validation_issues,
                             userflags_override=group_userflags,
+                            skip_uv_compression_override=group_skip_uv_compression,
                         )
                         if len(pending_exports) >= max_in_flight:
                             _complete_next_pending_export(pending_exports, objects)
@@ -627,6 +674,9 @@ def export_objects_to_meb(
                     if combined_obj:
                         temp_objects_to_cleanup.append(combined_obj)
                         group_userflags = _get_group_userflags(full_group_name, group_objects)
+                        group_skip_uv_compression = _get_group_skip_uv_compression(
+                            full_group_name, group_objects
+                        )
                         _export_single_object(
                             combined_obj,
                             full_group_name,
@@ -636,6 +686,7 @@ def export_objects_to_meb(
                             writer_pool,
                             mesh_validation_issues,
                             userflags_override=group_userflags,
+                            skip_uv_compression_override=group_skip_uv_compression,
                         )
                         if len(pending_exports) >= max_in_flight:
                             _complete_next_pending_export(pending_exports, objects)

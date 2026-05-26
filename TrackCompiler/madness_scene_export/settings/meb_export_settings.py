@@ -41,6 +41,12 @@ class MEBExportSettings(bpy.types.PropertyGroup):
         default=False
     ) # type: ignore
 
+    skip_uv_compression: BoolProperty(
+        name="Skip UV Compression",
+        description="Append _no_uv_comp to exported MEB filename for this mesh",
+        default=False
+    ) # type: ignore
+
     wsection1: BoolProperty(
         name="W Section 1",
         description="Enable W section 1",
@@ -150,6 +156,9 @@ def build_meb_args(settings: MEBExportSettings) -> List[str]:
 
     if settings.bodywork:
         args.append("--bodywork")
+
+    if settings.skip_uv_compression:
+        args.append("--skip-uv-compression")
 
     if settings.wsection1:
         args.append("--wsection1")
@@ -296,6 +305,7 @@ class MEB_PT_export_settings(bpy.types.Panel):
         col.prop(settings, "disable_material")
         col.prop(settings, "tangent_space")
         col.prop(settings, "bodywork")
+        col.prop(settings, "skip_uv_compression")
 
         row = col.row()
         row.prop(settings, "wsection1")

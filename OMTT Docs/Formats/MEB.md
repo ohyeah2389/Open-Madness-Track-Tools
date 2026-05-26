@@ -26,7 +26,7 @@ The vertex positions can be "encrypted" through a transposition of the X coordin
 ### Track Modeling Info
 MEB files defining the track surface need to contain extra information for certain visual attributes to work properly. This consists of a certain arrangement of UV maps and vertex colors.
 #### File name:
-The filename of the mesh needs to contain the string `_no_uv_comp`. The game explicitly checks for this to apply the special visual attributes.
+All MEB files' UV coordinates are internally converted to 16-bit floats by the game before display, probably for performance and VRAM reasons. This can cause quantization artifacts on meshes with large UV coordinates, such as ground surfaces. To prevent this, `_no_uv_comp` can be added to the end of the MEB filename to skip this "UV compression". The Blender exporter is set up to always export UV map data as 32-bit floats.
 #### Material:
 Use the material Road DBV (`road_dbv`) for these track surface objects. 
 #### Vertex colors:
