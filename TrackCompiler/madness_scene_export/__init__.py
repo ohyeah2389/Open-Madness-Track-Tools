@@ -9,36 +9,38 @@ bl_info = {
     "category": "Import-Export",
 }
 
-import bpy  # type: ignore
-from bpy.props import StringProperty, BoolProperty, FloatProperty, EnumProperty  # type: ignore
-from bpy_extras.io_utils import ExportHelper  # type: ignore
 from pathlib import Path
-from .settings import meb_export_settings
-from .materials import mtx_material_system
-from .settings.settings_manager import get_addon_preferences
+
+import bpy
+from bpy.props import BoolProperty, EnumProperty, FloatProperty, StringProperty
+from bpy_extras.io_utils import ExportHelper
+
 from .aiw import aiw_export
 from .export import livetrack_mrdf_export
 from .export import triggers_export
-from .settings import empty_meb_settings
-from .properties import camera_properties
-from .properties import area_properties
-from .ui import camera_ui
-from .properties import light_properties
-from .ui import light_ui
-from .properties import dynamic_properties
-from .ui import dynamic_ui
-from .properties import sound_properties
-from .ui import sound_ui
+from .export.dynamic_export import export_dynamic_objects
+from .export.environment_export import export_environment_xml
 from .export.exporter import (
+    SingleMebExportSettings,
     export_madness_scene,
     export_single_meb_set,
-    SingleMebExportSettings,
 )
-from .export.environment_export import export_environment_xml
-from .export.lights_export import export_lights_sgx
-from .export.dynamic_export import export_dynamic_objects
 from .export.gcl_export import export_gcl
+from .export.lights_export import export_lights_sgx
 from .export.sound_export import export_sounds
+from .materials import mtx_material_system
+from .properties import camera_properties
+from .properties import area_properties
+from .properties import light_properties
+from .properties import dynamic_properties
+from .properties import sound_properties
+from .settings import meb_export_settings
+from .settings import empty_meb_settings
+from .settings.settings_manager import get_addon_preferences
+from .ui import camera_ui
+from .ui import light_ui
+from .ui import dynamic_ui
+from .ui import sound_ui
 
 
 class MadnessSceneExporterPreferences(bpy.types.AddonPreferences):
