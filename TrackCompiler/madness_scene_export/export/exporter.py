@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 
-import bpy
+import bpy  # type: ignore
 
 from ..materials.mtx_material_system import (
     resolve_texture_path,

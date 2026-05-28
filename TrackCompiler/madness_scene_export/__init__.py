@@ -11,9 +11,9 @@ bl_info = {
 
 from pathlib import Path
 
-import bpy
-from bpy.props import BoolProperty, EnumProperty, FloatProperty, StringProperty
-from bpy_extras.io_utils import ExportHelper
+import bpy  # type: ignore
+from bpy.props import BoolProperty, EnumProperty, FloatProperty, StringProperty  # type: ignore
+from bpy_extras.io_utils import ExportHelper  # type: ignore
 
 from .aiw import aiw_export
 from .export import livetrack_mrdf_export
