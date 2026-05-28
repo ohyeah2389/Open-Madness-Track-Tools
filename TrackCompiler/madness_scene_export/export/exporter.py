@@ -319,8 +319,9 @@ def _queue_object_export(
         if skip_uv_compression_override is None
         else skip_uv_compression_override
     )
-    sanitized_name = sanitize(obj_name)
-    meb_path = output_dir / f"{_build_export_mesh_stem(sanitized_name, skip_uv_compression)}.meb"
+    base_name = sanitize(obj_name)
+    export_name = _build_export_mesh_stem(base_name, skip_uv_compression)
+    meb_path = output_dir / f"{export_name}.meb"
     print(
         f"Exporting {obj_name} to MEB... (tangents={options.generate_tangent_space}, "
         f"bodywork={options.bodywork_data}, UVs={options.uv_map_indices}, skip_uv_comp={skip_uv_compression})"
@@ -329,13 +330,13 @@ def _queue_object_export(
     extracted_data = extract_mesh_data_from_blender(
         obj,
         options,
-        log_prefix=sanitized_name,
+        log_prefix=export_name,
     )
-    validation_issue, skip_export = _validate_extracted_mesh(sanitized_name, extracted_data)
+    validation_issue, skip_export = _validate_extracted_mesh(export_name, extracted_data)
     if validation_issue:
         mesh_validation_issues.append(validation_issue)
     if skip_export:
-        print(f"Skipping {sanitized_name} MEB export due to vertex limit")
+        print(f"Skipping {export_name} MEB export due to vertex limit")
         return
 
     (
@@ -352,7 +353,7 @@ def _queue_object_export(
     ) = extracted_data
     pending_exports.append(
         _PendingObjectExport(
-            name=sanitized_name,
+            name=export_name,
             meb_path=meb_path,
             translation=translation,
             quaternion=quaternion,
@@ -361,7 +362,7 @@ def _queue_object_export(
             future=writer_pool.submit(
                 write_meb_file,
                 output_path=meb_path,
-                mesh_name=sanitized_name,
+                mesh_name=export_name,
                 vertices=vertices,
                 normals=normals,
                 colors=colors,
@@ -376,7 +377,7 @@ def _queue_object_export(
                 disable_materials=options.disable_materials,
                 bodywork_data=options.bodywork_data,
                 w_sections=options.w_sections,
-                log_prefix=sanitized_name,
+                log_prefix=export_name,
             ),
         )
     )
@@ -494,7 +495,7 @@ def export_single_meb_set(filepath: str, context, settings: SingleMebExportSetti
 
                 mesh_stem = _build_export_mesh_stem(output_path.stem, options.skip_uv_compression)
                 meb_path = output_path.with_name(f"{mesh_stem}.meb")
-                mesh_name = sanitize(output_path.stem)
+                mesh_name = sanitize(mesh_stem)
                 extracted_data = extract_mesh_data_from_blender(
                     combined_obj,
                     options,
