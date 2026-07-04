@@ -13173,8 +13173,8 @@
             "USE_UV2_PUDDLE2"
           ],
           "defineOrder": [
-            "USE_TERRAIN_BLEND",
             "USE_BROAD",
+            "USE_TERRAIN_BLEND",
             "USE_NORMAL3",
             "USE_NORMAL4",
             "USE_PUDDLE2",
