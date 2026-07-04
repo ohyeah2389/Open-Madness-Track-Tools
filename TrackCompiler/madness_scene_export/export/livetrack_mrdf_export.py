@@ -15,12 +15,6 @@ import mathutils # type: ignore
 # Constants
 FLAG_ATTRS = [f'flag_{i}' for i in range(8)]
 CORE_REQUIRED_ATTRS = ['friction', 'height', 'grip', 'mask']
-INIT_CELLS = [
-    (112, 0, 0.000, 0.000, 0.000, 0x00),
-    (0, 1, 0.753, 0.024, 0.000, 0x00),
-    (0, 1, 0.000, 0.000, 0.078, 0xE2),
-    (22, 1, 0.000, 0.000, 0.000, 0x00)
-]
 HEADER_SIZE = 0x70
 CELL_SIZE = 6
 
@@ -153,39 +147,16 @@ def extract_grid_data(obj) -> List[Tuple[int, int, float, float, float, int]]:
     return cells
 
 def create_row_offsets(cells: List[Tuple[int, int, float, float, float, int]], height: int) -> Tuple[List[int], List[Tuple[int, int, float, float, float, int]]]:
-    """Create row offset table with initialization cells at specific indices"""
-    init_positions = [(112, 0), (0, 1), (0, 1), (22, 1)]
-    init_cells_map = {}
-    user_cells = []
-    
-    for cell in cells:
-        pos = (cell[0], cell[1])
-        if pos in init_positions:
-            init_cells_map.setdefault(pos, []).append(cell)
-        else:
-            user_cells.append(cell)
-    
-    sorted_cells = []
-    for pos in init_positions:
-        if pos in init_cells_map and init_cells_map[pos]:
-            sorted_cells.append(init_cells_map[pos].pop(0))
-        else:
-            # Add default initialization cells if missing
-            if pos == (112, 0):
-                sorted_cells.append((112, 0, 0.0, 0.0, 0.0, 0x00))
-            elif pos == (0, 1):
-                if not any(c[0] == 0 and c[1] == 1 for c in sorted_cells):
-                    sorted_cells.append((0, 1, 0.753, 0.024, 0.0, 0x00))
-                else:
-                    sorted_cells.append((0, 1, 0.0, 0.0, 0.078, 0xE2))
-            elif pos == (22, 1):
-                sorted_cells.append((22, 1, 0.0, 0.0, 0.0, 0x00))
-    
-    sorted_cells.extend(sorted(user_cells, key=lambda c: (c[1], c[0])))
-    
+    """Build the row offset table for cells sorted by (row, x)
+
+    Cells are stored as ascending-X scanline runs grouped by grid row:
+    row_offsets[y] is the index of the first cell in row y, empty rows repeat the previous offset
+    """
+    sorted_cells = sorted(cells, key=lambda c: (c[1], c[0]))
+
     row_offsets = [len(sorted_cells)] * (height + 1)
     row_offsets[0] = 0
-    
+
     current_row = 0
     for i, cell in enumerate(sorted_cells):
         while current_row < cell[1] and current_row < height:
@@ -193,30 +164,11 @@ def create_row_offsets(cells: List[Tuple[int, int, float, float, float, int]], h
             row_offsets[current_row] = i
         if cell[1] < height:
             current_row = max(current_row, cell[1])
-    
-    row_offsets[height] = len(sorted_cells)
-    
-    _log(f"Row offsets: {len(row_offsets)} entries, {len(sorted_cells)} cells")
-    if _verbose_logging and len(sorted_cells) >= 4:
-        for i in range(min(4, len(sorted_cells))):
-            c = sorted_cells[i]
-            _log(f"  Init cell {i}: X={c[0]}, Y={c[1]}, friction={c[2]:.3f}, flags=0x{c[5]:02X}")
-    
-    return row_offsets, sorted_cells
 
-def add_required_initialization_cells(cells: List[Tuple[int, int, float, float, float, int]]) -> List[Tuple[int, int, float, float, float, int]]:
-    """Add required initialization cells, removing conflicts if present"""
-    existing_positions = {(x, y) for x, y, _, _, _, _ in cells}
-    
-    filtered_cells = []
-    for cell in cells:
-        pos = (cell[0], cell[1])
-        if pos not in [(112, 0), (0, 1), (22, 1)]:
-            filtered_cells.append(cell)
-        elif _verbose_logging:
-            _log(f"Removed conflicting cell at {pos}")
-    
-    return list(INIT_CELLS) + filtered_cells
+    row_offsets[height] = len(sorted_cells)
+
+    _log(f"Row offsets: {len(row_offsets)} entries, {len(sorted_cells)} cells")
+    return row_offsets, sorted_cells
 
 def write_mrdf_file(filepath: str, width: int, height: int, world_bounds: Tuple[float, float, float, float], 
                    cell_size: float, cells: List[Tuple[int, int, float, float, float, int]]):
@@ -229,10 +181,9 @@ def write_mrdf_file(filepath: str, width: int, height: int, world_bounds: Tuple[
     """
     from io import BytesIO
     
-    cells_with_init = add_required_initialization_cells(cells)
-    row_offsets, sorted_cells = create_row_offsets(cells_with_init, height)
+    row_offsets, sorted_cells = create_row_offsets(cells, height)
     
-    _log(f"Writing {len(sorted_cells)} cells ({len(cells)} user + {len(sorted_cells) - len(cells)} init)")
+    _log(f"Writing {len(sorted_cells)} cells")
     
     # PRIMARY_DATA section (0x01): Grid metadata (0x70 bytes header)
     primary_buffer = BytesIO()
