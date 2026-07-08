@@ -5,3 +5,7 @@ OMTT Docs/.obsidian/workspace.json
 /build
 /PhysicsMeshCooker/.cache
 __pycache__/
+/TrackPacker/build/
+/TrackPacker/dist/
+/TrackPacker/_bff_build/
+/TrackPacker/*.spec

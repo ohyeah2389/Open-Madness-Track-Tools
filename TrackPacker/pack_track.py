@@ -8,6 +8,7 @@ import argparse
 import logging
 import shutil
 import sys
+import tempfile
 import zipfile
 from pathlib import Path
 
@@ -18,6 +19,36 @@ logger = logging.getLogger(__name__)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 SEASONS = ("aut", "sno", "spr", "sum", "win")
+
+
+def resource_path(name: str) -> Path:
+    """Locate a bundled data file, whether running as a script or a PyInstaller exe"""
+    base = getattr(sys, "_MEIPASS", None)
+    return Path(base) / name if base else SCRIPT_DIR / name
+
+
+def pick_folder() -> str | None:
+    """Open a folder picker (used when no folder is passed, e.g. double-click)"""
+    try:
+        import tkinter
+        from tkinter import filedialog
+
+        root = tkinter.Tk()
+        root.withdraw()
+        path = filedialog.askdirectory(title="Select the prepared track folder to pack")
+        root.destroy()
+        return path or None
+    except Exception:
+        return None
+
+
+def pause_on_exit() -> None:
+    """Keep the console open so drag/double-click users can read the result"""
+    if getattr(sys, "frozen", False) and sys.stdin and sys.stdin.isatty():
+        try:
+            input("\nPress Enter to close...")
+        except EOFError:
+            pass
 
 
 def copy_tree(src: Path, dst: Path, exclude=(), only_ext=None):
@@ -68,7 +99,7 @@ def infer_track_name(source: Path, explicit: str | None):
     return source.name
 
 
-def pack_release(source, temp, lower, track, pack_track, out_main, out_physics):
+def pack_release(source, temp, lower, track, pack_track, out_main, out_physics, out_zip):
     logger.info("Preparing release ZIP staging...")
     stage = temp / f"{lower}_release_stage"
     shutil.rmtree(stage, ignore_errors=True)
@@ -79,7 +110,7 @@ def pack_release(source, temp, lower, track, pack_track, out_main, out_physics):
     shutil.copy2(out_main, bff_dir / out_main.name)
     shutil.copy2(out_physics, bff_dir / out_physics.name)
 
-    placeholder = SCRIPT_DIR / "placeholder_seasonal.bff"
+    placeholder = resource_path("placeholder_seasonal.bff")
     for season in SEASONS:
         shutil.copy2(placeholder, bff_dir / f"{season}_{pack_track}.bff")
 
@@ -88,7 +119,6 @@ def pack_release(source, temp, lower, track, pack_track, out_main, out_physics):
     copy_tree(tracks / "textures" / track, zip_root / "Tracks" / "textures" / pack_track)
     copy_tree(tracks / track, zip_root / "Tracks" / pack_track, only_ext={".mtx", ".trd"})
 
-    out_zip = Path.cwd() / f"{lower}.zip"
     logger.info("Creating release ZIP: %s", out_zip)
     out_zip.unlink(missing_ok=True)
     files = [p for p in sorted(stage.rglob("*")) if p.is_file()]
@@ -103,8 +133,8 @@ def pack_release(source, temp, lower, track, pack_track, out_main, out_physics):
 
 def main(argv) -> int:
     p = argparse.ArgumentParser(description="Packs a track into an installable ZIP file")
-    p.add_argument("source", help="Prepared track source folder")
-    p.add_argument("--track-name", help="Track name (default: source folder name)")
+    p.add_argument("source", nargs="?", help="Prepared track source folder (drag it onto the tool, or omit to pick one)")
+    p.add_argument("--track-name", help="Track name (default: auto-detected)")
     p.add_argument("--no-compress", action="store_true", help="Pack BFFs without compression (faster, but larger BFF filesizes)")
     p.add_argument("--quiet", action="store_true", help="Only show warnings and errors")
     p.add_argument("--verbose", action="store_true", help="Show per-file detail")
@@ -113,9 +143,17 @@ def main(argv) -> int:
 
     bff_creator.configure_logging(args.quiet, args.verbose)
 
-    source = Path(args.source).resolve()
+    src_arg = args.source or pick_folder()
+    if not src_arg:
+        logger.error("No track folder selected.")
+        return 1
+
+    source = Path(src_arg).resolve()
     if not source.is_dir():
-        logger.error("Source folder not found: %s", args.source)
+        logger.error("Not a folder: %s", src_arg)
+        return 1
+    if not (source / "Tracks").is_dir():
+        logger.error("This doesn't look like a prepared track folder (no 'Tracks' subfolder): %s", source)
         return 1
 
     track = infer_track_name(source, args.track_name)
@@ -124,7 +162,8 @@ def main(argv) -> int:
     lower = track.lower()
     pack_track = track
     pack_physics = f"{track}_Physics"
-    temp = SCRIPT_DIR / "_bff_build"
+    out_zip = source.parent / f"{lower}.zip"
+    temp = Path(tempfile.mkdtemp(prefix="omtt_pack_"))
     main_dir, physics_dir = temp / f"{lower}_main", temp / f"{lower}_physics"
     out_main = temp / f"{pack_track}.bff"
     out_physics = temp / f"{pack_physics}.bff"
@@ -156,13 +195,19 @@ def main(argv) -> int:
         logger.info("Packing %s...", out_physics.name)
         build_bff(physics_dir, out_physics, pack_physics, args.no_compress)
 
-        pack_release(source, temp, lower, track, pack_track, out_main, out_physics)
+        pack_release(source, temp, lower, track, pack_track, out_main, out_physics, out_zip)
     finally:
         shutil.rmtree(temp, ignore_errors=True)
 
-    logger.info("Done.")
+    logger.info("Done. Created: %s", out_zip)
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
+    try:
+        code = main(sys.argv[1:])
+    except Exception:
+        logger.exception("Packing failed")
+        code = 1
+    pause_on_exit()
+    raise SystemExit(code)
