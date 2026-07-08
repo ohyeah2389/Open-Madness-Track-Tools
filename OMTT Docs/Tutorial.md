@@ -105,16 +105,17 @@ Instructions on general track modeling are outside the scope of this tutorial, b
 - Track physical surface models from Reiza and SMS seem to be lower spatial resolution than those commonly used in other simulators. This may be a limitation of the Madness engine or it may not be; if you run into any performance limitations with high-density physical surface models, please let the community and I know.
 - The Madness engine, just like Assetto Corsa, runs on DirectX 11. The Madness engine does support instancing unlike Assetto Corsa, but again, SGX files do not have support for referencing instance meshes. Therefore, try to keep the object count low. The lower the object count, the quicker the track will load, and the better it will perform, to a limit. 
 	- The Madness engine uses spherical culling. Keep that in mind when combining objects; don't combine large objects that should be culled separately, like buildings.
-- The Madness engine supports LOD models, but support for LOD systems isn't yet implemented in the Blender toolkit. All objects render at a max distance of 1000m, or ~400m if userflag 0 is false.
+- The Madness engine supports LOD models, but support for LOD systems isn't yet implemented in the Blender toolkit. All objects render at a max distance of 1000m, or ~400m if userflag "Far Distant Mesh" is disabled.
 - Keep your objects organized with Blender's collection system. Support for separating collections into their own partitions (as well as support for child partitions) may be added later utilizing the Collections system.
 	- This could also help when troubleshooting track load crashes, in that you could isolate down to specific similar groups of objects. The Blender scene export option won't export objects inside deactivated (unchecked) collections.
-- The Blender scene exporter supports export-time object combining. If you have a significant number of objects that need to be combined, name them using the prefix `KSTREE_GROUP_blabla_`, where `blabla` can be any string without underscores or spaces. This is designed to handle Assetto Corsa's ksEditor Y-tree grouping system. Note, though, that it does NOT apply the vertex normal adjustments that ksEditor does.
-	- Additionally, the naming pattern `SMS_GRP_groupname_objectname.123` can be used instead, where all objects with the `SMS_GRP_groupname_` prefix will be combined into an object named `groupname`. Ensure `groupname` is unique and will not overlap with any non-grouped object names.
+- The Blender scene exporter supports export-time object combining. If you have a significant number of objects that need to be combined, name them using the prefix `KSTREE_GROUP_groupname_`, where `groupname` can be any string without underscores or spaces. This is designed to handle Assetto Corsa's ksEditor Y-tree grouping system. Note, though, that it does NOT apply the vertex normal adjustments that ksEditor does.
+	- Additionally, the naming pattern `SMS_GRP_groupname_objectname.123` can be used for the same functionality, where all objects with the `SMS_GRP_groupname_` prefix will be combined into an object named `groupname`. Ensure `groupname` is unique and will not overlap with any non-grouped object names.
 - The Madness Engine, similar to Assetto Corsa, has a limit of 65535 vertices per mesh.
 - The Madness Engine has been seen to support the following texture formats so far:
 	- DDS DXT1/3/5 Linear
 	- DDS BC7 Linear
 	- DDS BC5U
+	- DDS A8R8G8B8 Uncompressed
 - The Madness Engine has been seen to NOT support the following texture formats so far:
 	- DDS R8G8B8 Uncompressed
 # Step 3: Author the Materials
