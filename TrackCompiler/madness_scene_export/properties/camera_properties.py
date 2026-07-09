@@ -1,8 +1,93 @@
+import math
+
 import bpy  # type: ignore
+from bpy.app.handlers import persistent  # type: ignore
 from bpy.props import (  # type: ignore
     BoolProperty, FloatProperty, IntProperty, StringProperty,
     EnumProperty, FloatVectorProperty, PointerProperty, CollectionProperty
 )
+
+
+# Two-way link between Madness camera props and native Blender camera settings.
+# Each entry: madness_prop -> (blender data path, to_blender, from_blender)
+_CAM_LINKS = {
+    "fov": ("angle", math.radians, math.degrees),
+    "near_z": ("clip_start", None, None),
+    "far_z": ("clip_end", None, None),
+    "dof_static_focus_distance": ("dof.focus_distance", None, None),
+    "mBokehEnabled": ("dof.use_dof", None, None),
+    "mBokehFStop": ("dof.aperture_fstop", None, None),
+}
+
+_msgbus_owner = object()
+_syncing = False
+
+
+def _resolve(root, path):
+    """Return (owner_object, attr_name) for a dotted data path."""
+    parts = path.split(".")
+    for p in parts[:-1]:
+        root = getattr(root, p)
+    return root, parts[-1]
+
+
+def _madness_update(prop):
+    """Push a Madness property change onto the native Blender camera setting."""
+    def cb(self, context):
+        global _syncing
+        if _syncing:
+            return
+        path, to_bl, _ = _CAM_LINKS[prop]
+        owner, attr = _resolve(self.id_data, path)
+        val = getattr(self, prop)
+        val = to_bl(val) if to_bl else val
+        _syncing = True
+        try:
+            setattr(owner, attr, val)
+        finally:
+            _syncing = False
+    return cb
+
+
+def _blender_update(prop):
+    """Push a native Blender camera change onto the Madness property."""
+    def cb(*args):
+        global _syncing
+        if _syncing:
+            return
+        obj = bpy.context.object
+        if not obj or obj.type != 'CAMERA':
+            return
+        cam = obj.data
+        path, _, from_bl = _CAM_LINKS[prop]
+        owner, attr = _resolve(cam, path)
+        val = getattr(owner, attr)
+        val = from_bl(val) if from_bl else val
+        _syncing = True
+        try:
+            setattr(cam.madness_camera, prop, val)
+        finally:
+            _syncing = False
+    return cb
+
+
+def _subscribe():
+    """(Re)subscribe to native camera settings so edits sync back to Madness."""
+    bpy.msgbus.clear_by_owner(_msgbus_owner)
+    for prop, (path, _, _) in _CAM_LINKS.items():
+        parts = path.split(".")
+        rna = bpy.types.CameraDOFSettings if len(parts) > 1 else bpy.types.Camera
+        bpy.msgbus.subscribe_rna(
+            key=(rna, parts[-1]),
+            owner=_msgbus_owner,
+            args=(),
+            notify=_blender_update(prop),
+        )
+
+
+@persistent
+def _on_load(dummy):
+    _subscribe()
 
 
 class CameraZoneReference(bpy.types.PropertyGroup):
@@ -35,7 +120,8 @@ class MadnessCameraProperties(bpy.types.PropertyGroup):
         description="Field of view in degrees",
         default=40.0,
         min=1.0,
-        max=180.0
+        max=180.0,
+        update=_madness_update("fov")
     )  # type: ignore
 
     fov_min: FloatProperty(
@@ -104,7 +190,8 @@ class MadnessCameraProperties(bpy.types.PropertyGroup):
         description="Static focus distance for DOF",
         default=0.0,
         min=0.0,
-        max=10000.0
+        max=10000.0,
+        update=_madness_update("dof_static_focus_distance")
     )  # type: ignore
 
     dof_delay: FloatProperty(
@@ -137,7 +224,8 @@ class MadnessCameraProperties(bpy.types.PropertyGroup):
         description="Near clipping plane",
         default=1.5,
         min=0.1,
-        max=100.0
+        max=100.0,
+        update=_madness_update("near_z")
     )  # type: ignore
 
     far_z: FloatProperty(
@@ -145,7 +233,8 @@ class MadnessCameraProperties(bpy.types.PropertyGroup):
         description="Far clipping plane",
         default=5000.0,
         min=1.0,
-        max=50000.0
+        max=50000.0,
+        update=_madness_update("far_z")
     )  # type: ignore
 
     cut_off_z: FloatProperty(
@@ -406,7 +495,8 @@ class MadnessCameraProperties(bpy.types.PropertyGroup):
     mBokehEnabled: BoolProperty(
         name="Bokeh Enabled",
         description="Enable bokeh effect",
-        default=False
+        default=False,
+        update=_madness_update("mBokehEnabled")
     )  # type: ignore
 
     mBokehFStop: FloatProperty(
@@ -414,7 +504,8 @@ class MadnessCameraProperties(bpy.types.PropertyGroup):
         description="Bokeh f-stop value",
         default=16.0,
         min=1.0,
-        max=32.0
+        max=32.0,
+        update=_madness_update("mBokehFStop")
     )  # type: ignore
 
     mBokehFocalLength: FloatProperty(
@@ -565,9 +656,15 @@ def register():
     bpy.utils.register_class(CameraZoneReference)
     bpy.utils.register_class(MadnessCameraProperties)
     bpy.types.Camera.madness_camera = PointerProperty(type=MadnessCameraProperties)
+    _subscribe()
+    if _on_load not in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.append(_on_load)
 
 
 def unregister():
+    if _on_load in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.remove(_on_load)
+    bpy.msgbus.clear_by_owner(_msgbus_owner)
     del bpy.types.Camera.madness_camera
     bpy.utils.unregister_class(MadnessCameraProperties)
     bpy.utils.unregister_class(CameraZoneReference)
