@@ -13,7 +13,7 @@ class MadnessAreaProperties(bpy.types.PropertyGroup):
             ('OBB', "OBB", "Oriented bounding box area"),
         ],
         default='SPHERE',
-        update=lambda self, context: update_area_display(context.object)
+        update=lambda self, context: update_area_display(self.id_data)
     )  # type: ignore
 
     # Common Properties
@@ -64,7 +64,7 @@ class MadnessAreaProperties(bpy.types.PropertyGroup):
         default=10.0,
         min=0.1,
         max=1000.0,
-        update=lambda self, context: update_sphere_display(context.object)
+        update=lambda self, context: update_sphere_display(self.id_data)
     )  # type: ignore
 
     # OBB Area Properties
@@ -74,7 +74,7 @@ class MadnessAreaProperties(bpy.types.PropertyGroup):
         default=(10.0, 5.0, 10.0),
         subtype='XYZ',
         min=0.1,
-        update=lambda self, context: update_obb_display(context.object)
+        update=lambda self, context: update_obb_display(self.id_data)
     )  # type: ignore
 
 
