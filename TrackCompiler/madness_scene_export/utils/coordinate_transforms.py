@@ -21,20 +21,6 @@ def _quat(ax: float, ay: float, az: float) -> np.ndarray:
 Q_EXTRA = _quat(-90, 0, 0)  # Only rotate around X axis to convert Z-up to Y-up
 
 
-def q_mult(q1: np.ndarray, q2: np.ndarray) -> np.ndarray:
-    """Hamilton product (w,x,y,z)."""
-    w1, x1, y1, z1 = q1
-    w2, x2, y2, z2 = q2
-    return np.array(
-        [
-            w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
-            w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
-            w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
-            w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,
-        ]
-    )
-
-
 def q_to_matrix(q: np.ndarray) -> np.ndarray:
     """3×3 rotation matrix from (w,x,y,z)."""
     w, x, y, z = q
@@ -60,15 +46,6 @@ def convert_rotation_matrix(rot: np.ndarray) -> np.ndarray:
     """Convert rotation matrix from Blender coordinate system to Madness."""
     converted = R_EXTRA @ rot @ R_EXTRA.T
     return converted
-
-
-def apply_180_rotation_y(q: np.ndarray) -> np.ndarray:
-    """Apply 180° rotation about Y axis to quaternion."""
-    q_180_y = np.array([0, 0, 1, 0])
-    return q_mult(q_180_y, q)
-
-
-R_POS = np.diag([1, 1, 1])
 
 
 def _quat_from_matrix(m: np.ndarray) -> np.ndarray:

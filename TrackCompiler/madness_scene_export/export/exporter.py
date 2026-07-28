@@ -843,8 +843,7 @@ def build_sgx(objects: List[ObjectInfo], dest_path: Path, resource_prefix: str =
     ET.ElementTree(scene).write(dest_path, encoding="utf-8", xml_declaration=True)
 
 
-def export_madness_scene(filepath: str, resource_prefix: str, placeholder_mtx: Path, context):
-    _ = placeholder_mtx
+def export_madness_scene(filepath: str, resource_prefix: str, context):
     output_dir = Path(filepath).parent
     sgx_path = Path(filepath)
     track_name = sgx_path.stem

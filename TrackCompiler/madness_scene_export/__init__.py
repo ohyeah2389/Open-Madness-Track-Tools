@@ -36,7 +36,6 @@ from .properties import dynamic_properties
 from .properties import sound_properties
 from .settings import meb_export_settings
 from .settings import empty_meb_settings
-from .settings.settings_manager import get_addon_preferences
 from .ui import camera_ui
 from .ui import light_ui
 from .ui import dynamic_ui
@@ -68,13 +67,6 @@ class MadnessSceneExporter(bpy.types.Operator, ExportHelper):
         maxlen=255,
     )  # type: ignore
 
-    placeholder_mtx: StringProperty(
-        name="Placeholder MTX",
-        description="Path to template MTX file",
-        default=r"S:\Assorted Project Files\Synced Projects\AMS2 Track RevEng\placeholder_grass.mtx",
-        subtype="FILE_PATH",
-    )  # type: ignore
-
     def execute(self, context):
         # Derive resource prefix from output filename
         output_path = Path(self.filepath)
@@ -85,7 +77,6 @@ class MadnessSceneExporter(bpy.types.Operator, ExportHelper):
             export_result = export_madness_scene(
                 filepath=self.filepath,
                 resource_prefix=resource_prefix,
-                placeholder_mtx=Path(self.placeholder_mtx),
                 context=context,
             )
             self.report({"INFO"}, "Madness scene exported successfully")
@@ -137,9 +128,6 @@ class MadnessSceneExporter(bpy.types.Operator, ExportHelper):
         except Exception as e:
             self.report({"ERROR"}, f"Export failed: {str(e)}")
             return {"CANCELLED"}
-
-    def draw(self, context):
-        layout = self.layout
 
 
 class MadnessEnvironmentExporter(bpy.types.Operator, ExportHelper):

@@ -116,11 +116,9 @@ def update_obb_display(obj):
 
     area_props = obj.madness_area
     if area_props.area_type == 'OBB':
-        # Convert game dimensions to Blender scale using inverse coordinate transform
+        # Convert game dimensions to Blender scale for visualization
         # Game dimensions (width, height, depth) -> Blender scale (x, z, y)
         game_dims = area_props.obb_dimensions
-        # Since convert_position does [-x, z, -y], we need to reverse this for scale
-        # Game (x, y, z) should map to Blender (x, z, y) for scale visualization
         blender_scale = (game_dims.x, game_dims.z, game_dims.y)
         obj.scale = blender_scale
 
