@@ -12,7 +12,7 @@ bl_info = {
 from pathlib import Path
 
 import bpy  # type: ignore
-from bpy.props import BoolProperty, EnumProperty, FloatProperty, StringProperty  # type: ignore
+from bpy.props import BoolProperty, EnumProperty, StringProperty  # type: ignore
 from bpy_extras.io_utils import ExportHelper  # type: ignore
 
 from .aiw import export as aiw_export
@@ -363,39 +363,9 @@ class MadnessGclExporter(bpy.types.Operator, ExportHelper):
         maxlen=255,
     )  # type: ignore
 
-    version_string: StringProperty(
-        name="GCL Version",
-        description="Header version value (accepts decimal or hex with 0x prefix)",
-        default="0x10000001",
-    )  # type: ignore
-
-    use_elevation_override: BoolProperty(
-        name="Override Elevation",
-        description="Use a custom elevation instead of the auto-calculated value",
-        default=False,
-    )  # type: ignore
-
-    elevation_override: FloatProperty(
-        name="Elevation",
-        description="Elevation (Y) to assign to all triangles and cells",
-        default=0.0,
-    )  # type: ignore
-
     def execute(self, context):
         try:
-            version = int(self.version_string, 0)
-        except ValueError:
-            self.report({"ERROR"}, f"Invalid GCL version value: {self.version_string}")
-            return {"CANCELLED"}
-
-        elevation = self.elevation_override if self.use_elevation_override else None
-        try:
-            result = export_gcl(
-                filepath=self.filepath,
-                context=context,
-                version=version,
-                elevation_override=elevation,
-            )
+            result = export_gcl(filepath=self.filepath, context=context)
         except Exception as exc:
             self.report({"ERROR"}, f"GCL export failed: {exc}")
             return {"CANCELLED"}
@@ -407,14 +377,6 @@ class MadnessGclExporter(bpy.types.Operator, ExportHelper):
         )
         self.report({"INFO"}, message)
         return {"FINISHED"}
-
-    def draw(self, context):
-        layout = self.layout
-        layout.prop(self, "version_string")
-        layout.prop(self, "use_elevation_override")
-        row = layout.row()
-        row.enabled = self.use_elevation_override
-        row.prop(self, "elevation_override")
 
 
 def menu_func_export(self, context):
