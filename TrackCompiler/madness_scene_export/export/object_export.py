@@ -299,8 +299,8 @@ def collect_empty_objects_with_meb(context):
         sphere_radius = getattr(obj.empty_meb_settings, 'sphere_radius', 1.0)
 
         # Get userflags
-        from ..settings.empty_meb_settings import get_empty_userflags_value
-        userflags = get_empty_userflags_value(obj.empty_meb_settings)
+        from ..settings.userflags import bool_vector_to_userflags
+        userflags = bool_vector_to_userflags(obj.empty_meb_settings.userflags)
 
         results.append((
             obj.name,

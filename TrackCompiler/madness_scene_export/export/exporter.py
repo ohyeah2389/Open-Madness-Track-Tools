@@ -174,9 +174,8 @@ def _build_maybe_overridden_options(obj, resource_prefix: str) -> MeshExportOpti
 
 def _get_userflags(obj) -> int:
     if hasattr(obj.data, "meb_export_settings"):
-        from ..settings.meb_export_settings import get_userflags_value
-
-        return get_userflags_value(obj.data.meb_export_settings)
+        from ..settings.userflags import bool_vector_to_userflags
+        return bool_vector_to_userflags(obj.data.meb_export_settings.userflags)
     return DEFAULT_USERFLAGS
 
 

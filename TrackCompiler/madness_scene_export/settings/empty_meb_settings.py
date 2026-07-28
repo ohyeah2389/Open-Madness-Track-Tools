@@ -1,11 +1,12 @@
-import bpy
+import bpy  # type: ignore
+from bpy.props import StringProperty, PointerProperty, FloatProperty, BoolVectorProperty, IntProperty  # type: ignore
 from pathlib import Path
-from bpy.props import StringProperty, PointerProperty, FloatProperty, BoolVectorProperty, IntProperty
 from .userflags import (
     USERFLAG_CATEGORIES,
     get_userflag_name,
     get_userflag_description,
     userflags_to_bool_vector,
+    bool_vector_to_userflags,
 )
 
 
@@ -34,15 +35,6 @@ class EmptyMEBSettings(bpy.types.PropertyGroup):
         size=32,
         default=userflags_to_bool_vector(),
     )  # type: ignore
-
-
-def get_empty_userflags_value(settings) -> int:
-    """Convert userflags boolean vector to integer value."""
-    value = 0
-    for i, flag in enumerate(settings.userflags):
-        if flag:
-            value |= 1 << i
-    return value
 
 
 class OBJECT_OT_toggle_empty_userflag(bpy.types.Operator):
@@ -118,7 +110,7 @@ class OBJECT_OT_copy_empty_userflag(bpy.types.Operator):
 
 
 def convert_to_relative_game_path(absolute_path: str, game_folder: str = None) -> str:
-    """Convert absolute path to relative game path format for MEB files.
+    r"""Convert absolute path to relative game path format for MEB files.
 
     Args:
         absolute_path: Full path like "G:\SteamLibrary\steamapps\common\Automobilista 2\tracks\_data\instances\..."
@@ -240,7 +232,7 @@ class EMPTY_PT_meb_reference(bpy.types.Panel):
         box.label(text="User Flags (32-bit bitmask)", icon="SETTINGS")
 
         # Show the current value in both binary and decimal
-        userflags_value = get_empty_userflags_value(settings)
+        userflags_value = bool_vector_to_userflags(settings.userflags)
         binary_str = format(userflags_value, "032b")
         box.label(text=f"Value: {userflags_value} (0b{binary_str})")
 

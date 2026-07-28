@@ -10,6 +10,15 @@ def userflags_to_bool_vector(value: int = DEFAULT_USERFLAGS) -> List[bool]:
     return [bool(value & (1 << i)) for i in range(32)]
 
 
+def bool_vector_to_userflags(flags) -> int:
+    """Convert a 32-element boolean sequence to an integer bitmask."""
+    value = 0
+    for i, flag in enumerate(flags):
+        if flag:
+            value |= 1 << i
+    return value
+
+
 # Index in this list maps directly to the bit index (0-31).
 USERFLAG_DEFINITIONS: List[Tuple[str, str]] = [
     ("Far Distant Mesh", "Draws beyond the usual automatic LOD cutoff limits."),

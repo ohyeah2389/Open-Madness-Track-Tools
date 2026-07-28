@@ -1,17 +1,16 @@
-import bpy
-from bpy.props import BoolProperty, IntProperty, StringProperty, EnumProperty, PointerProperty, BoolVectorProperty
+import shlex
+
+import bpy  # type: ignore
+from bpy.props import BoolProperty, IntProperty, StringProperty, PointerProperty, BoolVectorProperty  # type: ignore
 from typing import List
 from .userflags import (
     USERFLAG_CATEGORIES,
     get_userflag_name,
     get_userflag_description,
     userflags_to_bool_vector,
+    bool_vector_to_userflags,
 )
 
-
-def _get_default_userflags():
-    """Get default userflags as boolean array."""
-    return userflags_to_bool_vector()
 
 class MEBExportSettings(bpy.types.PropertyGroup):
     """MEB Exporter settings attached to mesh objects"""
@@ -137,8 +136,9 @@ class MEBExportSettings(bpy.types.PropertyGroup):
         name="User Flags",
         description="32-bit bitmask for SGX object userflags",
         size=32,
-        default=_get_default_userflags()
+        default=userflags_to_bool_vector()
     ) # type: ignore
+
 
 def build_meb_args(settings: MEBExportSettings) -> List[str]:
     """Convert MEB export settings to command-line arguments"""
@@ -184,19 +184,9 @@ def build_meb_args(settings: MEBExportSettings) -> List[str]:
 
     # Add custom arguments
     if settings.custom_args.strip():
-        # Split custom args respecting quotes
-        import shlex
         args.extend(shlex.split(settings.custom_args))
 
     return args
-
-def get_userflags_value(settings: MEBExportSettings) -> int:
-    """Convert userflags boolean vector to integer value."""
-    value = 0
-    for i, flag in enumerate(settings.userflags):
-        if flag:
-            value |= (1 << i)
-    return value
 
 
 class MEB_OT_toggle_userflag(bpy.types.Operator):
@@ -340,7 +330,7 @@ class MEB_PT_export_settings(bpy.types.Panel):
         box.label(text="User Flags (32-bit bitmask)", icon='SETTINGS')
 
         # Show the current value in both binary and decimal
-        userflags_value = get_userflags_value(settings)
+        userflags_value = bool_vector_to_userflags(settings.userflags)
         binary_str = format(userflags_value, '032b')
         box.label(text=f"Value: {userflags_value} (0b{binary_str})")
 
