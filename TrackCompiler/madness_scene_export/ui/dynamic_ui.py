@@ -1,5 +1,5 @@
 import bpy  # type: ignore
-from ..properties.dynamic_properties import is_sms_dynamic, get_dynamic_name, refresh_template_list
+from ..properties.dynamic_properties import is_sms_dynamic, refresh_template_list, get_available_dynamic_templates
 
 # Global dictionary to store expand/collapse state for template groups
 _group_expand_state = {}
@@ -96,8 +96,6 @@ class MADNESS_DYNAMIC_OT_select_template(bpy.types.Operator):
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        from ..properties.dynamic_properties import get_available_dynamic_templates
-        
         # Get available templates
         try:
             templates = get_available_dynamic_templates()
@@ -113,8 +111,6 @@ class MADNESS_DYNAMIC_OT_select_template(bpy.types.Operator):
         return wm.invoke_props_dialog(self, width=400)
 
     def draw(self, context):
-        from ..properties.dynamic_properties import get_available_dynamic_templates
-        
         layout = self.layout
         obj = context.object
         
@@ -218,21 +214,6 @@ class MADNESS_DYNAMIC_OT_select_template(bpy.types.Operator):
                     op = row.operator("madness_dynamic.set_template", text=template_name)
                     op.template_name = template_id
 
-    def get_display_name_for_template(self, template_name, group_key):
-        """Get a readable display name for the template within its group"""
-        # Remove the group prefix to avoid redundancy
-        if template_name.startswith(group_key):
-            remaining = template_name[len(group_key):].lstrip('_')
-            if remaining:
-                # Format the remaining part
-                return remaining.replace('_', ' ').title()
-            else:
-                # If nothing remains, use the full name
-                return template_name.replace('_', ' ').title()
-        else:
-            # Fallback: use full name
-            return template_name.replace('_', ' ').title()
-
 
 class MADNESS_DYNAMIC_OT_toggle_group(bpy.types.Operator):
     """Toggle expand/collapse state of a template group"""
@@ -241,7 +222,6 @@ class MADNESS_DYNAMIC_OT_toggle_group(bpy.types.Operator):
     bl_description = "Expand or collapse template group"
 
     group_key: bpy.props.StringProperty()
-    operator_instance: bpy.props.IntProperty()
 
     def execute(self, context):
         # Use global dictionary to store state

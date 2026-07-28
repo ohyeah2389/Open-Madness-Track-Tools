@@ -164,6 +164,7 @@ class MadnessCameraPanel(bpy.types.Panel):
         box.prop(cam_props, "force_keep")
         box.prop(cam_props, "lod_distance_multiplier")
         box.prop(cam_props, "shadow_type_index")
+        box.prop(cam_props, "overridden_by")
 
         # Tracking Properties (only for tracking cameras)
         if cam_props.camera_type == 'TRACKING':
@@ -177,9 +178,6 @@ class MadnessCameraPanel(bpy.types.Panel):
             box.prop(cam_props, "auto_zoom")
             box.prop(cam_props, "static_direction")
             box.prop(cam_props, "tracking_lag")
-
-        # Override
-        box.prop(cam_props, "overridden_by")
 
         # Active Zones
         box = layout.box()

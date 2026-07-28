@@ -1,5 +1,5 @@
 import bpy  # type: ignore
-from ..properties.sound_properties import is_sms_sound, get_sound_name_for_export
+from ..properties.sound_properties import is_sms_sound
 
 
 class SOUND_PT_MadnessSoundPanel(bpy.types.Panel):
@@ -74,29 +74,6 @@ class SOUND_PT_MadnessSoundPanel(bpy.types.Panel):
         # Orientation (for Environment Sound)
         if sound_props.sound_type == 'ENVIRONMENT_SOUND':
             layout.prop(sound_props, "orientation")
-
-
-def draw_sound_info(layout, obj):
-    """Draw sound information in object properties"""
-    if not is_sms_sound(obj):
-        return
-
-    sound_props = obj.madness_sound
-
-    box = layout.box()
-    box.label(text="Madness Sound Object", icon='SOUND')
-
-    # Show sound type and basic info
-    row = box.row()
-    row.label(text=f"Type: {sound_props.sound_type.replace('_', ' ').title()}")
-
-    sound_name = get_sound_name_for_export(obj)
-    if sound_name:
-        row = box.row()
-        row.label(text=f"Sound: {sound_name.split('/')[-1]}")
-    else:
-        row = box.row()
-        row.label(text="Sound: Not set", icon='ERROR')
 
 
 def register():
