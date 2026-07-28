@@ -3,7 +3,7 @@
 import bpy # type: ignore
 import bmesh # type: ignore
 import numpy as np
-from typing import List, Dict
+from typing import List, Dict, Any
 from . import aiw_parser
 from .aiw_utils import convert_coords_to_madness, calculate_perpendicular
 
@@ -240,7 +240,7 @@ class WaypointProcessor:
         wall_line_left_obj: bpy.types.Object = None,
         wall_line_right_obj: bpy.types.Object = None,
         centerline_vertices: List[np.ndarray] = None
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """Calculate lateral offsets from centerline to various track geometry lines."""
 
         # Default values

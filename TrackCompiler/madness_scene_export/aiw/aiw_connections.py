@@ -9,6 +9,8 @@ from .aiw_utils import (
     convert_coords_to_madness,
     calculate_perpendicular,
     find_grid_connection_before_start,
+    find_waypoint_before_position,
+    find_waypoint_after_position,
 )
 
 
@@ -29,8 +31,6 @@ def connect_pit_lane_to_main_line(
             pit_waypoints[0].position.z,
         ]
     )
-
-    from .aiw_utils import find_waypoint_before_position
 
     main_before_pit_idx = find_waypoint_before_position(
         first_pit_pos, main_waypoints
@@ -53,8 +53,6 @@ def connect_pit_lane_to_main_line(
             pit_waypoints[last_pit_idx].position.z,
         ]
     )
-
-    from .aiw_utils import find_waypoint_after_position
 
     main_after_pit_idx = find_waypoint_after_position(
         last_pit_pos, main_waypoints

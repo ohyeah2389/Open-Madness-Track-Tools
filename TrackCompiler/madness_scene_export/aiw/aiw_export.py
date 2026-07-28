@@ -114,25 +114,18 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
         # Check for track geometry objects
         if name == "SMS_AIW_CENTERLINE":
             centerline_obj = obj
-            print(f"Found centerline: {name}")  # Debug output
         elif name == "SMS_AIW_RACINGLINE":
             racing_line_obj = obj
-            print(f"Found racing line: {name}")  # Debug output
         elif name == "SMS_AIW_CUTLINE_LEFT":
             cut_line_left_obj = obj
-            print(f"Found cut line left: {name}")  # Debug output
         elif name == "SMS_AIW_CUTLINE_RIGHT":
             cut_line_right_obj = obj
-            print(f"Found cut line right: {name}")  # Debug output
         elif name == "SMS_AIW_WALLLINE_LEFT":
             wall_line_left_obj = obj
-            print(f"Found wall line left: {name}")  # Debug output
         elif name == "SMS_AIW_WALLLINE_RIGHT":
             wall_line_right_obj = obj
-            print(f"Found wall line right: {name}")  # Debug output
         elif name.startswith("SMS_AIW_PITLINE"):
             pit_line_obj = obj
-            print(f"Found pit line: {name}")  # Debug output
         elif name.startswith("SMS_AIW_ALTLINE_"):
             # Extract alt line number
             alt_num = name.split("_")[-1]
@@ -147,9 +140,8 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
             try:
                 garage_id = int(garage_num)
                 garage_line_objects[garage_id] = obj
-                print(f"Found garage line: {name} (id={garage_id})")  # Debug output
             except ValueError:
-                print(f"Could not parse garage line id from {name}")  # Debug output
+                print(f"Could not parse garage line id from {name}")
         # Check for marker objects (can be mesh or empty)
         elif name.startswith("SMS_AIW_START_"):
             grid_objects.append(obj)
@@ -157,15 +149,10 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
             teleport_objects.append(obj)
         elif name.startswith("SMS_AIW_PITBOX_"):
             pit_box_objects.append(obj)
-            print(f"Found pit box: {name}")  # Debug output
         elif name == "SMS_AIW_SAFETYCAR":
             safety_car_obj = obj
-            print(f"Found safety car: {name}")  # Debug output
         elif name.startswith("SMS_AIW_GARAGE_"):
             garage_objects.append(obj)
-
-    print(f"Total pit boxes found: {len(pit_box_objects)}")  # Debug output
-    print(f"Total garage lines found: {len(garage_line_objects)}")  # Debug output
 
     # Process waypoints
     all_waypoints = []
@@ -174,14 +161,6 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
 
     # Main racing line (branch_id 0) - use centerline for positions
     if centerline_obj:
-        # Print export settings
-        if not export_racing_line:
-            print("Racing line export disabled - path values will be 0")
-        if not export_cut_lines:
-            print("Cut lines export disabled - width values will be 0")
-        if not export_wall_lines:
-            print("Wall lines export disabled - dwidth values will be 0")
-
         racing_waypoints = WaypointProcessor.process_centerline_waypoints(
             centerline_obj,
             racing_line_obj if export_racing_line else None,
@@ -192,7 +171,6 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
             0,
         )
         all_waypoints.extend(racing_waypoints)
-        print(f"Processed {len(racing_waypoints)} racing waypoints from centerline")
 
     # Pit line (branch_id 1) - use pit line as before
     if pit_line_obj:
@@ -207,21 +185,18 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
         )
 
     # Alternative racing lines (branch_id 999 and descending)
-    alt_waypoints_dict = {}
     for alt_id in sorted(alt_line_objects.keys()):
         branch_id = 999 - alt_id  # 999, 998, 997, etc.
         alt_waypoints = WaypointProcessor.process_waypoint_line(
             alt_line_objects[alt_id],
             branch_id,
         )
-        alt_waypoints_dict[branch_id] = alt_waypoints
         all_waypoints.extend(alt_waypoints)
 
     # Garage extension lines (also branch_id 1, flagged by PitExtensionsStart/End)
     garage_waypoint_lines = []
     for garage_id in sorted(garage_line_objects.keys()):
         branch_id = 1
-        print(f"Processing garage line {garage_id} as branch_id {branch_id}")  # Debug output
         garage_waypoints = WaypointProcessor.process_waypoint_line(
             garage_line_objects[garage_id],
             branch_id,
@@ -231,7 +206,6 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
             garage_wp.score = (0, -1.0)
         garage_waypoint_lines.append(garage_waypoints)
         all_waypoints.extend(garage_waypoints)
-        print(f"Processed {len(garage_waypoints)} garage waypoints for garage line {garage_id} (branch_id={branch_id})")  # Debug output
 
     # Store connection waypoints separately to update pointers later
     connection_waypoints = []
@@ -581,19 +555,14 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
 
     # Process pit spots
     pit_spots = []
-    print(f"Processing {len(pit_box_objects)} pit box objects...")  # Debug
 
     for obj in sorted(pit_box_objects, key=lambda x: x.name):
         # Extract team index from name
         team_index = 0
         try:
             team_index = int(obj.name.split("_")[-1])
-            print(
-                f"Processing pit box {obj.name} with team index {team_index}"
-            )  # Debug
         except ValueError:
-            print(f"Could not parse team index from {obj.name}")  # Debug
-            pass
+            print(f"Could not parse team index from {obj.name}")
 
         matrix = obj.matrix_world
         location = convert_coords_to_madness(np.array(matrix.translation))
@@ -607,13 +576,8 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
         garage_positions = []
         garage_orientations = []
 
-        print(
-            f"Looking for garage objects with prefix SMS_AIW_GARAGE_{team_index}"
-        )  # Debug
-
         for garage_obj in garage_objects:
             if garage_obj.name.startswith(f"SMS_AIW_GARAGE_{team_index}"):
-                print(f"Found garage: {garage_obj.name}")  # Debug
                 garage_matrix = garage_obj.matrix_world
                 garage_location = convert_coords_to_madness(
                     np.array(garage_matrix.translation)
@@ -633,10 +597,6 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
                 )
                 garage_orientations.append(garage_orientation)
 
-        print(
-            f"Found {len(garage_positions)} garage positions for team {team_index}"
-        )  # Debug
-
         pit_spot = aiw_parser.PitSpot(
             team_index=team_index,
             left_handed=aiw_props.track_features.left_handed_pits,  # Use scene setting
@@ -646,7 +606,6 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
             garage_orientations=garage_orientations,
         )
         pit_spots.append(pit_spot)
-        print(f"Created pit spot for team {team_index} at position {location}")  # Debug
 
     # Process safety car as pit spot index 63
     if safety_car_obj:
@@ -694,9 +653,6 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
             garage_orientations=garage_orientations,
         )
         pit_spots.append(safety_car_pit_spot)
-        print(f"Created safety car pit spot at position {location}")  # Debug
-
-    print(f"Total pit spots created: {len(pit_spots)}")  # Debug
 
     # Create track features
     features = aiw_parser.TrackFeatures(
