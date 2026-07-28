@@ -1,10 +1,5 @@
-import bpy
-import numpy as np
-from bpy.props import (
-    BoolProperty, FloatProperty, IntProperty, StringProperty,
-    EnumProperty, FloatVectorProperty, PointerProperty
-)
-from ..utils.coordinate_transforms import convert_position
+import bpy # type: ignore
+from bpy.props import FloatProperty, IntProperty, StringProperty, EnumProperty, FloatVectorProperty, PointerProperty # type: ignore
 
 
 class MadnessAreaProperties(bpy.types.PropertyGroup):

@@ -1,8 +1,5 @@
 import bpy  # type: ignore
-from bpy.props import (  # type: ignore
-    BoolProperty, FloatProperty, StringProperty, EnumProperty,
-    FloatVectorProperty, PointerProperty
-)
+from bpy.props import BoolProperty, FloatProperty, EnumProperty, FloatVectorProperty, PointerProperty# type: ignore
 import json
 from pathlib import Path
 
@@ -385,20 +382,6 @@ def get_sound_name(obj):
     if obj.name.startswith('SMS_SOUND_'):
         return obj.name[10:]  # Remove 'SMS_SOUND_' prefix
     return obj.name
-
-
-def refresh_sound_list():
-    """Force refresh of the sound list for all sound objects"""
-    global _sound_cache
-    # Clear the cache to force reload
-    _sound_cache = None
-    
-    # This can be called when the master database is updated
-    for obj in bpy.context.scene.objects:
-        if is_sms_sound(obj):
-            # Trigger a UI refresh by touching the property
-            if hasattr(obj, 'madness_sound'):
-                obj.madness_sound.property_unset("sound_type")
 
 
 def register():

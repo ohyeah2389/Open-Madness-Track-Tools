@@ -1,10 +1,7 @@
 import bpy  # type: ignore
-from bpy.props import (  # type: ignore
-    BoolProperty, FloatProperty, StringProperty, EnumProperty
-)
+from bpy.props import BoolProperty, FloatProperty, StringProperty, EnumProperty  # type: ignore
 import xml.etree.ElementTree as ET
 from pathlib import Path
-import os
 
 
 # Cache for template list to avoid repeated file reads
