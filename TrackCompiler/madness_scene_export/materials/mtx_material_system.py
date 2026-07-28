@@ -32,10 +32,6 @@ def _available_shader_database_ids():
     return [item[0] for item in get_shader_database_items(None, None)]
 
 
-def _norm_shader_path(path: str) -> str:
-    return str(path or "").replace("/", "\\").lower()
-
-
 def _enabled_option_names(mtx_settings):
     enabled_params = {param.name for param in mtx_settings.shader_params if param.enabled}
     enabled_defines = {define.name for define in mtx_settings.defines if define.enabled}
@@ -123,9 +119,6 @@ def resolve_texture_path(texture_path_str, context=None):
     if not texture_path_str:
         return None, False
 
-    # Import bpy at function level to ensure it's available throughout the function
-    import bpy  # type: ignore
-
     if context is None:
         context = bpy.context
 
@@ -147,8 +140,6 @@ def resolve_texture_path(texture_path_str, context=None):
 
 def texture_value_update(self, context):
     """Update callback to convert absolute paths to plain relative paths when texture_value is set."""
-    import bpy  # type: ignore
-    
     if not self.texture_value:
         return
     
@@ -718,9 +709,6 @@ class MTX_PT_shader_parameters(bpy.types.Panel):
                     warn_row = col.row()
                     warn_row.alert = True
                     warn_row.label(text="Texture path is empty", icon="ERROR")
-
-                # Clear button
-                # (Handled by button row above)
             elif param.param_type == "EPT_BOOL":
                 box.prop(param, "bool_value", text="Value")
 
@@ -926,8 +914,6 @@ def read_mtx_file(filepath: Path, material):
     # Initialize parameters and defines
     update_shader_change(mtx, bpy.context)
 
-    # No longer using hardcoded game folder for texture resolution
-
     # Read shader parameters
     found_params = set()
     for shaderparam in root.findall("shaderparam"):
@@ -1069,8 +1055,6 @@ class MTX_OT_pick_texture(bpy.types.Operator):
     param_index: bpy.props.IntProperty(default=-1)  # type: ignore
 
     def _resolve_existing_path(self, path_value: str) -> Optional[Path]:
-        import bpy  # type: ignore
-
         if not path_value:
             return None
 
@@ -1091,8 +1075,6 @@ class MTX_OT_pick_texture(bpy.types.Operator):
         return path_obj
 
     def invoke(self, context, event):
-        import bpy  # type: ignore
-
         if context.material and hasattr(context.material, "mtx_settings"):
             mtx = context.material.mtx_settings
             index = self.param_index
@@ -1114,8 +1096,6 @@ class MTX_OT_pick_texture(bpy.types.Operator):
         return {"RUNNING_MODAL"}
 
     def execute(self, context):
-        import bpy  # type: ignore
-
         if context.material and hasattr(context.material, "mtx_settings"):
             mtx = context.material.mtx_settings
             index = self.param_index

@@ -1,5 +1,6 @@
 import bpy  # type: ignore
 from pathlib import Path
+import shutil
 from typing import List
 import xml.etree.ElementTree as ET
 from . import mtx_material_system
@@ -39,7 +40,6 @@ def prepare_mtx_files_from_materials(
 
         # Fall back to placeholder
         if placeholder_path and placeholder_path.exists():
-            import shutil
             shutil.copy2(placeholder_path, dest)
             # Update material name in MTX file
             try:

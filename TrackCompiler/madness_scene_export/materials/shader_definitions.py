@@ -1,4 +1,3 @@
-import bpy # type: ignore
 from pathlib import Path
 import json
 
@@ -17,8 +16,6 @@ OPTION_PAIRINGS = {}
 DATABASE_DIR = Path(__file__).resolve().parent.parent / "database"
 SHADER_DATABASE_DIR = DATABASE_DIR / "shaders"
 DATABASE_REGISTRY = {}
-LOADED_SHADER_DATABASE = None
-LOADED_SHADER_DATABASE_ID = ""
 
 
 def _norm_name(value: str) -> str:
@@ -328,8 +325,6 @@ def get_default_shader_database_id():
 
 def load_shader_database(database_id=None):
     """Load shader data from selected database. Returns True on success."""
-    global LOADED_SHADER_DATABASE, LOADED_SHADER_DATABASE_ID
-
     _discover_shader_databases()
     if database_id is None or database_id == "builtin":
         database_id = get_default_shader_database_id()
@@ -391,8 +386,6 @@ def load_shader_database(database_id=None):
     OPTION_PAIRINGS.clear()
     OPTION_PAIRINGS.update(option_pairings)
 
-    LOADED_SHADER_DATABASE = db_content
-    LOADED_SHADER_DATABASE_ID = database_id
     print(f"Loaded shader database: {len(SHADER_TECHNIQUES)} shaders from {db_path}")
     return True
 
