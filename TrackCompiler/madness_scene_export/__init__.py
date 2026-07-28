@@ -285,21 +285,6 @@ class MadnessDynamicObjectsExporter(bpy.types.Operator, ExportHelper):
 
     filename_ext = ".xml"
 
-    def draw(self, context):
-        layout = self.layout
-
-        # Add helpful information about what will be exported
-        box = layout.box()
-        box.label(text="Export Information:", icon="INFO")
-        box.label(text="This will generate TWO files:")
-        box.label(text="1. physics/dynamic_collisions.xml (collision meshes)")
-        box.label(text="2. _data/dynamic/physics/[track].env.xml (object placements)")
-        box.separator()
-        box.label(
-            text="Choose any filename - the paths will be determined automatically"
-        )
-        box.label(text="based on the track structure.")
-
     def execute(self, context):
         try:
             results = export_dynamic_objects(self.filepath)
@@ -338,21 +323,6 @@ class MadnessSoundExporter(bpy.types.Operator, ExportHelper):
         options={"HIDDEN"},
         maxlen=255,
     )  # type: ignore
-
-    def draw(self, context):
-        layout = self.layout
-
-        # Add helpful information about what will be exported
-        box = layout.box()
-        box.label(text="Export Information:", icon="INFO")
-        box.label(text="This will generate an LSD (LevelSoundDefinition) file.")
-        box.label(text="Create empties named SMS_SOUND_[name] to define sound objects.")
-        box.separator()
-        box.label(text="Supported sound types:")
-        box.label(text="• Environment Sound (positional audio)")
-        box.label(text="• Ambient Sound (background audio)")
-        box.label(text="• Ambient Reverb (global reverb)")
-        box.label(text="• Local Reverb (area reverb)")
 
     def execute(self, context):
         try:
