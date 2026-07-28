@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 from typing import List, Dict, Any
 import mathutils  # type: ignore
 import numpy as np
-from ..properties.dynamic_properties import is_sms_dynamic, get_dynamic_name
+from ..properties.dynamic import is_sms_dynamic, get_dynamic_name
 from ..utils.coordinate_transforms import convert_position, convert_rotation_matrix
 
 

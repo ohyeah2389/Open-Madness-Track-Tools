@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 from typing import List, Dict, Any
 import mathutils  # type: ignore
 import numpy as np
-from ..properties.sound_properties import is_sms_sound, get_sound_name, get_sound_name_for_export
+from ..properties.sound import is_sms_sound, get_sound_name, get_sound_name_for_export
 from ..utils.coordinate_transforms import convert_position, convert_rotation_matrix
 
 

@@ -3,7 +3,7 @@
 import numpy as np
 from math import sqrt, atan2
 from typing import List
-from . import aiw_parser
+from . import parser
 
 
 def convert_coords_to_madness(pos: np.ndarray) -> np.ndarray:
@@ -19,7 +19,7 @@ def calculate_perpendicular(forward: np.ndarray, right: np.ndarray) -> np.ndarra
     return right_norm
 
 
-def calculate_euler_orientation(forward_vec: np.ndarray) -> aiw_parser.Orientation:
+def calculate_euler_orientation(forward_vec: np.ndarray) -> parser.Orientation:
     """Calculate Euler orientation from forward vector."""
     # Normalize the forward vector
     forward = -(
@@ -37,12 +37,12 @@ def calculate_euler_orientation(forward_vec: np.ndarray) -> aiw_parser.Orientati
     # Roll is typically 0 for track orientations
     roll = 0.0
 
-    return aiw_parser.Orientation(pitch, yaw, roll)
+    return parser.Orientation(pitch, yaw, roll)
 
 
 def find_waypoint_before_position(
     target_pos: np.ndarray,
-    waypoints: List[aiw_parser.Waypoint],
+    waypoints: List[parser.Waypoint],
 ) -> int:
     """Find a waypoint that comes BEFORE the target position in track direction."""
     if not waypoints:
@@ -102,7 +102,7 @@ def find_waypoint_before_position(
 
 def find_waypoint_after_position(
     target_pos: np.ndarray,
-    waypoints: List[aiw_parser.Waypoint],
+    waypoints: List[parser.Waypoint],
 ) -> int:
     """Find a waypoint that comes AFTER the target position in track direction."""
     if not waypoints:
@@ -162,7 +162,7 @@ def find_waypoint_after_position(
 
 def find_grid_connection_before_start(
     grid_pos: np.ndarray,
-    racing_waypoints: List[aiw_parser.Waypoint],
+    racing_waypoints: List[parser.Waypoint],
     distance_before: float = 20.0,
     avoid_indices: set = None,
 ) -> int:

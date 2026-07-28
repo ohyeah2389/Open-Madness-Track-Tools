@@ -2,7 +2,7 @@
 
 from . import livetrack_mrdf_export
 from . import triggers_export
-from .exporter import export_madness_scene
+from .sgx_export import export_madness_scene
 from .environment_export import export_environment_xml
 from .lights_export import export_lights_sgx
 from .dynamic_export import export_dynamic_objects

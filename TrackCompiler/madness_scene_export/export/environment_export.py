@@ -4,8 +4,8 @@ import numpy as np
 import math
 from pathlib import Path
 from typing import List, Dict, Any
-from ..properties.camera_properties import is_sms_camera
-from ..properties.area_properties import is_sms_area, get_area_name
+from ..properties.camera import is_sms_camera
+from ..properties.area import is_sms_area, get_area_name
 from ..utils.coordinate_transforms import decompose_matrix, convert_position
 
 

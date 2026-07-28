@@ -1,5 +1,5 @@
 import bpy  # type: ignore
-from ..properties.sound_properties import is_sms_sound
+from ..properties.sound import is_sms_sound
 
 
 class SOUND_PT_MadnessSoundPanel(bpy.types.Panel):

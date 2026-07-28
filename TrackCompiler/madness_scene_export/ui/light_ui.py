@@ -1,5 +1,5 @@
 import bpy  # type: ignore
-from ..properties.light_properties import is_sms_light
+from ..properties.light import is_sms_light
 
 
 class MadnessLightPanel(bpy.types.Panel):

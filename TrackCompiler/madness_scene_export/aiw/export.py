@@ -5,20 +5,20 @@ import mathutils  # type: ignore
 import numpy as np
 from bpy.props import StringProperty, PointerProperty  # type: ignore
 from bpy_extras.io_utils import ExportHelper  # type: ignore
-from . import aiw_parser
-from .aiw_ui import AIW_PT_ScenePanel
-from .aiw_waypoint_processor import WaypointProcessor
-from .aiw_connections import (
+from . import parser
+from .ui import AIW_PT_ScenePanel
+from .waypoint_processor import WaypointProcessor
+from .connections import (
     connect_pit_lane_to_main_line,
     generate_grid_connection_waypoints,
     generate_pit_connection_waypoints,
 )
-from .aiw_utils import (
+from .utils import (
     convert_coords_to_madness,
     calculate_euler_orientation,
     find_grid_connection_before_start,
 )
-from .aiw_writer import write_aiw_file
+from .writer import write_aiw_file
 
 
 class AIWExporter(bpy.types.Operator, ExportHelper):
@@ -532,9 +532,9 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
 
         orientation = calculate_euler_orientation(madness_forward)
 
-        grid_spot = aiw_parser.GridSpot(
+        grid_spot = parser.GridSpot(
             index=grid_index,  # Use parsed index from name
-            position=aiw_parser.Position(location[0], location[1], location[2]),
+            position=parser.Position(location[0], location[1], location[2]),
             orientation=orientation,
         )
         grid_spots.append(grid_spot)
@@ -560,9 +560,9 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
 
         orientation = calculate_euler_orientation(madness_forward)
 
-        teleport_spot = aiw_parser.TeleportSpot(
+        teleport_spot = parser.TeleportSpot(
             index=teleport_index,  # Use parsed index from name
-            position=aiw_parser.Position(location[0], location[1], location[2]),
+            position=parser.Position(location[0], location[1], location[2]),
             orientation=orientation,
         )
         teleport_spots.append(teleport_spot)
@@ -608,16 +608,16 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
                 garage_orientation = calculate_euler_orientation(garage_madness_forward)
 
                 garage_positions.append(
-                    aiw_parser.Position(
+                    parser.Position(
                         garage_location[0], garage_location[1], garage_location[2]
                     )
                 )
                 garage_orientations.append(garage_orientation)
 
-        pit_spot = aiw_parser.PitSpot(
+        pit_spot = parser.PitSpot(
             team_index=team_index,
             left_handed=aiw_props.track_features.left_handed_pits,  # Use scene setting
-            position=aiw_parser.Position(location[0], location[1], location[2]),
+            position=parser.Position(location[0], location[1], location[2]),
             orientation=orientation,
             garage_positions=garage_positions,
             garage_orientations=garage_orientations,
@@ -655,16 +655,16 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
                 garage_orientation = calculate_euler_orientation(garage_madness_forward)
 
                 garage_positions.append(
-                    aiw_parser.Position(
+                    parser.Position(
                         garage_location[0], garage_location[1], garage_location[2]
                     )
                 )
                 garage_orientations.append(garage_orientation)
 
-        safety_car_pit_spot = aiw_parser.PitSpot(
+        safety_car_pit_spot = parser.PitSpot(
             team_index=63,  # Safety car is always team index 63
             left_handed=aiw_props.track_features.left_handed_pits,  # Use scene setting
-            position=aiw_parser.Position(location[0], location[1], location[2]),
+            position=parser.Position(location[0], location[1], location[2]),
             orientation=orientation,
             garage_positions=garage_positions,
             garage_orientations=garage_orientations,
@@ -672,7 +672,7 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
         pit_spots.append(safety_car_pit_spot)
 
     # Create track features
-    features = aiw_parser.TrackFeatures(
+    features = parser.TrackFeatures(
         waypoint_span=waypoint_span,
         pitlanes=aiw_props.track_features.pitlanes,
         starting_grid=len(grid_spots),
@@ -700,7 +700,7 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
     # Create rolling starts
     rolling_starts = []
     for rs in aiw_props.rolling_starts:
-        rolling_start = aiw_parser.RollingStart(
+        rolling_start = parser.RollingStart(
             race_type=rs.race_type,
             distance_behind_grid=rs.distance_behind_grid,
             distance_between_rows=rs.distance_between_rows,
@@ -717,7 +717,7 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
         pit_extensions_end = garage_waypoint_lines[-1][-1].index
 
     # Create waypoint metadata
-    waypoint_metadata = aiw_parser.WaypointMetadata(
+    waypoint_metadata = parser.WaypointMetadata(
         trackstate=467,  # Default
         times=(
             340282346638528859811704183484516925440.0000,
@@ -748,7 +748,7 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
     )
 
     # Create track data
-    track_data = aiw_parser.TrackData(
+    track_data = parser.TrackData(
         features=features,
         grid_spots=grid_spots,
         rolling_starts=rolling_starts,
@@ -774,8 +774,8 @@ def menu_func_export(self, context):
 
 
 def register():
-    # Import property classes from aiw_properties
-    from .aiw_properties import (
+    # Import property classes from properties
+    from .properties import (
         AIWTrackFeatures,
         AIWRollingStart,
         AIWWaypointMetadata,
@@ -802,8 +802,8 @@ def unregister():
     bpy.utils.unregister_class(AIWExporter)
     bpy.utils.unregister_class(AIW_PT_ScenePanel)
 
-    # Import property classes from aiw_properties for unregistration
-    from .aiw_properties import (
+    # Import property classes from properties for unregistration
+    from .properties import (
         AIWTrackFeatures,
         AIWRollingStart,
         AIWWaypointMetadata,

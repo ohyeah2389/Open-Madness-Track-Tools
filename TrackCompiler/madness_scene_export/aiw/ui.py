@@ -1,7 +1,7 @@
 """AIW UI panel in Blender."""
 
 import bpy  # type: ignore
-from .aiw_properties import AIWSceneProperties
+from .properties import AIWSceneProperties
 
 
 class AIW_PT_ScenePanel(bpy.types.Panel):

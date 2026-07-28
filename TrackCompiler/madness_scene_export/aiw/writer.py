@@ -1,7 +1,7 @@
-from . import aiw_parser
+from . import parser
 
 
-def write_aiw_file(track_data: aiw_parser.TrackData, filepath: str):
+def write_aiw_file(track_data: parser.TrackData, filepath: str):
     """Writes AIW file with standard Madness AIW format."""
     with open(filepath, "w", encoding="utf-8") as f:
         # Write Features section

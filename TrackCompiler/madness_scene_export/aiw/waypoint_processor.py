@@ -4,8 +4,8 @@ import bpy # type: ignore
 import bmesh # type: ignore
 import numpy as np
 from typing import List, Dict, Any
-from . import aiw_parser
-from .aiw_utils import convert_coords_to_madness, calculate_perpendicular
+from . import parser
+from .utils import convert_coords_to_madness, calculate_perpendicular
 
 
 class WaypointProcessor:
@@ -53,7 +53,7 @@ class WaypointProcessor:
         wall_line_left_obj: bpy.types.Object = None,
         wall_line_right_obj: bpy.types.Object = None,
         branch_id: int = 0,
-    ) -> List[aiw_parser.Waypoint]:
+    ) -> List[parser.Waypoint]:
         """Process centerline waypoints with lateral offset calculations."""
         if not centerline_obj or centerline_obj.type != "MESH":
             return []
@@ -171,12 +171,12 @@ class WaypointProcessor:
             )  # alt_next and branch_merge to be calculated later
 
             # Create waypoint
-            waypoint = aiw_parser.Waypoint(
+            waypoint = parser.Waypoint(
                 index=i,
-                position=aiw_parser.Position(
+                position=parser.Position(
                     madness_pos[0], madness_pos[1], madness_pos[2]
                 ),
-                perpendicular=aiw_parser.Orientation(
+                perpendicular=parser.Orientation(
                     perpendicular[0], perpendicular[1], perpendicular[2]
                 ),
                 width=width,
@@ -604,7 +604,7 @@ class WaypointProcessor:
     @staticmethod
     def process_waypoint_line(
         mesh_obj: bpy.types.Object, branch_id: int
-    ) -> List[aiw_parser.Waypoint]:
+    ) -> List[parser.Waypoint]:
         """Process vertices of a mesh object into waypoint data."""
         if not mesh_obj or mesh_obj.type != "MESH":
             return []
@@ -742,12 +742,12 @@ class WaypointProcessor:
             )  # alt_next and branch_merge to be calculated later
 
             # Create waypoint
-            waypoint = aiw_parser.Waypoint(
+            waypoint = parser.Waypoint(
                 index=i,
-                position=aiw_parser.Position(
+                position=parser.Position(
                     madness_pos[0], madness_pos[1], madness_pos[2]
                 ),
-                perpendicular=aiw_parser.Orientation(
+                perpendicular=parser.Orientation(
                     perpendicular[0], perpendicular[1], perpendicular[2]
                 ),
                 width=width,

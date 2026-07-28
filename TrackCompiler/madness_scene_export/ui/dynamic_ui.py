@@ -1,5 +1,5 @@
 import bpy  # type: ignore
-from ..properties.dynamic_properties import is_sms_dynamic, refresh_template_list, get_available_dynamic_templates
+from ..properties.dynamic import is_sms_dynamic, refresh_template_list, get_available_dynamic_templates
 
 # Global dictionary to store expand/collapse state for template groups
 _group_expand_state = {}

@@ -1,6 +1,6 @@
 import bpy  # type: ignore
-from ..properties.camera_properties import is_sms_camera
-from ..properties.area_properties import is_sms_area
+from ..properties.camera import is_sms_camera
+from ..properties.area import is_sms_area
 
 
 class MADNESS_OT_add_camera_zone(bpy.types.Operator):

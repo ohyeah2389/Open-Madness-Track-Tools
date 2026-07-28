@@ -15,12 +15,12 @@ import bpy  # type: ignore
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, StringProperty  # type: ignore
 from bpy_extras.io_utils import ExportHelper  # type: ignore
 
-from .aiw import aiw_export
+from .aiw import export as aiw_export
 from .export import livetrack_mrdf_export
 from .export import triggers_export
 from .export.dynamic_export import export_dynamic_objects
 from .export.environment_export import export_environment_xml
-from .export.exporter import (
+from .export.sgx_export import (
     SingleMebExportSettings,
     export_madness_scene,
     export_single_meb_set,
@@ -29,11 +29,7 @@ from .export.gcl_export import export_gcl
 from .export.lights_export import export_lights_sgx
 from .export.sound_export import export_sounds
 from .materials import mtx_material_system
-from .properties import camera_properties
-from .properties import area_properties
-from .properties import light_properties
-from .properties import dynamic_properties
-from .properties import sound_properties
+from .properties import area, camera, dynamic, light, sound
 from .settings import meb_export_settings
 from .settings import empty_meb_settings
 from .ui import camera_ui
@@ -485,14 +481,14 @@ def register():
     aiw_export.register()
     livetrack_mrdf_export.register()
     triggers_export.register()
-    camera_properties.register()
-    area_properties.register()
+    camera.register()
+    area.register()
     camera_ui.register()
-    light_properties.register()
+    light.register()
     light_ui.register()
-    dynamic_properties.register()
+    dynamic.register()
     dynamic_ui.register()
-    sound_properties.register()
+    sound.register()
     sound_ui.register()
 
     main_classes = [
@@ -538,14 +534,14 @@ def unregister():
             pass  # Already unregistered
 
     dynamic_ui.unregister()
-    dynamic_properties.unregister()
+    dynamic.unregister()
     sound_ui.unregister()
-    sound_properties.unregister()
+    sound.unregister()
     light_ui.unregister()
-    light_properties.unregister()
+    light.unregister()
     camera_ui.unregister()
-    area_properties.unregister()
-    camera_properties.unregister()
+    area.unregister()
+    camera.unregister()
     triggers_export.unregister()
     livetrack_mrdf_export.unregister()
     aiw_export.unregister()

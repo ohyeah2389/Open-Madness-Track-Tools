@@ -4,8 +4,8 @@ import bpy  # type: ignore
 import mathutils  # type: ignore
 import numpy as np
 from typing import List, Tuple, Optional
-from . import aiw_parser
-from .aiw_utils import (
+from . import parser
+from .utils import (
     convert_coords_to_madness,
     calculate_perpendicular,
     find_grid_connection_before_start,
@@ -15,8 +15,8 @@ from .aiw_utils import (
 
 
 def connect_pit_lane_to_main_line(
-    pit_waypoints: List[aiw_parser.Waypoint],
-    main_waypoints: List[aiw_parser.Waypoint],
+    pit_waypoints: List[parser.Waypoint],
+    main_waypoints: List[parser.Waypoint],
 ) -> int:
     """Connect pit lane waypoints to nearest main line waypoints.
     Returns the index of the main waypoint that connects to the first pit waypoint."""
@@ -140,16 +140,16 @@ def connect_pit_lane_to_main_line(
 
 def generate_grid_connection_waypoints(
     grid_obj: bpy.types.Object,
-    racing_waypoints: List[aiw_parser.Waypoint],
+    racing_waypoints: List[parser.Waypoint],
     branch_id: int,
-) -> Tuple[aiw_parser.Waypoint, int]:
+) -> Tuple[parser.Waypoint, int]:
     """Generate connection waypoints for a grid spot (connects from warmup lap to grid position)."""
     if not racing_waypoints:
         # Return a default waypoint if no racing waypoints exist
-        default_waypoint = aiw_parser.Waypoint(
+        default_waypoint = parser.Waypoint(
             index=0,
-            position=aiw_parser.Position(0, 0, 0),
-            perpendicular=aiw_parser.Orientation(0, 0, 0),
+            position=parser.Position(0, 0, 0),
+            perpendicular=parser.Orientation(0, 0, 0),
             width=(0, 0),
             dwidth=(0, 0),
             path=(0, 0),
@@ -199,10 +199,10 @@ def generate_grid_connection_waypoints(
     perpendicular = calculate_perpendicular(madness_forward, right_vec)
 
     # Create waypoint
-    waypoint = aiw_parser.Waypoint(
+    waypoint = parser.Waypoint(
         index=0,  # Will be renumbered later
-        position=aiw_parser.Position(grid_pos[0], grid_pos[1], grid_pos[2]),
-        perpendicular=aiw_parser.Orientation(
+        position=parser.Position(grid_pos[0], grid_pos[1], grid_pos[2]),
+        perpendicular=parser.Orientation(
             perpendicular[0], perpendicular[1], perpendicular[2]
         ),
         width=(0.0, 0.0),
@@ -223,8 +223,8 @@ def generate_grid_connection_waypoints(
 
 
 def generate_pit_connection_waypoints(
-    pit_obj: bpy.types.Object, pit_waypoints: List[aiw_parser.Waypoint], branch_id: int
-) -> Tuple[aiw_parser.Waypoint, int, int]:
+    pit_obj: bpy.types.Object, pit_waypoints: List[parser.Waypoint], branch_id: int
+) -> Tuple[parser.Waypoint, int, int]:
     """Generate connection waypoints for a pit spot (connects to/from pit line)."""
     if not pit_waypoints:
         return None, -1, -1
@@ -267,10 +267,10 @@ def generate_pit_connection_waypoints(
     perpendicular = calculate_perpendicular(madness_forward, right_vec)
 
     # Create waypoint
-    waypoint = aiw_parser.Waypoint(
+    waypoint = parser.Waypoint(
         index=0,  # Will be renumbered later
-        position=aiw_parser.Position(pit_pos[0], pit_pos[1], pit_pos[2]),
-        perpendicular=aiw_parser.Orientation(
+        position=parser.Position(pit_pos[0], pit_pos[1], pit_pos[2]),
+        perpendicular=parser.Orientation(
             perpendicular[0], perpendicular[1], perpendicular[2]
         ),
         width=(5.0, 5.0),

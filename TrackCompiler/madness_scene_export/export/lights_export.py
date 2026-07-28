@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 from typing import List, Dict, Any
 import mathutils  # type: ignore
 import numpy as np
-from ..properties.light_properties import is_sms_light
+from ..properties.light import is_sms_light
 from ..utils.coordinate_transforms import decompose_matrix, convert_position
 
 
