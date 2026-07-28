@@ -57,8 +57,23 @@ class AIWExporter(bpy.types.Operator, ExportHelper):
 
     def execute(self, context):
         try:
-            export_aiw(context, self.filepath, self.export_cut_lines, self.export_wall_lines, self.export_racing_line)
+            export_result = export_aiw(
+                context,
+                self.filepath,
+                self.export_cut_lines,
+                self.export_wall_lines,
+                self.export_racing_line,
+            )
             self.report({"INFO"}, f"AIW exported successfully to {self.filepath}")
+            warnings = export_result.get("warnings", {}) if isinstance(export_result, dict) else {}
+            issue_count = int(warnings.get("issues", 0))
+            if issue_count:
+                self.report(
+                    {"WARNING"},
+                    f"AIW export warnings: {issue_count} issue(s)",
+                )
+                for detail in warnings.get("details", []):
+                    self.report({"WARNING"}, detail)
             return {"FINISHED"}
         except Exception as e:
             self.report({"ERROR"}, f"AIW export failed: {str(e)}")
@@ -87,6 +102,8 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
 
     aiw_props = scene.aiw_properties
     aiw_props.ensure_rolling_starts()
+
+    warnings = []
 
     # Collect waypoint objects
     centerline_obj = None
@@ -141,7 +158,7 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
                 garage_id = int(garage_num)
                 garage_line_objects[garage_id] = obj
             except ValueError:
-                print(f"Could not parse garage line id from {name}")
+                warnings.append(f"Could not parse garage line id from '{name}'; object ignored")
         # Check for marker objects (can be mesh or empty)
         elif name.startswith("SMS_AIW_START_"):
             grid_objects.append(obj)
@@ -504,7 +521,7 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
         try:
             grid_index = int(obj.name.split("_")[-1])
         except ValueError:
-            print(f"Could not parse grid index from {obj.name}")
+            warnings.append(f"Could not parse grid index from '{obj.name}'; defaulting to 0")
 
         matrix = obj.matrix_world
         location = convert_coords_to_madness(np.array(matrix.translation))
@@ -533,7 +550,7 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
         try:
             teleport_index = int(obj.name.split("_")[-1])
         except ValueError:
-            print(f"Could not parse teleport index from {obj.name}")
+            warnings.append(f"Could not parse teleport index from '{obj.name}'; defaulting to 0")
 
         matrix = obj.matrix_world
         location = convert_coords_to_madness(np.array(matrix.translation))
@@ -562,7 +579,7 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
         try:
             team_index = int(obj.name.split("_")[-1])
         except ValueError:
-            print(f"Could not parse team index from {obj.name}")
+            warnings.append(f"Could not parse team index from '{obj.name}'; defaulting to 0")
 
         matrix = obj.matrix_world
         location = convert_coords_to_madness(np.array(matrix.translation))
@@ -743,6 +760,13 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
 
     # Export to file
     write_aiw_file(track_data, filepath)
+
+    return {
+        "warnings": {
+            "issues": len(warnings),
+            "details": warnings,
+        }
+    }
 
 
 def menu_func_export(self, context):
