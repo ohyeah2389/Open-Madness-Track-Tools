@@ -82,21 +82,19 @@ class MadnessCameraPanel(bpy.types.Panel):
         box.prop(cam_props, "fov_delay")
         box.prop(cam_props, "fov_scalar")
 
-        # Zoom Curves
+        # Zoom Curve
         subbox = box.box()
-        subbox.label(text="Zoom Curves")
-        row = subbox.row()
-        row.prop(cam_props, "zoom_curve_0")
-        row.prop(cam_props, "zoom_curve_1")
-        row = subbox.row()
-        row.prop(cam_props, "zoom_curve_2")
-        row.prop(cam_props, "zoom_curve_3")
-        row = subbox.row()
-        row.prop(cam_props, "zoom_curve_4")
-        row.prop(cam_props, "zoom_curve_5")
-        row = subbox.row()
-        row.prop(cam_props, "zoom_curve_6")
-        row.prop(cam_props, "zoom_curve_7")
+        subbox.label(text="Zoom Curve")
+        for point_index, (dist_prop, zoom_prop) in enumerate((
+            ("zoom_curve_0", "zoom_curve_1"),
+            ("zoom_curve_2", "zoom_curve_3"),
+            ("zoom_curve_4", "zoom_curve_5"),
+            ("zoom_curve_6", "zoom_curve_7"),
+        )):
+            row = subbox.row()
+            row.label(text=f"P{point_index}")
+            row.prop(cam_props, dist_prop, text="Distance")
+            row.prop(cam_props, zoom_prop, text="Zoom")
 
         # Depth of Field
         box = layout.box()

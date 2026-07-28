@@ -481,15 +481,15 @@ class MadnessCameraProperties(bpy.types.PropertyGroup):
         max=10
     )  # type: ignore
 
-    # Zoom Curves (8 values)
-    zoom_curve_0: FloatProperty(name="Zoom Curve 0", default=0.0)  # type: ignore
-    zoom_curve_1: FloatProperty(name="Zoom Curve 1", default=1.0)  # type: ignore
-    zoom_curve_2: FloatProperty(name="Zoom Curve 2", default=0.1)  # type: ignore
-    zoom_curve_3: FloatProperty(name="Zoom Curve 3", default=0.05)  # type: ignore
-    zoom_curve_4: FloatProperty(name="Zoom Curve 4", default=0.5)  # type: ignore
-    zoom_curve_5: FloatProperty(name="Zoom Curve 5", default=0.85)  # type: ignore
-    zoom_curve_6: FloatProperty(name="Zoom Curve 6", default=0.65)  # type: ignore
-    zoom_curve_7: FloatProperty(name="Zoom Curve 7", default=0.95)  # type: ignore
+    # Zoom Curve: 4 (distance, zoom) control points sampled by the auto-zoom system
+    zoom_curve_0: FloatProperty(name="P0 Distance", default=0.0, min=0.0, max=1.0)  # type: ignore
+    zoom_curve_1: FloatProperty(name="P0 Zoom", default=1.0, min=0.0, max=1.0)  # type: ignore
+    zoom_curve_2: FloatProperty(name="P1 Distance", default=0.1, min=0.0, max=1.0)  # type: ignore
+    zoom_curve_3: FloatProperty(name="P1 Zoom", default=0.05, min=0.0, max=1.0)  # type: ignore
+    zoom_curve_4: FloatProperty(name="P2 Distance", default=0.5, min=0.0, max=1.0)  # type: ignore
+    zoom_curve_5: FloatProperty(name="P2 Zoom", default=0.85, min=0.0, max=1.0)  # type: ignore
+    zoom_curve_6: FloatProperty(name="P3 Distance", default=0.65, min=0.0, max=1.0)  # type: ignore
+    zoom_curve_7: FloatProperty(name="P3 Zoom", default=0.95, min=0.0, max=1.0)  # type: ignore
 
     # Bokeh Properties
     mBokehEnabled: BoolProperty(
