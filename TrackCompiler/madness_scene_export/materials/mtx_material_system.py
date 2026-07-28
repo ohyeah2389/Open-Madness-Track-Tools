@@ -1085,10 +1085,25 @@ class MTX_OT_pick_texture(bpy.types.Operator):
                 param = mtx.shader_params[index]
                 existing_path = self._resolve_existing_path(param.texture_value)
 
-                if existing_path and existing_path.exists():
-                    self.filepath = str(existing_path)
+                if existing_path is not None:
+                    # Keep previous filename even when the file is missing; open at the deepest existing ancestor of that path
+                    name = existing_path.name
+                    directory = existing_path if existing_path.is_dir() else existing_path.parent
+                    while not directory.exists():
+                        parent = directory.parent
+                        if parent == directory:
+                            break
+                        directory = parent
+                    if directory.exists():
+                        self.filepath = str(directory / name) if name else str(directory) + "/"
+                    elif bpy.data.filepath:
+                        blend_dir = Path(bpy.data.filepath).resolve().parent
+                        self.filepath = str(blend_dir / name) if name else str(blend_dir) + "/"
+                    elif name:
+                        self.filepath = name
                 elif bpy.data.filepath:
-                    self.filepath = str(Path(bpy.data.filepath).resolve().parent)
+                    # Trailing sep required so Blender does not treat the folder name as the selected file
+                    self.filepath = str(Path(bpy.data.filepath).resolve().parent) + "/"
 
                 self.param_index = index
 
