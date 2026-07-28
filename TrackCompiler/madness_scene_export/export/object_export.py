@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Iterable, List, Tuple
 import numpy as np
 import re
+import traceback
 from contextlib import contextmanager
 from ..utils.coordinate_transforms import decompose_matrix
 from ..utils import effective_materials_for_object, sanitize
@@ -75,68 +76,6 @@ class ObjectInfo:
         self.bb_min = bb_min
         self.bb_max = bb_max
         self.userflags = userflags
-
-
-def is_collection_visible(collection, view_layer):
-    """Check if a collection is visible in the view layer, considering hierarchy."""
-    if collection.name in view_layer.layer_collection.children:
-        layer_collection = view_layer.layer_collection.children[collection.name]
-    else:
-        layer_collection = find_layer_collection(
-            view_layer.layer_collection, collection
-        )
-
-    if not layer_collection:
-        return False
-
-    if layer_collection.exclude:
-        return False
-
-    parent = layer_collection
-    while parent.collection != view_layer.layer_collection.collection:
-        parent = get_parent_layer_collection(view_layer.layer_collection, parent)
-        if parent and parent.exclude:
-            return False
-
-    return True
-
-
-def find_layer_collection(layer_collection, target_collection):
-    """Recursively find a layer collection for a given collection."""
-    if layer_collection.collection == target_collection:
-        return layer_collection
-
-    for child in layer_collection.children:
-        result = find_layer_collection(child, target_collection)
-        if result:
-            return result
-
-    return None
-
-
-def get_parent_layer_collection(root_layer_collection, target_layer_collection):
-    """Find the parent layer collection of a given layer collection."""
-    for child in root_layer_collection.children:
-        if child == target_layer_collection:
-            return root_layer_collection
-
-        parent = get_parent_layer_collection(child, target_layer_collection)
-        if parent:
-            return parent
-
-    return None
-
-
-def is_object_in_visible_collection(obj, view_layer):
-    """Check if an object is in any visible collection."""
-    for collection in obj.users_collection:
-        if is_collection_visible(collection, view_layer):
-            return True
-
-    if not obj.users_collection:
-        return not view_layer.layer_collection.exclude
-
-    return False
 
 
 def _iter_visible_layer_collections(root_layer_collection):
@@ -309,8 +248,6 @@ def combine_objects_into_mesh(
 
     except Exception as e:
         print(f"Error combining objects: {e}")
-        import traceback
-
         traceback.print_exc()
         return None, [], None
     finally:

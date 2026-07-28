@@ -8,13 +8,6 @@ from ..properties.sound_properties import is_sms_sound, get_sound_name, get_soun
 from ..utils.coordinate_transforms import convert_position, convert_rotation_matrix
 
 
-def get_sound_name(obj):
-    """Get sound name without SMS_SOUND_ prefix"""
-    if obj.name.startswith('SMS_SOUND_'):
-        return obj.name[10:]  # Remove 'SMS_SOUND_' prefix
-    return obj.name
-
-
 def collect_sounds(scene) -> List[Dict[str, Any]]:
     """Collect all SMS sound objects from the scene"""
     sounds = []
@@ -41,15 +34,11 @@ def collect_sounds(scene) -> List[Dict[str, Any]]:
             position = mathutils.Vector(madness_position)
             orientation = mathutils.Vector(madness_orientation).normalized()
 
-            # Calculate center position for sound areas
-            area_center = position
-
             sound_info = {
                 'name': get_sound_name(obj),
                 'object': obj,
                 'position': position,
                 'orientation': orientation,
-                'area_center': area_center,
                 'properties': sound_props,
                 'world_matrix': world_matrix
             }
@@ -61,7 +50,7 @@ def collect_sounds(scene) -> List[Dict[str, Any]]:
 def generate_sound_area_xml(sound_info: Dict[str, Any], area_type: str) -> ET.Element:
     """Generate XML element for a sound area definition"""
     props = sound_info['properties']
-    center = sound_info['area_center']
+    center = sound_info['position']
 
     if area_type == 'SPHERICAL':
         area_elem = ET.Element("data", **{'class': 'SoundAreaSpherical'})

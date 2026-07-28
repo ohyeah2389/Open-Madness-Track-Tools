@@ -1,10 +1,11 @@
 import bpy # type: ignore
+import mathutils # type: ignore
 import xml.etree.ElementTree as ET
 import numpy as np
+import random
 from pathlib import Path
-from typing import List, Dict, Tuple, Optional
-import re
-from math import radians, degrees
+from typing import List, Dict, Tuple
+from math import radians
 from bpy.props import StringProperty, BoolProperty # type: ignore
 from bpy_extras.io_utils import ExportHelper # type: ignore
 
@@ -59,7 +60,6 @@ def build_trigger_crc_map() -> Dict[str, int]:
 def convert_position_to_madness(blender_pos: Tuple[float, float, float]) -> Tuple[float, float, float]:
     """Convert position from Blender coordinate system to Madness coordinate system"""
     x, y, z = blender_pos
-    # Fixed: removed negations on X and Z axes (was (-x, z, -y), now (x, z, y))
     return (x, z, y)
 
 def convert_rotation_matrix_to_madness(blender_matrix) -> np.ndarray:
@@ -114,7 +114,6 @@ def matrix_to_flat_string(matrix: np.ndarray) -> str:
 
 def generate_unique_name() -> str:
     """Generate a unique 8-character hex name for trigger"""
-    import random
     return f"{random.randint(0, 0xFFFFFFFF):08x}"
 
 def extract_trigger_objects(context) -> List[Dict]:
@@ -149,7 +148,6 @@ def extract_trigger_objects(context) -> List[Dict]:
         # Get pure rotation matrix (normalized by scale)
         rotation_matrix_scaled = world_matrix.to_3x3()
         # Normalize each column to remove scale influence
-        import mathutils # type: ignore
         col0 = rotation_matrix_scaled.col[0].normalized()
         col1 = rotation_matrix_scaled.col[1].normalized() 
         col2 = rotation_matrix_scaled.col[2].normalized()

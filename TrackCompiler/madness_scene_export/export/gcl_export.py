@@ -513,7 +513,6 @@ def export_gcl(
     return {
         "triangles": len(tris),
         "grid": (grid_100_x, grid_100_z),
-        "header_grid": (grid_100_x, grid_100_z),
         "bounds": {
             "min_x": grid_min_x,
             "max_x": grid_max_x,

@@ -1,7 +1,7 @@
 import bpy  # type: ignore
 from pathlib import Path
 import xml.etree.ElementTree as ET
-from typing import List, Dict, Any, Set
+from typing import List, Dict, Any
 import mathutils  # type: ignore
 import numpy as np
 from ..properties.dynamic_properties import is_sms_dynamic, get_dynamic_name
@@ -253,8 +253,8 @@ def export_dynamic_collisions_xml(filepath: str, dynamic_objects: List[Dict[str,
     return len(dynamic_objects)
 
 
-def export_environment_xml(filepath: str, dynamic_objects: List[Dict[str, Any]]) -> int:
-    """Export environment XML file"""
+def export_dynamic_environment_xml(filepath: str, dynamic_objects: List[Dict[str, Any]]) -> int:
+    """Export environment XML file with dynamic object placements"""
     root = create_environment_xml(dynamic_objects)
     
     # Format and write XML without encoding
@@ -273,7 +273,7 @@ def export_environment_xml(filepath: str, dynamic_objects: List[Dict[str, Any]])
     return len(dynamic_objects)
 
 
-def export_dynamic_objects(base_filepath: str) -> Dict[str, any]:
+def export_dynamic_objects(base_filepath: str) -> Dict[str, Any]:
     """Export both dynamic collisions and environment files"""
     dynamic_objects = collect_dynamic_objects(bpy.context.scene)
     
@@ -338,7 +338,7 @@ def export_dynamic_objects(base_filepath: str) -> Dict[str, any]:
     # Environment: Tracks/_data/dynamic/physics/[track_name].env.xml
     env_path = tracks_dir / "_data" / "dynamic" / "physics" / f"{track_name}.env.xml"
     env_path.parent.mkdir(parents=True, exist_ok=True)
-    results['environment'] = export_environment_xml(str(env_path), dynamic_objects)
+    results['environment'] = export_dynamic_environment_xml(str(env_path), dynamic_objects)
     results['env_path'] = str(env_path)
     
     print(f"Dynamic objects exported:")
