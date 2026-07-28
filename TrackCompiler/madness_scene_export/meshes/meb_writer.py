@@ -1,6 +1,7 @@
-"""Core MEB file writer.
+"""
+Core MEB file writer.
 
-Writes mesh data to binary MEB format used by Automobilista 2.
+Writes mesh data to binary MEB format used by Madness Engine games.
 """
 
 import struct

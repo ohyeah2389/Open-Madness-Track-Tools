@@ -1,4 +1,4 @@
-"""MEB mesh format handling."""
+"""MEB mesh format handling module."""
 
 from .blender_meb_export import export_object_to_meb, MeshExportOptions
 

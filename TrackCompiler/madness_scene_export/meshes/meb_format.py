@@ -1,8 +1,8 @@
-"""MEB file format constants and specifications.
+"""
+MEB file format constants and specifications.
 
 The MEB format is a binary mesh format used by Madness Engine games.
-It consists of multiple sections, each identified by a 12-byte header containing
-section type identifiers.
+It consists of multiple sections, each identified by a 12-byte header containing section type identifiers.
 
 Section format: [type1(4 bytes), type2(4 bytes), subtype(4 bytes), data...]
 """

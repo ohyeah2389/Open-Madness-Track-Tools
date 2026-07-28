@@ -409,8 +409,7 @@ def export_object_to_meb(
     # Validate vertex count (MEB uses 16-bit indices)
     if len(vertices) > 65535:
         raise ValueError(
-            f"Mesh {obj.name} has {len(vertices)} unique vertices, exceeding the"
-            f"MEB format limit of 65535 vertices. This mesh cannot be exported."
+            f"Mesh {obj.name} has {len(vertices)} unique vertices, exceeding the MEB format limit of 65535 vertices. This mesh cannot be exported."
         )
 
     # Write MEB file
