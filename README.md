@@ -2,7 +2,7 @@
 This repository consists of a set of scripts, a Blender plugin, and program source code enabling development of original track models for Slightly Mad Studios' Madness Engine racing games (tested with Project CARS 2 and Reiza Studios' Automobilista 2).
 
 ## Limitations:
-I want people to be aware of the limitations of the current methodology upfront. Here is the list of features that are not yet working:
+I want people to be aware of the limitations of the current methodology upfront. Here is the non-exhaustive list of features that are not yet working:
 
 ### VHF instance hierarchies and IMB instance models can't be added to a track
 This is because the SGX format does not support referencing these files. Certain scene preparation code, which runs if an SGB64 is loaded, doesn't run in the SGX loading pipeline.
@@ -10,6 +10,9 @@ The SGB64 format does support VHFs and IMBs, as evidenced by filepath strings co
 
 ### LiveGrass isn't implemented
 I haven't begun research into the LiveGrass system because I highly suspect it'll only work with SGB64-formatted scenegraphs, not SGXs, for the reasons listed above, because the LiveGrass system likely makes heavy use of instancing.
+
+### LODs are not implemented
+This feature is possible to implement and will be implemented at a later date.
 
 ## Contents:
 
@@ -23,10 +26,10 @@ A command-line utility that prepares LiveTrack geometry data (PhysX cooked colli
 A Blender addon that handles all Madness-specific track exporting and related authoring. 
 It has the following capabilities:
 - Export a Blender scene into a collection of MEBs (mesh binaries) and MTXs (material XML files) and a corresponding SGX (scenegraph XML file)
-    - Automatically copy all MTX-referenced textures to a specified folder, including straight into the specified game's folder structure
+    - Automatically copy all MTX-referenced textures to the correct place in a placeholder game folder structure
 - Import, export, and create new loose MTXs linked to a Blender material (defined independently from it, but organized alongside it)
 - Export selected Blender objects or the entire active Blender scene to a single MEB file + MTX file(s) for special purposes (such as preparation of custom dynamic physics objects)
-- Export an AIW (AI Waypoints) file from a set of scene object with a specific mesh topology, attributes, and naming convention (see Example Files)
+- Export an AIW (AI Waypoints) file from a set of scene objects with a specific mesh topology, attributes, and naming convention (see Example Files)
 - Export a LiveTrack Weathering-In MRDF (Madness "Machine-Readable Data Format") from an object with a specifically formatted Geometry Nodes setup (see Example Files)
 - Export a `triggers.xml` file containing timing gate and other trigger zone information from a set of scene objects with a specific naming convention (see Example Files)
 - Export a Cameras XML file from a set of scene objects with a specific naming convention, configured data, placements, and orientation (see Example Files)
@@ -34,6 +37,14 @@ It has the following capabilities:
 - Export a paired `dynamic_objects.xml` and `trackname.env.xml` dynamic physics objects layout fileset from a set of empties with a specific naming convention and configuration
 - Export a Level Sound Definition LSD file from a set of scene objects with a specific naming convention, configured data, placements, and orientation (see Example Files)
 - Export a LiveTrack Point Grid and track cut area GCL file from a set of scene objects representing the drivable surface of the track (see Example Files)
+
+### TrackPacker
+A command-line utility that converts and packs files for distribution and installation with [Paolo Ambrosio's AMS2 CM](https://github.com/OpenSimTools/AMS2CM/). This is distributed in each release as `PackTrack.exe`; a PyInstaller-built version of the `pack_track.py` script; which can be used instead if you have Python installed.
+Contains the following:
+- `bff_creator.py` is a Python script that is capable of creating a new valid BFF from loose files. It does not and will not support BFF encryption; no code that supports BFF encryption is included or will be included.
+- `mtx2bmt.py` is a Python script that is capable of converting MTX material definition XML files to BMT binary material files.
+- `pack_track.py` is a Python script that performs the actual packing of a template folder structure (such as the one provided in the Example Project) into a `.zip` file ready for installation with the aforementioned Content Manager.
+- `placeholder_seasonal.bff` is a nearly-empty BFF file which gets reused as the empty seasonal variation BFF files in each packed track. (I tried various methods of creating an original placeholder BFF on the fly, such as creating an empty BFF and creating a BFF with a benign file to replace, to no success.)
 
 ### Example Project
 This contains a Blender project file, textures, and a shell track file structure ready to be exported into.
