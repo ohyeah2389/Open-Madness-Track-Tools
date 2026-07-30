@@ -8,4 +8,3 @@ __pycache__/
 /TrackPacker/build/
 /TrackPacker/dist/
 /TrackPacker/_bff_build/
-/TrackPacker/*.spec
