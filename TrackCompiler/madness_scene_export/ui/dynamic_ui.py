@@ -1,12 +1,67 @@
 import bpy  # type: ignore
-from ..properties.dynamic import is_sms_dynamic, refresh_template_list, get_available_dynamic_templates
+from ..properties.dynamic import (
+    get_definition_name,
+    get_definition_shapes,
+    is_dynamic_definition,
+    is_sms_dynamic,
+)
 
-# Global dictionary to store expand/collapse state for template groups
-_group_expand_state = {}
+
+def _find_definition_root(obj):
+    """Walk up the parent chain to the definition this object belongs to."""
+    while obj:
+        if is_dynamic_definition(obj):
+            return obj
+        obj = obj.parent
+    return None
+
+
+class MadnessDynamicDefinitionPanel(bpy.types.Panel):
+    """Panel for authoring a dynamic physics object definition"""
+    bl_label = "Madness Dynamic Definition"
+    bl_idname = "OBJECT_PT_madness_dynamic_definition"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_context = "object"
+
+    @classmethod
+    def poll(cls, context):
+        return context.object and context.object.type in {'MESH', 'EMPTY'}
+
+    def draw(self, context):
+        layout = self.layout
+        obj = context.object
+        props = obj.madness_dynamic_def
+
+        layout.prop(props, "is_definition")
+
+        if props.is_definition:
+            box = layout.box()
+            box.prop(props, "export_name", placeholder=obj.name)
+            shapes = get_definition_shapes(obj)
+            if shapes:
+                box.label(text=f"{len(shapes)} collision shape(s)", icon='MESH_ICOSPHERE')
+            else:
+                box.label(text="No mesh shapes found", icon='ERROR')
+
+        if obj.type != 'MESH':
+            return
+
+        definition_root = _find_definition_root(obj)
+        if definition_root is None:
+            return
+
+        shape_box = layout.box()
+        shape_box.label(text="Collision Shape", icon='PHYSICS')
+        if definition_root is not obj:
+            shape_box.label(text=f"Part of: {get_definition_name(definition_root)}", icon='INFO')
+        shape_box.prop(props, "physics_material")
+        shape_box.prop(props, "mass")
+        shape_box.label(text="Exported as a convex hull of this mesh", icon='MESH_ICOSPHERE')
 
 
 class MadnessDynamicPanel(bpy.types.Panel):
-    """Panel for dynamic physics object properties"""
+    """Panel for placing an instance of a dynamic object definition"""
     bl_label = "Madness Dynamic Object"
     bl_idname = "OBJECT_PT_madness_dynamic"
     bl_space_type = 'PROPERTIES'
@@ -15,345 +70,88 @@ class MadnessDynamicPanel(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return (context.object and
-                context.object.type == 'EMPTY' and
-                is_sms_dynamic(context.object))
+        return is_sms_dynamic(context.object)
 
     def draw(self, context):
         layout = self.layout
         obj = context.object
         dynamic_props = obj.madness_dynamic
 
-        # Template Selection
         main_box = layout.box()
-        main_box.label(text="Template Configuration", icon='LIBRARY_DATA_DIRECT')
-        
-        # Template selection
-        row = main_box.row()
-        if dynamic_props.template_name:
-            row.prop(dynamic_props, "template_name", text="Template")
-        else:
-            row.operator("madness_dynamic.select_template", text="Select Template", icon='DOWNARROW_HLT')
-        if dynamic_props.template_name:
-            row.operator("madness_dynamic.clear_template", text="", icon='TRASH')
-        else:
-            row.operator("madness_dynamic.refresh_templates", text="", icon='FILE_REFRESH')
+        main_box.label(text="Definition", icon='LIBRARY_DATA_DIRECT')
+        main_box.prop(dynamic_props, "definition", text="")
 
-        selected_dynamic_empties = [
-            selected_obj for selected_obj in context.selected_objects
-            if selected_obj.type == 'EMPTY'
-        ]
-        if dynamic_props.template_name and len(selected_dynamic_empties) > 1:
-            copy_row = main_box.row()
-            copy_row.operator(
-                "madness_dynamic.copy_template_to_selected",
-                text=f"Copy Template To {len(selected_dynamic_empties)} Selected Empties",
+        if not is_dynamic_definition(dynamic_props.definition):
+            main_box.label(text="Assign a definition to place an object here", icon='INFO')
+            return
+
+        selected_empties = [o for o in context.selected_objects if o.type == 'EMPTY']
+        if len(selected_empties) > 1:
+            main_box.operator(
+                "madness_dynamic.copy_definition_to_selected",
+                text=f"Copy Definition To {len(selected_empties)} Selected Empties",
                 icon='DUPLICATE'
             )
-        
-        if dynamic_props.template_name:
-            # Mass Override
-            mass_box = layout.box()
-            mass_box.label(text="Mass Properties", icon='PHYSICS')
-            mass_box.prop(dynamic_props, "use_mass_override")
-            if dynamic_props.use_mass_override:
-                mass_box.prop(dynamic_props, "mass")
-            else:
-                mass_box.label(text="Using template default mass", icon='INFO')
 
-            # Material Override
-            material_box = layout.box()
-            material_box.label(text="Physics Material", icon='MATERIAL')
-            material_box.prop(dynamic_props, "use_material_override")
-            if dynamic_props.use_material_override:
-                material_box.prop(dynamic_props, "physics_material")
-            else:
-                material_box.label(text="Using template default material", icon='INFO')
-
-            # Scale Override
-            scale_box = layout.box()
-            scale_box.label(text="Collision Scale", icon='FULLSCREEN_ENTER')
-            scale_box.prop(dynamic_props, "use_scale_override")
-            if dynamic_props.use_scale_override:
-                col = scale_box.column()
-                col.prop(dynamic_props, "scale_x")
-                col.prop(dynamic_props, "scale_y")
-                col.prop(dynamic_props, "scale_z")
-                scale_box.label(text="Note: Scale affects collision mesh size", icon='INFO')
-            else:
-                scale_box.label(text="Using object transform scale", icon='INFO')
-
-
-
-class MADNESS_DYNAMIC_OT_select_template(bpy.types.Operator):
-    """Select a dynamic object template"""
-    bl_idname = "madness_dynamic.select_template"
-    bl_label = "Select Template"
-    bl_description = "Select a dynamic object template"
-
-    def execute(self, context):
-        # This will be handled by invoke with a menu
-        return {'FINISHED'}
-
-    def invoke(self, context, event):
-        # Get available templates
-        try:
-            templates = get_available_dynamic_templates()
-            if len(templates) <= 1:  # Only empty template
-                self.report({'WARNING'}, "No dynamic object templates available")
-                return {'CANCELLED'}
-        except Exception as e:
-            self.report({'ERROR'}, f"Error loading templates: {e}")
-            return {'CANCELLED'}
-        
-        # Create popup menu
-        wm = context.window_manager
-        return wm.invoke_props_dialog(self, width=400)
-
-    def draw(self, context):
-        layout = self.layout
-        obj = context.object
-        
-        if not obj or not is_sms_dynamic(obj):
-            layout.label(text="No dynamic empty selected")
-            return
-        
-        layout.label(text="Select Dynamic Object Template:", icon='LIBRARY_DATA_DIRECT')
-        
-        try:
-            templates = get_available_dynamic_templates()
-            
-            # Organize templates into a hierarchical tree
-            template_tree = self.organize_templates_into_tree(templates[1:])  # Skip empty first entry
-            
-            # Draw the hierarchical tree
-            self.draw_template_tree(layout, template_tree, context)
-                
-        except Exception as e:
-            layout.label(text=f"Error loading templates: {e}", icon='ERROR')
-
-    def organize_templates_into_tree(self, templates):
-        """Organize templates into groups based on common prefixes"""
-        groups = {}
-        
-        for template_id, template_name, template_desc in templates:
-            # Extract meaningful grouping from template name
-            group_key = self.extract_group_key(template_name)
-            
-            if group_key not in groups:
-                groups[group_key] = {
-                    'display_name': group_key,
-                    'templates': []
-                }
-            
-            groups[group_key]['templates'].append((template_id, template_name, template_desc))
-        
-        return groups
-
-    def extract_group_key(self, template_name):
-        """Extract a meaningful group key from template name"""
-        parts = template_name.split('_')
-        
-        # Handle different naming patterns
-        if len(parts) >= 3:
-            # For names like "rz_dyn_suzuka_distance_a_loda" -> "rz_dyn_suzuka"
-            # For names like "dyn_trafficcone02_loda" -> "dyn_trafficcone"
-            if parts[0] == 'rz' and parts[1] == 'dyn':
-                # Race track specific objects: rz_dyn_trackname
-                return '_'.join(parts[:3])
-            elif parts[0] == 'dyn':
-                # Generic dynamic objects: dyn_objecttype
-                return '_'.join(parts[:2])
-            else:
-                # Other patterns: use first two parts
-                return '_'.join(parts[:2])
-        elif len(parts) >= 2:
-            # Short names: use first two parts
-            return '_'.join(parts[:2])
+        scale_box = layout.box()
+        scale_box.label(text="Instance Scale", icon='FULLSCREEN_ENTER')
+        scale_box.prop(dynamic_props, "use_scale_override")
+        if dynamic_props.use_scale_override:
+            col = scale_box.column(align=True)
+            col.prop(dynamic_props, "scale_x")
+            col.prop(dynamic_props, "scale_y")
+            col.prop(dynamic_props, "scale_z")
         else:
-            # Single word: use as-is
-            return template_name
-
-    def draw_template_tree(self, layout, groups, context):
-        """Draw the grouped template tree"""
-        # Sort groups by display name
-        sorted_groups = sorted(groups.items(), key=lambda x: x[1]['display_name'])
-        
-        for group_key, group_data in sorted_groups:
-            # Create a collapsible box for each group
-            box = layout.box()
-            
-            # Group header with expand/collapse toggle
-            header = box.row()
-            
-            # Use global dictionary to track expanded state (collapsed by default)
-            expand_key = f"dyn_expand_{group_key.replace('.', '_').replace('-', '_')}"
-            
-            # Get the expanded state from global dictionary
-            expanded = _group_expand_state.get(expand_key, False)
-            
-            # Toggle button
-            icon = 'TRIA_DOWN' if expanded else 'TRIA_RIGHT'
-            toggle_op = header.operator("madness_dynamic.toggle_group", text="", icon=icon, emboss=False)
-            toggle_op.group_key = group_key
-            
-            # Group name and item count
-            header.label(text=group_data['display_name'], icon='FILE_FOLDER')
-            header.label(text=f"({len(group_data['templates'])} items)")
-            
-            # Group contents (only show if expanded)
-            if expanded:
-                col = box.column(align=True)
-                
-                # Sort templates within the group
-                sorted_templates = sorted(group_data['templates'], key=lambda x: x[1])
-                
-                for template_id, template_name, template_desc in sorted_templates:
-                    row = col.row()
-                    # Show the full template name
-                    op = row.operator("madness_dynamic.set_template", text=template_name)
-                    op.template_name = template_id
+            scale_box.label(text="Using object transform scale", icon='INFO')
 
 
-class MADNESS_DYNAMIC_OT_toggle_group(bpy.types.Operator):
-    """Toggle expand/collapse state of a template group"""
-    bl_idname = "madness_dynamic.toggle_group"
-    bl_label = "Toggle Group"
-    bl_description = "Expand or collapse template group"
-
-    group_key: bpy.props.StringProperty()
-
-    def execute(self, context):
-        # Use global dictionary to store state
-        global _group_expand_state
-        expand_key = f"dyn_expand_{self.group_key.replace('.', '_').replace('-', '_')}"
-        
-        # Toggle the expanded state
-        current_state = _group_expand_state.get(expand_key, False)
-        _group_expand_state[expand_key] = not current_state
-        
-        return {'FINISHED'}
-
-
-class MADNESS_DYNAMIC_OT_set_template(bpy.types.Operator):
-    """Set the template for the current dynamic object"""
-    bl_idname = "madness_dynamic.set_template"
-    bl_label = "Set Template"
-    bl_description = "Set the template for the current dynamic object"
-
-    template_name: bpy.props.StringProperty()
-
-    def execute(self, context):
-        obj = context.object
-        
-        if not obj or not is_sms_dynamic(obj):
-            self.report({'ERROR'}, "No dynamic empty selected")
-            return {'CANCELLED'}
-        
-        obj.madness_dynamic.template_name = self.template_name
-        self.report({'INFO'}, f"Template set to: {self.template_name}")
-        return {'FINISHED'}
-
-
-class MADNESS_DYNAMIC_OT_refresh_templates(bpy.types.Operator):
-    """Refresh the list of available dynamic object templates"""
-    bl_idname = "madness_dynamic.refresh_templates"
-    bl_label = "Refresh Templates"
-    bl_description = "Reload templates from master_dynamic_collisions.xml"
-
-    def execute(self, context):
-        refresh_template_list()
-        self.report({'INFO'}, "Dynamic object templates refreshed")
-        return {'FINISHED'}
-
-
-class MADNESS_DYNAMIC_OT_clear_template(bpy.types.Operator):
-    """Clear template from the active empty only"""
-    bl_idname = "madness_dynamic.clear_template"
-    bl_label = "Clear Template"
-    bl_description = "Clear the selected template on the active empty"
-
-    def execute(self, context):
-        obj = context.object
-        if not obj or obj.type != 'EMPTY':
-            self.report({'ERROR'}, "Active object is not an empty")
-            return {'CANCELLED'}
-
-        obj.madness_dynamic.template_name = ""
-        self.report({'INFO'}, "Template cleared for active empty")
-        return {'FINISHED'}
-
-
-class MADNESS_DYNAMIC_OT_copy_template_to_selected(bpy.types.Operator):
-    """Copy active template to all selected empties"""
-    bl_idname = "madness_dynamic.copy_template_to_selected"
-    bl_label = "Copy Template To Selected"
-    bl_description = "Copy the active empty's template to all selected empties"
+class MADNESS_DYNAMIC_OT_copy_definition_to_selected(bpy.types.Operator):
+    """Copy the active empty's definition to all selected empties"""
+    bl_idname = "madness_dynamic.copy_definition_to_selected"
+    bl_label = "Copy Definition To Selected"
+    bl_description = "Copy the active empty's definition to all selected empties"
 
     def execute(self, context):
         active_obj = context.object
-        if not active_obj or active_obj.type != 'EMPTY':
+        if not is_sms_dynamic(active_obj):
             self.report({'ERROR'}, "Active object is not an empty")
             return {'CANCELLED'}
 
-        template_name = active_obj.madness_dynamic.template_name
-        if not template_name:
-            self.report({'WARNING'}, "Active empty has no template selected")
+        definition = active_obj.madness_dynamic.definition
+        if not is_dynamic_definition(definition):
+            self.report({'WARNING'}, "Active empty has no definition assigned")
             return {'CANCELLED'}
 
         selected_empties = [obj for obj in context.selected_objects if obj.type == 'EMPTY']
-        if not selected_empties:
-            self.report({'WARNING'}, "No selected empties to copy template to")
-            return {'CANCELLED'}
-
-        updated_count = 0
         for obj in selected_empties:
-            if obj.madness_dynamic.template_name != template_name:
-                obj.madness_dynamic.template_name = template_name
-                updated_count += 1
+            obj.madness_dynamic.definition = definition
 
         self.report(
             {'INFO'},
-            f"Applied template '{template_name}' to {len(selected_empties)} selected empties ({updated_count} changed)"
+            f"Applied definition '{get_definition_name(definition)}' to {len(selected_empties)} empties"
         )
         return {'FINISHED'}
 
 
+_CLASSES = [
+    MadnessDynamicDefinitionPanel,
+    MadnessDynamicPanel,
+    MADNESS_DYNAMIC_OT_copy_definition_to_selected,
+]
 
 
 def register():
-    classes = [
-        MadnessDynamicPanel,
-        MADNESS_DYNAMIC_OT_select_template,
-        MADNESS_DYNAMIC_OT_toggle_group,
-        MADNESS_DYNAMIC_OT_set_template,
-        MADNESS_DYNAMIC_OT_refresh_templates,
-        MADNESS_DYNAMIC_OT_clear_template,
-        MADNESS_DYNAMIC_OT_copy_template_to_selected
-    ]
-    
-    for cls in classes:
+    for cls in _CLASSES:
         try:
             bpy.utils.register_class(cls)
         except ValueError:
-            # Already registered, unregister and re-register
             bpy.utils.unregister_class(cls)
             bpy.utils.register_class(cls)
 
 
 def unregister():
-    classes = [
-        MADNESS_DYNAMIC_OT_copy_template_to_selected,
-        MADNESS_DYNAMIC_OT_clear_template,
-        MADNESS_DYNAMIC_OT_refresh_templates,
-        MADNESS_DYNAMIC_OT_set_template,
-        MADNESS_DYNAMIC_OT_toggle_group,
-        MADNESS_DYNAMIC_OT_select_template,
-        MadnessDynamicPanel
-    ]
-    
-    for cls in classes:
+    for cls in reversed(_CLASSES):
         try:
             bpy.utils.unregister_class(cls)
         except RuntimeError:
-            pass  # Already unregistered
+            pass

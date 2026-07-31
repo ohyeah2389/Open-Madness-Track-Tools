@@ -1,190 +1,130 @@
 import bpy  # type: ignore
-from bpy.props import BoolProperty, FloatProperty, StringProperty, EnumProperty  # type: ignore
-import xml.etree.ElementTree as ET
-from pathlib import Path
+from bpy.props import BoolProperty, EnumProperty, FloatProperty, PointerProperty, StringProperty  # type: ignore
 
 
-# Cache for template list to avoid repeated file reads
-_template_cache = None
+# Physics material names recognised by the Madness engine.
+PHYSICS_MATERIALS = [
+    "styropor",
+    "plastic pipe",
+    "plastic solid",
+    "rubber tyre",
+    "metal and tin",
+    "Wood",
+    "Wood white",
+    "hay",
+    "bouncy",
+]
 
-def get_available_dynamic_templates():
-    """Load available dynamic object templates from master_dynamic_collisions.xml"""
-    global _template_cache
-    
-    # Return cached results if available
-    if _template_cache is not None:
-        return _template_cache
-    
-    # Resolve from madness_scene_export/properties -> madness_scene_export/database
-    addon_root = Path(__file__).resolve().parent.parent
-    database_path = addon_root / "database" / "master_dynamic_collisions.xml"
-    
-    templates = [("", "Select Template", "")]
-    
-    if database_path.exists():
-        try:
-            tree = ET.parse(database_path)
-            root = tree.getroot()
-            
-            # Extract template names from PxRigidDynamic objects
-            for rigid_dynamic in root.findall('PxRigidDynamic'):
-                name_elem = rigid_dynamic.find('Name')
-                if name_elem is not None and name_elem.text:
-                    template_name = name_elem.text
-                    # Create enum item (value, name, description)
-                    templates.append((template_name, template_name, f"Dynamic object: {template_name}"))
-            
-            # Sort templates alphabetically (except for the first empty entry)
-            if len(templates) > 1:
-                first_item = templates[0]
-                sorted_templates = sorted(templates[1:], key=lambda x: x[0])
-                templates = [first_item] + sorted_templates
-                
-        except Exception as e:
-            print(f"Error loading dynamic templates: {e}")
-            # Return basic template list on error
-            templates = [("", "Select Template", ""), ("ERROR", "Template Load Error", "Failed to load templates")]
-    
-    # Cache the results
-    _template_cache = templates
-    return templates
+PHYSICS_MATERIAL_ITEMS = [(name, name, f"Physics material: {name}") for name in PHYSICS_MATERIALS]
 
 
-def update_template_list(self, context):
-    """Update the template list when needed"""
-    try:
-        return get_available_dynamic_templates()
-    except Exception as e:
-        print(f"Error in update_template_list: {e}")
-        # Return safe fallback
-        return [("", "Select Template", ""), ("ERROR", "Template Load Error", "Failed to load templates")]
+def is_dynamic_definition(obj):
+    """Check if an object is the root of a dynamic object definition."""
+    return bool(obj) and obj.madness_dynamic_def.is_definition
 
 
-class MadnessDynamicProperties(bpy.types.PropertyGroup):
-    """Properties for dynamic physics empties"""
+def _definition_poll(self, obj):
+    return is_dynamic_definition(obj)
 
-    # Template Selection
-    template_name: StringProperty(
-        name="Template",
-        description="Dynamic object template to use (select from UI)",
-        default=""
+
+def get_definition_shapes(definition):
+    """Collect the mesh objects making up a definition's collision shapes."""
+    shapes = [definition] if definition.type == "MESH" else []
+    shapes.extend(child for child in definition.children_recursive if child.type == "MESH")
+    return shapes
+
+
+def get_definition_name(definition):
+    """Get the name a definition is exported under."""
+    return definition.madness_dynamic_def.export_name or definition.name
+
+
+class MadnessDynamicDefinition(bpy.types.PropertyGroup):
+    """Authoring properties for a dynamic physics object definition."""
+
+    is_definition: BoolProperty(
+        name="Dynamic Object Definition",
+        description=(
+            "Treat this object as a dynamic physics object definition. Its mesh, and the "
+            "meshes of any children, become collision shapes"
+        ),
+        default=False,
     )  # type: ignore
 
-    # Mass override
-    use_mass_override: BoolProperty(
-        name="Override Mass",
-        description="Override the default mass of the template",
-        default=False
-    )  # type: ignore
-
-    mass: FloatProperty(
-        name="Mass",
-        description="Mass of the dynamic object in kg",
-        default=50.0,
-        min=0.1,
-        max=1000.0
-    )  # type: ignore
-
-    # Material override
-    use_material_override: BoolProperty(
-        name="Override Material",
-        description="Override the default physics material",
-        default=False
+    export_name: StringProperty(
+        name="Export Name",
+        description="Name written to dynamic_collisions.xml (defaults to the object name)",
+        default="",
     )  # type: ignore
 
     physics_material: EnumProperty(
         name="Physics Material",
-        description="Physics material for the object",
-        items=[
-            ("styropor", "Styropor", "Styrofoam material"),
-            ("plastic pipe", "Plastic Pipe", "Plastic pipe material"),
-            ("plastic solid", "Plastic Solid", "Solid plastic material"),
-            ("metal", "Metal", "Metal material"),
-            ("concrete", "Concrete", "Concrete material"),
-            ("wood", "Wood", "Wood material"),
-            ("rubber", "Rubber", "Rubber material"),
-            ("glass", "Glass", "Glass material"),
-        ],
-        default="styropor"
+        description="Physics material applied to this collision shape",
+        items=PHYSICS_MATERIAL_ITEMS,
+        default="plastic solid",
     )  # type: ignore
 
-    # Scale override
+    mass: FloatProperty(
+        name="Mass",
+        description="Mass of this collision shape in kg",
+        default=50.0,
+        min=0.001,
+        soft_max=1000.0,
+    )  # type: ignore
+
+
+class MadnessDynamicProperties(bpy.types.PropertyGroup):
+    """Properties for a placed instance of a dynamic object definition."""
+
+    definition: PointerProperty(
+        name="Definition",
+        description="Dynamic object definition to place at this empty",
+        type=bpy.types.Object,
+        poll=_definition_poll,
+    )  # type: ignore
+
     use_scale_override: BoolProperty(
         name="Override Scale",
-        description="Override the template scale (affects collision mesh)",
-        default=False
+        description="Override the empty's transform scale for this instance",
+        default=False,
     )  # type: ignore
 
-    scale_x: FloatProperty(
-        name="Scale X",
-        description="Scale factor in X axis",
-        default=1.0,
-        min=0.1,
-        max=10.0
-    )  # type: ignore
-
-    scale_y: FloatProperty(
-        name="Scale Y",
-        description="Scale factor in Y axis",
-        default=1.0,
-        min=0.1,
-        max=10.0
-    )  # type: ignore
-
-    scale_z: FloatProperty(
-        name="Scale Z",
-        description="Scale factor in Z axis",
-        default=1.0,
-        min=0.1,
-        max=10.0
-    )  # type: ignore
-
+    scale_x: FloatProperty(name="Scale X", default=1.0, min=0.01, soft_max=10.0)  # type: ignore
+    scale_y: FloatProperty(name="Scale Y", default=1.0, min=0.01, soft_max=10.0)  # type: ignore
+    scale_z: FloatProperty(name="Scale Z", default=1.0, min=0.01, soft_max=10.0)  # type: ignore
 
 
 def is_sms_dynamic(obj):
-    """Check if object can be used as a dynamic physics empty."""
-    return obj and obj.type == 'EMPTY'
+    """Check if object can be used as a dynamic physics placement."""
+    return bool(obj) and obj.type == "EMPTY"
 
 
 def get_dynamic_name(obj):
     """Get dynamic object display name for exported instance naming."""
-    if obj.name.startswith('SMS_DYN_'):
-        return obj.name[8:]  # Remove 'SMS_DYN_' prefix
+    if obj.name.startswith("SMS_DYN_"):
+        return obj.name[8:]
     return obj.name
 
 
-def refresh_template_list():
-    """Force refresh of the cached template list."""
-    global _template_cache
-    # Clear the cache to force reload
-    _template_cache = None
-
-
 def register():
-    try:
-        bpy.utils.register_class(MadnessDynamicProperties)
-    except ValueError:
-        # Already registered, unregister and re-register
-        bpy.utils.unregister_class(MadnessDynamicProperties)
-        bpy.utils.register_class(MadnessDynamicProperties)
-    
-    # Add dynamic properties to objects
-    if not hasattr(bpy.types.Object, 'madness_dynamic'):
-        bpy.types.Object.madness_dynamic = bpy.props.PointerProperty(type=MadnessDynamicProperties)
-    
-    # Load templates to populate cache
-    try:
-        templates = get_available_dynamic_templates()
-        print(f"Loaded {len(templates)-1} dynamic object templates")
-    except Exception as e:
-        print(f"Warning: Could not load dynamic templates: {e}")
+    for cls in (MadnessDynamicDefinition, MadnessDynamicProperties):
+        try:
+            bpy.utils.register_class(cls)
+        except ValueError:
+            bpy.utils.unregister_class(cls)
+            bpy.utils.register_class(cls)
+
+    bpy.types.Object.madness_dynamic_def = PointerProperty(type=MadnessDynamicDefinition)
+    bpy.types.Object.madness_dynamic = PointerProperty(type=MadnessDynamicProperties)
 
 
 def unregister():
-    if hasattr(bpy.types.Object, 'madness_dynamic'):
-        del bpy.types.Object.madness_dynamic
-    
-    try:
-        bpy.utils.unregister_class(MadnessDynamicProperties)
-    except RuntimeError:
-        pass  # Already unregistered
+    for attr in ("madness_dynamic", "madness_dynamic_def"):
+        if hasattr(bpy.types.Object, attr):
+            delattr(bpy.types.Object, attr)
+
+    for cls in (MadnessDynamicProperties, MadnessDynamicDefinition):
+        try:
+            bpy.utils.unregister_class(cls)
+        except RuntimeError:
+            pass

@@ -1,11 +1,25 @@
 import bpy  # type: ignore
+import bmesh  # type: ignore
 from pathlib import Path
 import xml.etree.ElementTree as ET
 from typing import List, Dict, Any
 import mathutils  # type: ignore
 import numpy as np
-from ..properties.dynamic import is_sms_dynamic, get_dynamic_name
-from ..utils.coordinate_transforms import convert_position, convert_rotation_matrix
+from ..properties.dynamic import (
+    get_definition_name,
+    get_definition_shapes,
+    get_dynamic_name,
+    is_dynamic_definition,
+    is_sms_dynamic,
+)
+from ..utils.coordinate_transforms import (
+    convert_position,
+    convert_rotation_matrix,
+    matrix_to_quaternion,
+)
+
+# PhysX cannot cook a convex hull with more than 255 vertices.
+MAX_HULL_VERTICES = 255
 
 
 def collect_dynamic_objects(scene) -> List[Dict[str, Any]]:
@@ -16,10 +30,10 @@ def collect_dynamic_objects(scene) -> List[Dict[str, Any]]:
         if is_sms_dynamic(obj):
             dynamic_props = obj.madness_dynamic
             
-            # Skip empties without a template selection.
-            # Since any empty can now be used, this avoids warning spam for
-            # non-dynamic helper empties in the scene.
-            if not dynamic_props.template_name:
+            # Skip empties without a definition assigned. Since any empty can be
+            # used, this avoids warning spam for non-dynamic helper empties.
+            definition = dynamic_props.definition
+            if not is_dynamic_definition(definition):
                 continue
             
             # Get world transform and convert to Madness coordinate system
@@ -67,7 +81,8 @@ def collect_dynamic_objects(scene) -> List[Dict[str, Any]]:
             dynamic_info = {
                 'name': get_dynamic_name(obj),
                 'object': obj,
-                'template_name': dynamic_props.template_name,
+                'definition': definition,
+                'definition_name': get_definition_name(definition),
                 'position': madness_position,
                 'world_matrix': madness_matrix,
                 'matrix_string': matrix_string,
@@ -79,110 +94,113 @@ def collect_dynamic_objects(scene) -> List[Dict[str, Any]]:
     return dynamic_objects
 
 
-def load_master_template(template_name: str) -> Dict[str, Any]:
-    """Load a specific template from the master dynamic collisions file"""
-    # Resolve from madness_scene_export/export -> madness_scene_export/database
-    addon_root = Path(__file__).resolve().parent.parent
-    database_path = addon_root / "database" / "master_dynamic_collisions.xml"
-    
-    if not database_path.exists():
-        raise FileNotFoundError(f"Master dynamic collisions file not found: {database_path}")
-    
+def build_hull_points(shape_obj) -> List[np.ndarray]:
+    """Compute the convex hull of a shape object's mesh, in Madness coordinates.
+
+    Points are in the shape's local space; its transform is carried by the
+    shape's LocalPose and geometry Scale instead.
+    """
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    eval_obj = shape_obj.evaluated_get(depsgraph)
+    mesh = eval_obj.to_mesh()
+
     try:
-        tree = ET.parse(database_path)
-        root = tree.getroot()
-        
-        # Find the template
-        template_data = {
-            'meshes': [],
-            'rigid_dynamic': None
-        }
-        
-        # First, find the PxRigidDynamic with matching name
-        for rigid_elem in root.findall('PxRigidDynamic'):
-            name_elem = rigid_elem.find('Name')
-            if name_elem is not None and name_elem.text == template_name:
-                template_data['rigid_dynamic'] = rigid_elem
-                
-                # Find referenced mesh IDs
-                for convex_mesh_elem in rigid_elem.findall('.//ConvexMesh'):
-                    mesh_id = convex_mesh_elem.text
-                    
-                    # Find the corresponding PxConvexMesh
-                    for mesh_elem in root.findall('PxConvexMesh'):
-                        id_elem = mesh_elem.find('Id')
-                        if id_elem is not None and id_elem.text == mesh_id:
-                            template_data['meshes'].append(mesh_elem)
-                            break
-                break
-        
-        if template_data['rigid_dynamic'] is None:
-            raise ValueError(f"Template '{template_name}' not found in master file")
-        
-        return template_data
-        
-    except Exception as e:
-        raise Exception(f"Error loading template '{template_name}': {e}")
+        bm = bmesh.new()
+        bm.from_mesh(mesh)
+        result = bmesh.ops.convex_hull(bm, input=bm.verts, use_existing_faces=False)
+        hull_verts = [item for item in result["geom"] if isinstance(item, bmesh.types.BMVert)]
+        points = [convert_position(np.array(vert.co)) for vert in hull_verts]
+        bm.free()
+    finally:
+        eval_obj.to_mesh_clear()
+
+    return points
+
+
+def _pose_string(matrix) -> str:
+    """Format a Blender matrix as a PhysX pose (quaternion xyzw, then position)."""
+    matrix_np = np.array(matrix)
+    rotation = matrix_np[:3, :3]
+    scales = np.linalg.norm(rotation, axis=0)
+    rotation = rotation / np.where(scales > 1e-8, scales, 1.0)
+
+    w, x, y, z = matrix_to_quaternion(convert_rotation_matrix(rotation))
+    position = convert_position(matrix_np[:3, 3])
+
+    values = [x, y, z, w, position[0], position[1], position[2]]
+    return " ".join(f"{value:.6f}" for value in values)
+
+
+def _append_shape(shapes_elem: ET.Element, shape_obj, mesh_id: int, local_matrix) -> None:
+    """Append a PxShape referencing an already-emitted convex mesh."""
+    props = shape_obj.madness_dynamic_def
+    scale = local_matrix.to_scale()
+
+    shape_elem = ET.SubElement(shapes_elem, 'PxShape')
+    ET.SubElement(shape_elem, 'Name').text = shape_obj.name
+    ET.SubElement(shape_elem, 'LocalPose').text = _pose_string(local_matrix)
+
+    geometry = ET.SubElement(shape_elem, 'Geometry')
+    convex_geometry = ET.SubElement(geometry, 'PxConvexMeshGeometry')
+    scale_elem = ET.SubElement(convex_geometry, 'Scale')
+    ET.SubElement(scale_elem, 'Scale').text = f"{scale.x:.6f} {scale.z:.6f} {scale.y:.6f}"
+    ET.SubElement(scale_elem, 'Rotation').text = "0 0 0 1"
+    ET.SubElement(convex_geometry, 'ConvexMesh').text = str(mesh_id)
+
+    materials = ET.SubElement(shape_elem, 'Materials')
+    ET.SubElement(materials, 'PxMaterialName').text = props.physics_material
+    ET.SubElement(shape_elem, 'Mass').text = f"{props.mass:.6f}"
 
 
 def create_dynamic_collisions_xml(dynamic_objects: List[Dict[str, Any]]) -> ET.Element:
-    """Create a dynamic_collisions.xml with only the needed templates"""
-    if not dynamic_objects:
-        # Return empty collection
-        root = ET.Element('PhysX30Collection')
-        root.set('Version', '3.2.0-SMS')
-        return root
-    
-    # Get unique templates used
-    used_templates = set()
-    for obj_info in dynamic_objects:
-        used_templates.add(obj_info['template_name'])
-    
-    # Create root element
+    """Create a dynamic_collisions.xml from the definitions used in the scene"""
     root = ET.Element('PhysX30Collection')
     root.set('Version', '3.2.0-SMS')
-    
-    # Track mesh ID mapping for new collection
-    mesh_id_mapping = {}
+
+    # Unique definitions, keyed by exported name so duplicates collapse.
+    definitions = {}
+    for obj_info in dynamic_objects:
+        definitions.setdefault(obj_info['definition_name'], obj_info['definition'])
+
     next_mesh_id = 0
-    
-    # Load and add templates
-    for template_name in sorted(used_templates):
-        try:
-            template_data = load_master_template(template_name)
-            
-            # Add meshes with new IDs
-            for mesh_elem in template_data['meshes']:
-                # Create a copy of the mesh element
-                new_mesh = ET.fromstring(ET.tostring(mesh_elem))
-                
-                # Get original ID and assign new ID
-                old_id_elem = new_mesh.find('Id')
-                if old_id_elem is not None:
-                    old_id = old_id_elem.text
-                    new_id = str(next_mesh_id)
-                    old_id_elem.text = new_id
-                    mesh_id_mapping[f"{template_name}:{old_id}"] = new_id
-                    next_mesh_id += 1
-                
-                root.append(new_mesh)
-            
-            # Add rigid dynamic with updated mesh references
-            rigid_elem = template_data['rigid_dynamic']
-            new_rigid = ET.fromstring(ET.tostring(rigid_elem))
-            
-            # Update ConvexMesh references
-            for convex_mesh_elem in new_rigid.findall('.//ConvexMesh'):
-                old_mesh_id = convex_mesh_elem.text
-                key = f"{template_name}:{old_mesh_id}"
-                if key in mesh_id_mapping:
-                    convex_mesh_elem.text = mesh_id_mapping[key]
-            
-            root.append(new_rigid)
-            
-        except Exception as e:
-            print(f"Error loading template '{template_name}': {e}")
-    
+    rigid_elements = []
+
+    for name in sorted(definitions):
+        definition = definitions[name]
+        shapes = get_definition_shapes(definition)
+        if not shapes:
+            print(f"Dynamic definition '{name}' has no mesh shapes, skipping")
+            continue
+
+        rigid_elem = ET.Element('PxRigidDynamic')
+        ET.SubElement(rigid_elem, 'Name').text = name
+        ET.SubElement(rigid_elem, 'GlobalPose').text = _pose_string(mathutils.Matrix.Identity(4))
+        shapes_elem = ET.SubElement(rigid_elem, 'Shapes')
+
+        root_inverse = definition.matrix_world.inverted()
+        for shape_obj in shapes:
+            points = build_hull_points(shape_obj)
+            if not points:
+                print(f"Shape '{shape_obj.name}' produced an empty hull, skipping")
+                continue
+            if len(points) > MAX_HULL_VERTICES:
+                print(
+                    f"Shape '{shape_obj.name}' hull has {len(points)} vertices, exceeding the "
+                    f"PhysX limit of {MAX_HULL_VERTICES}. Simplify the collision mesh."
+                )
+
+            mesh_elem = ET.SubElement(root, 'PxConvexMesh')
+            ET.SubElement(mesh_elem, 'Id').text = str(next_mesh_id)
+            points_text = "\n".join(f"{p[0]:.6f} {p[1]:.6f} {p[2]:.6f}" for p in points)
+            ET.SubElement(mesh_elem, 'points').text = f"\n{points_text}\n"
+
+            _append_shape(shapes_elem, shape_obj, next_mesh_id, root_inverse @ shape_obj.matrix_world)
+            next_mesh_id += 1
+
+        rigid_elements.append(rigid_elem)
+
+    # All PxConvexMesh entries must precede the bodies that reference them.
+    root.extend(rigid_elements)
     return root
 
 
@@ -231,7 +249,7 @@ def create_environment_xml(dynamic_objects: List[Dict[str, Any]]) -> ET.Element:
                                 **{'class': 'EnvironmentObject', 'id': f'0x{object_id:08X}'})
         
         # Generate instance name (template name + number)
-        instance_name = f"{obj_info['template_name']} {i}"
+        instance_name = f"{obj_info['definition_name']} {i}"
         ET.SubElement(obj_data, 'prop', name="Name", data=instance_name)
         
         # Add world matrix

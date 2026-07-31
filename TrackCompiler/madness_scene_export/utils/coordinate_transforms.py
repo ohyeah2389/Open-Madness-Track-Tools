@@ -80,6 +80,11 @@ def _quat_from_matrix(m: np.ndarray) -> np.ndarray:
     return np.array([w, x, y, z])
 
 
+def matrix_to_quaternion(rot: np.ndarray) -> np.ndarray:
+    """Convert a 3x3 rotation matrix to a quaternion (w, x, y, z)."""
+    return _quat_from_matrix(rot)
+
+
 def fix_x_axis_rotation_direction(q: np.ndarray) -> np.ndarray:
     """Fix X-axis and Z-axis rotation directions."""
     w, x, y, z = q
