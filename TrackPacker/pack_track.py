@@ -21,15 +21,18 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 SEASONS = ("aut", "sno", "spr", "sum", "win")
 
 
-def build_seasonal_bff(output_bff: Path, name: str, staging: Path) -> None:
-    """Build an inert seasonal BFF.
+def build_seasonal_bff(output_bff: Path, name: str, season: str, materials: Path, staging: Path) -> None:
+    """Build a seasonal BFF holding season-suffixed copies of the track's materials.
 
-    The game requires a seasonal pak per season to exist, but ignores its name and
-    contents, so an archive holding a single marker file satisfies the loader.
+    Every stock track has a pak per season, and the loader stalls without them. It
+    also stalls on an archive of inert filler, so each pak carries `<material>_<season>.bmt`
+    variants of the track's own materials, matching the stock per-track layout.
     """
-    seasonal_dir = staging / "tracks" / "_data" / "instances" / "3dtrees" / "seasonal"
-    seasonal_dir.mkdir(parents=True, exist_ok=True)
-    (seasonal_dir / "placeholder.txt").write_bytes(b"Placeholder seasonal archive.\n")
+    shutil.rmtree(staging, ignore_errors=True)
+    season_dir = staging / materials.relative_to(materials.parents[1])
+    season_dir.mkdir(parents=True)
+    for bmt in sorted(materials.glob("*.bmt")):
+        shutil.copy2(bmt, season_dir / f"{bmt.stem}_{season}{bmt.suffix}")
 
     creator = bff_creator.BFFCreator(name)
     creator.compression_type = bff_creator.CompressionType.ZLIB
@@ -109,7 +112,7 @@ def infer_track_name(source: Path, explicit: str | None):
     return source.name
 
 
-def pack_release(source, temp, lower, track, pack_track, out_main, out_physics, out_zip):
+def pack_release(source, temp, lower, track, pack_track, materials, out_main, out_physics, out_zip):
     logger.info("Preparing release ZIP staging...")
     stage = temp / f"{lower}_release_stage"
     shutil.rmtree(stage, ignore_errors=True)
@@ -120,11 +123,11 @@ def pack_release(source, temp, lower, track, pack_track, out_main, out_physics, 
     shutil.copy2(out_main, bff_dir / out_main.name)
     shutil.copy2(out_physics, bff_dir / out_physics.name)
 
-    logger.info("Generating seasonal placeholder BFFs...")
+    logger.info("Generating seasonal BFFs...")
     seasonal_stage = temp / "seasonal_stage"
     for season in SEASONS:
         name = f"{season}_{pack_track}"
-        build_seasonal_bff(bff_dir / f"{name}.bff", name, seasonal_stage)
+        build_seasonal_bff(bff_dir / f"{name}.bff", name, season, materials, seasonal_stage)
 
     tracks = source / "Tracks"
     copy_tree(source / "GUI", zip_root / "GUI")
@@ -207,7 +210,7 @@ def main(argv) -> int:
         logger.info("Packing %s...", out_physics.name)
         build_bff(physics_dir, out_physics, pack_physics, args.no_compress)
 
-        pack_release(source, temp, lower, track, pack_track, out_main, out_physics, out_zip)
+        pack_release(source, temp, lower, track, pack_track, main_dir / "tracks" / pack_track, out_main, out_physics, out_zip)
     finally:
         shutil.rmtree(temp, ignore_errors=True)
 
