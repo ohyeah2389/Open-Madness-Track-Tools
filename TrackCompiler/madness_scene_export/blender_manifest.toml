@@ -7,7 +7,7 @@ tagline = "An open-source toolkit for Madness Engine track development"
 maintainer = "ohyeah2389"
 type = "add-on"
 tags = ["Import-Export", "Pipeline"]
-license = ["SPDX:GPL-3.0-only"]
+license = ["SPDX:GPL-3.0-or-later"]
 blender_version_min = "4.0.0"
 
 platforms = ["windows-x64"]

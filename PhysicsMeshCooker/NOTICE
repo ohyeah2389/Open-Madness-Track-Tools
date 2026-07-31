@@ -1,0 +1,8 @@
+PhysicsMeshCooker
+Copyright (c) 2025-2026 ohyeah2389
+Licensed under the MIT License. See LICENSE.
+
+This product uses the NVIDIA PhysX SDK, Copyright (c) NVIDIA Corporation.
+All rights reserved.
+
+The PhysX SDK is not included in this repository and is not redistributed with released builds. PhysicsMeshCooker links against the PhysX 3.3.4 runtime libraries already present in an installed copy of the target game. Your use of those libraries is governed by NVIDIA's license terms for the PhysX SDK, not by the MIT License above.

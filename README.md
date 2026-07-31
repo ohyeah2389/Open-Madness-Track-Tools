@@ -1,6 +1,11 @@
 ﻿# Open Madness Track Tools
 This repository consists of a set of scripts, a Blender plugin, and program source code enabling development of original track models for Slightly Mad Studios' Madness Engine racing games (tested with Project CARS 2 and Reiza Studios' Automobilista 2).
 
+## Disclaimer
+This is an unofficial, independent project. It is not affiliated with, authorized by, endorsed by, or sponsored by Reiza Studios, Slightly Mad Studios, or any of their affiliates. "Automobilista 2", "Project CARS", "Madness Engine", and all related names and marks are the property of their respective owners and are used here only to identify the software this toolkit interoperates with.
+
+No game assets or game code are distributed by this project. You must own a legitimate copy of the target game to use this toolkit.
+
 ## Limitations:
 I want people to be aware of the limitations of the current methodology upfront. Here is the non-exhaustive list of features that are not yet working:
 
@@ -57,3 +62,20 @@ The Blender project file contains a basic track model and preconfigured setups f
 - Triggers `XML`
 - Lights `SGX`
 - Scene `SGX`
+
+## License
+This project is free software. Different components carry different licenses:
+
+| Component | License |
+| --- | --- |
+| `TrackCompiler` | [GPL-3.0-or-later](LICENSE) + [output exception](LICENSE-EXCEPTION.txt) |
+| `TrackPacker` | [GPL-3.0-or-later](LICENSE) + [output exception](LICENSE-EXCEPTION.txt) |
+| `PhysicsMeshCooker` | [MIT](PhysicsMeshCooker/LICENSE) |
+| `OMTT Docs` | [CC BY-SA 4.0](OMTT%20Docs/LICENSE) |
+| `Example Project` | CC BY 4.0 |
+
+### Tracks you make with this are yours
+The copyleft terms apply to this toolkit and to derivatives of it. They do not apply to the tracks you build with it. The [output exception](LICENSE-EXCEPTION.txt) states this explicitly: files produced by these tools belong to you, you may license them however you like, and you may sell them.
+
+### Contributing and naming
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the sign-off requirement, and [TRADEMARKS.md](TRADEMARKS.md) for how the project name may be used.
