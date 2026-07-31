@@ -21,10 +21,20 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 SEASONS = ("aut", "sno", "spr", "sum", "win")
 
 
-def resource_path(name: str) -> Path:
-    """Locate a bundled data file, whether running as a script or a PyInstaller exe"""
-    base = getattr(sys, "_MEIPASS", None)
-    return Path(base) / name if base else SCRIPT_DIR / name
+def build_seasonal_bff(output_bff: Path, name: str, staging: Path) -> None:
+    """Build an inert seasonal BFF.
+
+    The game requires a seasonal pak per season to exist, but ignores its name and
+    contents, so an archive holding a single marker file satisfies the loader.
+    """
+    seasonal_dir = staging / "tracks" / "_data" / "instances" / "3dtrees" / "seasonal"
+    seasonal_dir.mkdir(parents=True, exist_ok=True)
+    (seasonal_dir / "placeholder.txt").write_bytes(b"Placeholder seasonal archive.\n")
+
+    creator = bff_creator.BFFCreator(name)
+    creator.compression_type = bff_creator.CompressionType.ZLIB
+    creator.add_directory(str(staging))
+    creator.create(str(output_bff), compress=True)
 
 
 def pick_folder() -> str | None:
@@ -110,9 +120,11 @@ def pack_release(source, temp, lower, track, pack_track, out_main, out_physics, 
     shutil.copy2(out_main, bff_dir / out_main.name)
     shutil.copy2(out_physics, bff_dir / out_physics.name)
 
-    placeholder = resource_path("placeholder_seasonal.bff")
+    logger.info("Generating seasonal placeholder BFFs...")
+    seasonal_stage = temp / "seasonal_stage"
     for season in SEASONS:
-        shutil.copy2(placeholder, bff_dir / f"{season}_{pack_track}.bff")
+        name = f"{season}_{pack_track}"
+        build_seasonal_bff(bff_dir / f"{name}.bff", name, seasonal_stage)
 
     tracks = source / "Tracks"
     copy_tree(source / "GUI", zip_root / "GUI")

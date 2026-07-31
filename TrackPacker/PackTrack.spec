@@ -5,7 +5,7 @@ a = Analysis(
     ['pack_track.py'],
     pathex=[],
     binaries=[],
-    datas=[('placeholder_seasonal.bff', '.')],
+    datas=[],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

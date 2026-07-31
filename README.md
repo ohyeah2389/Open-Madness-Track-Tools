@@ -44,7 +44,7 @@ Contains the following:
 - `bff_creator.py` is a Python script that is capable of creating a new valid BFF from loose files. It does not and will not support BFF encryption; no code that supports BFF encryption is included or will be included.
 - `mtx2bmt.py` is a Python script that is capable of converting MTX material definition XML files to BMT binary material files.
 - `pack_track.py` is a Python script that performs the actual packing of a template folder structure (such as the one provided in the Example Project) into a `.zip` file ready for installation with the aforementioned Content Manager.
-- `placeholder_seasonal.bff` is a nearly-empty BFF file which gets reused as the empty seasonal variation BFF files in each packed track. (I tried various methods of creating an original placeholder BFF on the fly, such as creating an empty BFF and creating a BFF with a benign file to replace, to no success.)
+- Seasonal variation BFFs are generated at pack time rather than shipped. The game requires a seasonal pak per season to exist, so each is built as an inert archive containing a single marker file.
 
 ### Example Project
 This contains a Blender project file, textures, and a shell track file structure ready to be exported into.
