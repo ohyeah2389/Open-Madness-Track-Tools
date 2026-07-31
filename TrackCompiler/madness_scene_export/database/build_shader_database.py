@@ -379,8 +379,6 @@ class ShaderDatabaseBuilder:
         return grouped
 
     def _serialize(self) -> Dict[str, Any]:
-        source_roots = [str(r) for r in self.mtx_roots]
-
         def median(vals: List[float]):
             if not vals:
                 return None
@@ -393,8 +391,6 @@ class ShaderDatabaseBuilder:
 
         serialized = {
             "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-            "sourceRoot": source_roots[0] if source_roots else "",
-            "sourceRoots": source_roots,
             "mtxFiles": self.raw_db["mtxFiles"],
             "shaders": {},
         }

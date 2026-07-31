@@ -1,9 +1,5 @@
 {
   "generatedAt": "2026-05-09T13:14:44.023501Z",
-  "sourceRoot": "s:\\Assorted Project Files\\Synced Projects\\AMS2 Track RevEng\\MTX Analysis\\PC2 MTXs\\Tracks",
-  "sourceRoots": [
-    "s:\\Assorted Project Files\\Synced Projects\\AMS2 Track RevEng\\MTX Analysis\\PC2 MTXs\\Tracks"
-  ],
   "mtxFiles": 41384,
   "shaders": {
     "Render\\Shaders\\basic.fx": {
