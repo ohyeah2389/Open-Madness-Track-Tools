@@ -45,3 +45,12 @@ It takes six textures, mapped to certain MEB UV channels:
 - specularTexture - UV Map ?
 - normalTexture - UV Map ?
 - puddleTexture - UV Map 4 (with multiplier set by param uvScaleForWetMasks)
+---
+Below are notes for specific textures.
+# LiveTrack Mask
+Certain shaders, mostly those regarding ground surface materials, use a LiveTrack Mask texture slot. This refers to a specific channel-packed texture. Below is my best guess for what the role of each channel of that texture is:
+- Red: Archetypal heightmap detail layer 1
+- Green: Archetypal heightmap detail layer 2
+- Blue: Archetypal heightmap detail layer 3
+- Alpha: Gravel-like texture, variations at all scales
+wherein "archetypal" means "grass-like" or "asphalt-like" or whatever the surface is that this mask is being used for is shaped like.
