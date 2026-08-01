@@ -1,8 +1,11 @@
 This tutorial, like the entire project, is a work-in-progress and is, by definition and necessity, not complete. Please keep that in mind while following it. If you have any notes or questions, please post them to the Issues tracker of this repository.
 
+Before following this tutorial, you should install the TrackCompiler Blender extension provided in the releases of this repository. It is installable in the same way as any other Blender extension, through Preferences > Extensions > Install from Disk.
 # Step 0: Shotgun Introduction to the Madness Engine
 The Madness Engine's game data is not designed to be modified by the end-user. That doesn't mean it isn't modifiable under the right configuration. 
+
 It does, however, mean that it is extremely intolerant to error and misconfiguration, and it provides no feedback on what you did wrong.
+
 Be careful, follow the instructions, and be warned that the instructions may be incomplete or unclear.
 ## Comparison to Assetto Corsa
 * Physics/visuals separation
