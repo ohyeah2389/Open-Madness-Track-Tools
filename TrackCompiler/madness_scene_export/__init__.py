@@ -38,17 +38,6 @@ from .ui import dynamic_ui
 from .ui import sound_ui
 
 
-class MadnessSceneExporterPreferences(bpy.types.AddonPreferences):
-    """Addon preferences for OMTT TrackCompiler"""
-
-    bl_idname = __name__
-
-
-    def draw(self, context):
-        layout = self.layout
-        layout.label(text="Addon has no settings.")
-
-
 class MadnessSceneExporter(bpy.types.Operator, ExportHelper):
     """Export Scene Graph XML"""
 
@@ -424,7 +413,6 @@ def register():
     sound_ui.register()
 
     main_classes = [
-        MadnessSceneExporterPreferences,
         MadnessSceneExporter,
         MadnessEnvironmentExporter,
         MadnessSingleMebExporter,
@@ -456,7 +444,6 @@ def unregister():
         MadnessEnvironmentExporter,
         MadnessSceneExporter,
         MadnessGclExporter,
-        MadnessSceneExporterPreferences,
     ]
 
     for cls in main_classes:
