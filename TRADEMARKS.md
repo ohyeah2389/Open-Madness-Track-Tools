@@ -2,7 +2,7 @@
 
 The licenses covering this project grant rights in copyright only. They do not grant rights to use the project's name or branding.
 
-"Open Madness Track Tools", "OMTT", and the project logo are reserved by the project maintainer.
+"Open Madness Track Tools", "OMTT", and the project logo (`omtt_project_icon.png`) are reserved by the project maintainer.
 
 ## What you may do without asking
 

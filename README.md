@@ -1,4 +1,8 @@
-﻿# Open Madness Track Tools
+﻿<p align="center">
+  <img src="omtt_project_icon.png" alt="Open Madness Track Tools" width="256">
+</p>
+
+# Open Madness Track Tools
 This repository consists of a set of scripts, a Blender plugin, and program source code enabling development of original track models for Slightly Mad Studios' Madness Engine racing games (tested with Project CARS 2 and Reiza Studios' Automobilista 2).
 
 ## Disclaimer
