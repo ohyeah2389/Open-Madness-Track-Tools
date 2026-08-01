@@ -10,3 +10,4 @@ __pycache__/
 /TrackPacker/_bff_build/
 /dist/
 /Art
+/.vscode
