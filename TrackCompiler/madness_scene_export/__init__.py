@@ -299,7 +299,7 @@ class MadnessDynamicObjectsExporter(bpy.types.Operator, ExportHelper):
             # Create a success message with actual file paths
             message = (
                 f"Dynamic objects exported successfully! "
-                f"{results['collisions']} templates, {results['environment']} instances. "
+                f"{results['collisions']} templates, {results['environment']} instances, {results['registered']} registered type(s). "
                 f"Files: {results.get('collisions_path', 'N/A')} and {results.get('env_path', 'N/A')}"
             )
 

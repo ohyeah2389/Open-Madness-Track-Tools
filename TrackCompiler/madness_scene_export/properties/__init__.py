@@ -3,6 +3,7 @@
 from .dynamic import (
     get_definition_name,
     get_definition_shapes,
+    get_definition_visual,
     is_dynamic_definition,
     is_sms_dynamic,
     get_dynamic_name
@@ -15,6 +16,7 @@ from .sound import is_sms_sound, get_sound_name
 __all__ = [
     'get_definition_name',
     'get_definition_shapes',
+    'get_definition_visual',
     'is_dynamic_definition',
     'is_sms_dynamic',
     'get_dynamic_name',

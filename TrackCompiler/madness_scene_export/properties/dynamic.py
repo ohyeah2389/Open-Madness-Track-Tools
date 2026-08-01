@@ -1,6 +1,8 @@
 import bpy  # type: ignore
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, PointerProperty, StringProperty  # type: ignore
 
+from ..utils import sanitize
+
 
 # Physics material names recognised by the Madness engine.
 PHYSICS_MATERIALS = [
@@ -16,6 +18,8 @@ PHYSICS_MATERIALS = [
 ]
 
 PHYSICS_MATERIAL_ITEMS = [(name, name, f"Physics material: {name}") for name in PHYSICS_MATERIALS]
+
+LOD_SUFFIX = "_loda"
 
 
 def is_dynamic_definition(obj):
@@ -35,8 +39,22 @@ def get_definition_shapes(definition):
 
 
 def get_definition_name(definition):
-    """Get the name a definition is exported under."""
-    return definition.madness_dynamic_def.export_name or definition.name
+    """Get the name a definition is exported under.
+
+    The engine binds a dynamic body to its visual mesh by name, so the physics body,
+    the VHF hierarchy and the name stored inside the MEB all have to agree. Stock files
+    use lowercase for all three.
+    """
+    name = sanitize(definition.madness_dynamic_def.export_name or definition.name).lower()
+    return name if name.endswith(LOD_SUFFIX) else f"{name}{LOD_SUFFIX}"
+
+
+def get_definition_visual(definition):
+    """Get the mesh drawn for a definition, defaulting to the definition itself."""
+    visual = definition.madness_dynamic_def.visual_mesh
+    if visual and visual.type == "MESH":
+        return visual
+    return definition if definition.type == "MESH" else None
 
 
 class MadnessDynamicDefinition(bpy.types.PropertyGroup):
@@ -53,8 +71,22 @@ class MadnessDynamicDefinition(bpy.types.PropertyGroup):
 
     export_name: StringProperty(
         name="Export Name",
-        description="Name written to dynamic_collisions.xml (defaults to the object name)",
+        description=(
+            "Name used for both the physics body and the exported mesh (defaults to the "
+            "object name). '_loda' is appended if missing"
+        ),
         default="",
+    )  # type: ignore
+
+    visual_mesh: PointerProperty(
+        name="Visual Mesh",
+        description=(
+            "Mesh drawn for this object, exported to tracks/_data/dynamic. Leave empty to "
+            "draw the definition's own mesh, or point at a detailed mesh when the collision "
+            "shapes are simplified"
+        ),
+        type=bpy.types.Object,
+        poll=lambda self, obj: obj.type == "MESH",
     )  # type: ignore
 
     physics_material: EnumProperty(

@@ -86,14 +86,15 @@ class MEBWriter:
         """Write file header (8 bytes)."""
         self.data.extend(meb_format.HEADER)
     
-    def write_mesh_name(self, name: str):
+    def write_mesh_name(self, name: str, uppercase: bool = True):
         """Write mesh name string, padded to 4-byte boundary.
         
         Args:
-            name: Mesh name (will be converted to uppercase ASCII)
+            name: Mesh name
+            uppercase: Convert to uppercase, as scenegraph meshes do. Dynamic object
+                meshes are stored in lowercase in stock files, so they pass False.
         """
-        name_upper = name.upper()
-        name_bytes = name_upper.encode('ascii', errors='replace')
+        name_bytes = (name.upper() if uppercase else name).encode('ascii', errors='replace')
         
         # Pad to 4-byte boundary
         padding_needed = (4 - len(name_bytes) % 4) % 4
@@ -335,6 +336,7 @@ def write_meb_file(
     bodywork_data: bool = False,
     w_sections: Optional[List[Tuple[int, int]]] = None,  # List of (uv_layer_idx, w_section_type)
     log_prefix: str = "",
+    uppercase_name: bool = True,
 ) -> BoundingInfo:
     """Write a complete MEB file.
     
@@ -410,7 +412,7 @@ def write_meb_file(
     
     # Write file structure
     writer.write_header()
-    writer.write_mesh_name(mesh_name)
+    writer.write_mesh_name(mesh_name, uppercase_name)
     writer.write_vertex_count(len(vertices))
     writer.write_vertex_params_count(param_count)
     writer.write_material_count(len(filtered_materials), disable_materials)

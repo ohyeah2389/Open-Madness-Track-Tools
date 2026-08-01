@@ -132,7 +132,9 @@ def pack_release(source, temp, lower, track, pack_track, materials, out_main, ou
     tracks = source / "Tracks"
     copy_tree(source / "GUI", zip_root / "GUI")
     copy_tree(tracks / "textures" / track, zip_root / "Tracks" / "textures" / pack_track)
+    copy_tree(tracks / "textures" / "_data", zip_root / "Tracks" / "textures" / "_data")
     copy_tree(tracks / track, zip_root / "Tracks" / pack_track, only_ext={".mtx", ".trd"})
+    copy_tree(tracks / "_data" / "dynamic", zip_root / "Tracks" / "_data" / "dynamic", exclude=("physics",), only_ext={".mtx"})
 
     logger.info("Creating release ZIP: %s", out_zip)
     out_zip.unlink(missing_ok=True)
@@ -194,7 +196,9 @@ def main(argv) -> int:
         copy_tree(source / "cameras", main_dir / "cameras")
         copy_tree(source / "GUI", main_dir / "gui")
         copy_tree(tracks / "_data" / "audio", main_dir / "tracks/_data/audio")
+        copy_tree(tracks / "_data" / "dynamic", main_dir / "tracks/_data/dynamic", exclude=("physics",))
         copy_tree(tracks / "textures" / track, main_dir / "tracks/textures" / pack_track)
+        copy_tree(tracks / "textures" / "_data", main_dir / "tracks/textures/_data")
         copy_tree(tracks / track, main_dir / "tracks" / pack_track, exclude=("physics", "track_cut"))
 
         logger.info("Copying physics files...")

@@ -2,6 +2,7 @@ import bpy  # type: ignore
 from ..properties.dynamic import (
     get_definition_name,
     get_definition_shapes,
+    get_definition_visual,
     is_dynamic_definition,
     is_sms_dynamic,
 )
@@ -38,11 +39,16 @@ class MadnessDynamicDefinitionPanel(bpy.types.Panel):
         if props.is_definition:
             box = layout.box()
             box.prop(props, "export_name", placeholder=obj.name)
+            box.label(text=f"Exports as {get_definition_name(obj)}", icon='FILE_3D')
             shapes = get_definition_shapes(obj)
             if shapes:
                 box.label(text=f"{len(shapes)} collision shape(s)", icon='MESH_ICOSPHERE')
             else:
                 box.label(text="No mesh shapes found", icon='ERROR')
+
+            box.prop(props, "visual_mesh", placeholder="This object's mesh")
+            if not get_definition_visual(obj):
+                box.label(text="No visual mesh: nothing will be drawn", icon='ERROR')
 
         if obj.type != 'MESH':
             return

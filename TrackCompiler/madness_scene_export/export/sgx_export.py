@@ -705,8 +705,11 @@ def prepare_texture_mapping(
     texture_export_dir: Path,
     track_name: str,
     context,
+    game_texture_dir: str = None,
 ):
     def _relative_texture_path(texture_name: str) -> str:
+        if game_texture_dir:
+            return f"{game_texture_dir}\\{texture_name}"
         if mtx_dir.parent.name.lower() == "tracks":
             return f"tracks\\textures\\{track_name}\\{texture_name}"
         try:

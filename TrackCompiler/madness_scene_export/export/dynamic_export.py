@@ -8,6 +8,7 @@ import numpy as np
 from ..properties.dynamic import (
     get_definition_name,
     get_definition_shapes,
+    get_definition_visual,
     get_dynamic_name,
     is_dynamic_definition,
     is_sms_dynamic,
@@ -17,9 +18,19 @@ from ..utils.coordinate_transforms import (
     convert_rotation_matrix,
     matrix_to_quaternion,
 )
+from .dynamic_registry import export_dynamic_registry
 
 # PhysX cannot cook a convex hull with more than 255 vertices.
 MAX_HULL_VERTICES = 255
+
+# Dynamic objects live in a shared folder, not the track's own. The second spelling is
+# the casing stock VHFs use for their resource references.
+GAME_DYNAMIC_DIR = "tracks/_data/dynamic"
+GAME_DYNAMIC_RESOURCE_DIR = "Tracks\\_Data\\Dynamic"
+
+# Textures for dynamic objects sit alongside every other track texture rather than
+# beside the meshes, which is where the engine resolves them from.
+GAME_DYNAMIC_TEXTURE_DIR = "tracks/textures/_data/dynamic"
 
 
 def collect_dynamic_objects(scene) -> List[Dict[str, Any]]:
@@ -152,18 +163,39 @@ def _append_shape(shapes_elem: ET.Element, shape_obj, mesh_id: int, local_matrix
     ET.SubElement(shape_elem, 'Mass').text = f"{props.mass:.6f}"
 
 
-def create_dynamic_collisions_xml(dynamic_objects: List[Dict[str, Any]]) -> ET.Element:
-    """Create a dynamic_collisions.xml from the definitions used in the scene"""
+def _describe_shape(shape_obj, points, local_matrix) -> Dict[str, Any]:
+    """Describe a shape for the object type registry, which stores it as an offset hull."""
+    props = shape_obj.madness_dynamic_def
+    matrix_np = np.array(local_matrix)
+    rotation = matrix_np[:3, :3]
+    scales = np.linalg.norm(rotation, axis=0)
+    rotation = convert_rotation_matrix(rotation / np.where(scales > 1e-8, scales, 1.0))
+
+    return {
+        'name': shape_obj.name,
+        'mass': props.mass,
+        'material': props.physics_material,
+        'points': points,
+        'position': convert_position(matrix_np[:3, 3]),
+        # Stored column-major, matching how the engine's other matrices are written.
+        'orientation': rotation.flatten(order='F').tolist(),
+    }
+
+
+def create_dynamic_collisions_xml(dynamic_objects: List[Dict[str, Any]]):
+    """Create a dynamic_collisions.xml from the definitions used in the scene.
+
+    Also returns a body description per definition, so the object type registry can be
+    written from the same hulls rather than computing them a second time.
+    """
     root = ET.Element('PhysX30Collection')
     root.set('Version', '3.2.0-SMS')
 
-    # Unique definitions, keyed by exported name so duplicates collapse.
-    definitions = {}
-    for obj_info in dynamic_objects:
-        definitions.setdefault(obj_info['definition_name'], obj_info['definition'])
+    definitions = unique_definitions(dynamic_objects)
 
     next_mesh_id = 0
     rigid_elements = []
+    bodies: List[Dict[str, Any]] = []
 
     for name in sorted(definitions):
         definition = definitions[name]
@@ -177,6 +209,7 @@ def create_dynamic_collisions_xml(dynamic_objects: List[Dict[str, Any]]) -> ET.E
         ET.SubElement(rigid_elem, 'GlobalPose').text = _pose_string(mathutils.Matrix.Identity(4))
         shapes_elem = ET.SubElement(rigid_elem, 'Shapes')
 
+        body_shapes: List[Dict[str, Any]] = []
         root_inverse = definition.matrix_world.inverted()
         for shape_obj in shapes:
             points = build_hull_points(shape_obj)
@@ -194,14 +227,87 @@ def create_dynamic_collisions_xml(dynamic_objects: List[Dict[str, Any]]) -> ET.E
             points_text = "\n".join(f"{p[0]:.6f} {p[1]:.6f} {p[2]:.6f}" for p in points)
             ET.SubElement(mesh_elem, 'points').text = f"\n{points_text}\n"
 
-            _append_shape(shapes_elem, shape_obj, next_mesh_id, root_inverse @ shape_obj.matrix_world)
+            local_matrix = root_inverse @ shape_obj.matrix_world
+            _append_shape(shapes_elem, shape_obj, next_mesh_id, local_matrix)
+            body_shapes.append(_describe_shape(shape_obj, points, local_matrix))
             next_mesh_id += 1
 
         rigid_elements.append(rigid_elem)
+        if body_shapes:
+            bodies.append({'name': name, 'shapes': body_shapes})
 
     # All PxConvexMesh entries must precede the bodies that reference them.
     root.extend(rigid_elements)
-    return root
+    return root, bodies
+
+
+def unique_definitions(dynamic_objects: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Map exported name to definition, collapsing repeated placements."""
+    definitions = {}
+    for obj_info in dynamic_objects:
+        definitions.setdefault(obj_info['definition_name'], obj_info['definition'])
+    return definitions
+
+
+def export_dynamic_visuals(dynamic_objects: List[Dict[str, Any]], tracks_dir: Path) -> int:
+    """Export each definition's visual mesh, materials and textures.
+
+    The engine resolves a dynamic body's appearance by looking up a mesh of the same
+    name under tracks/_data/dynamic, so the MEB is written there rather than into the
+    track's own folder.
+    """
+    from ..materials.mtx_processor import prepare_mtx_files_from_materials
+    from ..meshes.blender_meb_export import export_object_to_meb
+    from ..utils import effective_materials_for_object, sanitize
+    from .sgx_export import (
+        _build_maybe_overridden_options,
+        _get_userflags,
+        export_textures,
+        prepare_texture_mapping,
+    )
+    from .vhf_export import write_vhf
+
+    out_dir = tracks_dir / "_data" / "dynamic"
+    texture_dir = tracks_dir / "textures" / "_data" / "dynamic"
+    materials: List[str] = []
+    exported = 0
+
+    for name, definition in sorted(unique_definitions(dynamic_objects).items()):
+        visual = get_definition_visual(definition)
+        if not visual:
+            print(f"Dynamic definition '{name}' has no visual mesh, skipping mesh export")
+            continue
+        out_dir.mkdir(parents=True, exist_ok=True)
+        # The MEB stores each material's path, and dynamic objects resolve theirs from
+        # the shared folder rather than from the track's own.
+        options = _build_maybe_overridden_options(visual, f"{GAME_DYNAMIC_DIR}/")
+        bounds = export_object_to_meb(
+            visual, out_dir / f"{name}.meb", mesh_name=name, options=options, uppercase_name=False
+        )
+        write_vhf(
+            out_dir / f"{name}.vhf",
+            name,
+            f"{GAME_DYNAMIC_RESOURCE_DIR}\\{name}.meb",
+            bounds,
+            _get_userflags(visual),
+        )
+        materials.extend(sanitize(mat.name) for mat in effective_materials_for_object(visual) if mat)
+        exported += 1
+
+    materials = sorted(set(materials))
+    if materials:
+        texture_mapping = prepare_texture_mapping(
+            materials, out_dir, texture_dir, "dynamic", bpy.context,
+            game_texture_dir=GAME_DYNAMIC_TEXTURE_DIR.replace("/", "\\"),
+        )
+        prepare_mtx_files_from_materials(
+            materials, out_dir, bpy.context, track_name="dynamic", texture_mapping=texture_mapping
+        )
+        if texture_mapping:
+            export_textures(texture_mapping, texture_dir)
+
+    print(f"Exported {exported} dynamic object meshes and {len(materials)} materials to {out_dir}")
+    return exported
 
 
 def create_environment_xml(dynamic_objects: List[Dict[str, Any]]) -> ET.Element:
@@ -258,9 +364,9 @@ def create_environment_xml(dynamic_objects: List[Dict[str, Any]]) -> ET.Element:
     return root
 
 
-def export_dynamic_collisions_xml(filepath: str, dynamic_objects: List[Dict[str, Any]]) -> int:
-    """Export dynamic collisions XML file"""
-    root = create_dynamic_collisions_xml(dynamic_objects)
+def export_dynamic_collisions_xml(filepath: str, dynamic_objects: List[Dict[str, Any]]):
+    """Export dynamic collisions XML file, returning its bodies for registration"""
+    root, bodies = create_dynamic_collisions_xml(dynamic_objects)
     
     # Format and write XML without any declaration
     ET.indent(root, space="  ")
@@ -268,7 +374,7 @@ def export_dynamic_collisions_xml(filepath: str, dynamic_objects: List[Dict[str,
     tree.write(filepath, xml_declaration=False)
     
     print(f"Exported dynamic collisions with {len(dynamic_objects)} object types to {filepath}")
-    return len(dynamic_objects)
+    return len(dynamic_objects), bodies
 
 
 def export_dynamic_environment_xml(filepath: str, dynamic_objects: List[Dict[str, Any]]) -> int:
@@ -300,6 +406,8 @@ def export_dynamic_objects(base_filepath: str) -> Dict[str, Any]:
         return {
             'collisions': 0, 
             'environment': 0,
+            'visuals': 0,
+            'registered': 0,
             'collisions_path': 'No file created',
             'env_path': 'No file created'
         }
@@ -335,9 +443,10 @@ def export_dynamic_objects(base_filepath: str) -> Dict[str, Any]:
         
     # If we still don't have a track name, try to extract from filename
     if not track_name:
-        track_name = base_path.stem.replace('_dynamic_collisions', '').replace('dynamic_collisions', '')
-        if not track_name:
-            track_name = base_path.stem
+        # Selecting a previously exported "<track>.env.xml" leaves ".env" on the stem,
+        # which would otherwise be carried into the next export's paths.
+        stem = base_path.stem.removesuffix('.env')
+        track_name = stem.replace('_dynamic_collisions', '').replace('dynamic_collisions', '') or stem
     
     # If we can't find Tracks directory, create one at current location
     if tracks_dir is None:
@@ -350,7 +459,7 @@ def export_dynamic_objects(base_filepath: str) -> Dict[str, Any]:
     # Collisions: Tracks/[track_name]/physics/dynamic_collisions.xml
     collisions_path = tracks_dir / track_name / "physics" / "dynamic_collisions.xml"
     collisions_path.parent.mkdir(parents=True, exist_ok=True)
-    results['collisions'] = export_dynamic_collisions_xml(str(collisions_path), dynamic_objects)
+    results['collisions'], bodies = export_dynamic_collisions_xml(str(collisions_path), dynamic_objects)
     results['collisions_path'] = str(collisions_path)
     
     # Environment: Tracks/_data/dynamic/physics/[track_name].env.xml
@@ -358,10 +467,18 @@ def export_dynamic_objects(base_filepath: str) -> Dict[str, Any]:
     env_path.parent.mkdir(parents=True, exist_ok=True)
     results['environment'] = export_dynamic_environment_xml(str(env_path), dynamic_objects)
     results['env_path'] = str(env_path)
-    
+
+    # Registry: the pair beside the env.xml that makes these placements real bodies
+    results['registered'] = export_dynamic_registry(bodies, env_path.parent)
+
+    # Visuals: Tracks/_data/dynamic/[definition].meb
+    results['visuals'] = export_dynamic_visuals(dynamic_objects, tracks_dir)
+
     print(f"Dynamic objects exported:")
     print(f"  Collisions: {results['collisions_path']}")
     print(f"  Environment: {results['env_path']}")
+    print(f"  Visuals: {results['visuals']} mesh(es)")
+    print(f"  Registered types: {results['registered']}")
     print(f"  Track name: {track_name}")
     print(f"  Tracks directory: {tracks_dir}")
     

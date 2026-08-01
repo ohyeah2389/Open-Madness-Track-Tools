@@ -372,7 +372,8 @@ def export_object_to_meb(
     obj,
     output_path: Path,
     mesh_name: Optional[str] = None,
-    options: Optional[MeshExportOptions] = None
+    options: Optional[MeshExportOptions] = None,
+    uppercase_name: bool = True,
 ) -> BoundingInfo:
     """Export a Blender mesh object to MEB format.
 
@@ -429,7 +430,8 @@ def export_object_to_meb(
         material_dir=options.material_dir,
         disable_materials=options.disable_materials,
         bodywork_data=options.bodywork_data,
-        w_sections=options.w_sections
+        w_sections=options.w_sections,
+        uppercase_name=uppercase_name,
     )
 
     return bounds

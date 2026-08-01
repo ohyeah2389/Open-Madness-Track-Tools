@@ -39,7 +39,7 @@ It has the following capabilities:
 - Export a `triggers.xml` file containing timing gate and other trigger zone information from a set of scene objects with a specific naming convention (see Example Files)
 - Export a Cameras XML file from a set of scene objects with a specific naming convention, configured data, placements, and orientation (see Example Files)
 - Export a Lights SGX file from a set of scene objects with a specific naming convention, configured data, placements, and orientation (see Example Files)
-- Export a paired `dynamic_objects.xml` and `trackname.env.xml` dynamic physics objects layout fileset
+- Export a paired `dynamic_objects.xml` and `trackname.env.xml` dynamic physics objects layout fileset, along with each object's visual mesh, materials, and textures under `tracks/_data/dynamic`
 - Export a Level Sound Definition LSD file from a set of scene objects with a specific naming convention, configured data, placements, and orientation (see Example Files)
 - Export a LiveTrack Point Grid and track cut area GCL file from a set of scene objects representing the drivable surface of the track (see Example Files)
 
