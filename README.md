@@ -26,7 +26,7 @@ This feature is possible to implement and will be implemented at a later date.
 ## Contents:
 
 ### Documentation
-In the development of this toolkit, I conducted extensive research into the Madness Engine and the file formats it uses. These are the notes I took on each file format and the file structure of tracks in both games.
+In the development of this toolkit, I conducted extensive research into the Madness Engine and the file formats it uses. These are some of the notes I took on each file format and the file structure of tracks in both games.
 
 ### PhysicsMeshCooker
 A command-line utility that prepares LiveTrack geometry data (PhysX cooked collision meshes) from FBX files using NVIDIA PhysX 3.3.4.
