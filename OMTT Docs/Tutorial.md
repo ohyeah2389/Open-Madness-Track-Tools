@@ -229,7 +229,7 @@ The possible and valid names for trigger cubes are as follows:
 - `TRG_DRSZONE2END` (end of DRS zone 2)
 - `TRG_DRSZONE3END` (end of DRS zone 3)
 After all required triggers have been set up, use the "Madness Triggers" export function to export them to `\Automobilista 2\Tracks\TrackName\physics\triggers.xml`.
-## Step 4.4: Design the AIW Data
+## Step 4.4: Create and Export the AIW Data
 The AIW data serves the same purpose in Madness Engine games as it does in gMotor-based games (AMS1, rF2, rF1, GTR2, etc.): to define the waypoint graph used by the computer opponents. As the AIW system is internally point-based, the toolkit expects you to author a few meshes with ascending vertex indices along the path the computer opponents are to follow:
 - `SMS_AIW_CENTERLINE`: Defines the location of the individual waypoints forming the main path. Pay attention to the vertex indices; they should be ordered correctly counting up along the path, with no errors. To easily fix a disordered vertex series, convert the line mesh to a curve and back to a mesh. 
 - `SMS_AIW_PITLINE`: Defines the location of the individual waypoints forming the pit path. Same vertex index restrictions apply.
@@ -256,15 +256,17 @@ The centerline also needs certain data set up for each waypoint regarding the co
 To assign values to an attribute field, select the desired attribute field in the Object Data Properties panel, and in edit mode on the object with the desired vertices selected, on the top bar in the Mesh dropdown, click Set Attribute and type in the value to assign to those vertices for that attribute field. Note that these attribute fields need to be set as vertex-domain integers, not floats or any other data type or any other domain type. As a hint to assign the `corner_state` values: with all corner areas selected (after performing the `corner_type` assignments), assign them as Exit, then deselect the exits, then assign as Apex, then deselect the apexes, then assign the remaining as Entry.
 
 A few objects are required to be created and placed correctly. These can be meshes or empties; all that matters is their object names. They should be placed with their origin on the physical surface below them (unlike AC where a raycast is automatically done to resolve this, if you place the pitboxes high up, the cars will slide upwards when "magnetically" dragged into the pitbox, which can look weird, among other issues).
-- `SMS_AIW_GARAGE_0A`: Spawn location of each car, uses A/B/C/etc. for additional garages paired with each `PITBOX` spot. Z up, Y forward, X right. Make sure to set the "Garage Spots Per Pitbox" in the Madness AIW Params pane under the Scene Properties tab correctly: if only A is used, set it to 1, set to 2 if B is used, set to 3 if C is used, etc.
-- `SMS_AIW_PITBOX_0`: Pitstop location for each car. If `GARAGE_...B/C/etc` are used, multiple cars may stop in the same pitbox. Z up, Y forward, X right. Make sure to set the "Pitboxes" count correctly corresponding to the number of these objects (final index +1 since it is 0-indexed).
-- `SMS_AIW_START_0`: Standing start spawn location for each car. Z up, Y forward, X right. Make sure to set the "Starting Grid" count correctly corresponding to the number of these objects (final index +1 since it is 0-indexed).
+- `SMS_AIW_GARAGE_0A`: Spawn location of each car, uses A/B/C/etc. for additional garages paired with each `PITBOX` spot. Z up, Y forward, X right. Garage spots per pitbox are derived automatically from these objects (1 if only A is used, 2 if B is used, etc.).
+- `SMS_AIW_PITBOX_0`: Pitstop location for each car. If `GARAGE_...B/C/etc` are used, multiple cars may stop in the same pitbox. Z up, Y forward, X right. Pitbox count is derived automatically from these objects.
+- `SMS_AIW_START_0`: Standing start spawn location for each car. Z up, Y forward, X right. Starting grid count is derived automatically from these objects.
 - `SMS_AIW_TELEPORT_0`: Rolling start spawn location for each car. Z up, Y forward, X right.
 
 Optional AIW objects in Blender:
 - `SMS_AIW_RACINGLINE`: If present, is used to calculate the lateral racing line offset for the main path waypoints. Density and vertex index order does not matter for this line mesh.
 - `SMS_AIW_CUTLINE_LEFT/RIGHT` If present, is used to calculate the lateral track edge offset for the main path waypoints. Density and vertex index order does not matter for this line mesh. If not present, a default value of 5 meters of offset is used.
 - `SMS_AIW_WALLLINE_LEFT/RIGHT` If present, is used to calculate the lateral maximum offtrack position offset for the main path waypoints. Density and vertex index order does not matter for this line mesh. If not present, a default value of 10 meters of offset is used.
+
+Once created, the AIW data can be exported using the "Madness AIW" export option to `Automobilista 2\Tracks\_data\aiw\TrackName.aiw`. Ensure the collection the AIW objects are part of is enabled (and that all its parents are enabled) before export.
 ## Step 4.5: Configure LiveTrack Weathering-In Data
 The Weathering-In Data consists of a sparse grid of cells with specific float and flag data determining how to initialize the LiveTrack system for the preset track states (puddles, rubber, etc.). Officially, this is done with a tool present in debug builds of the game (see https://www.youtube.com/watch?v=3yjgO0yylhc for an example of its usage), but since debug builds are not provided to the public, we must find an alternate way of synthesizing that data. 
 

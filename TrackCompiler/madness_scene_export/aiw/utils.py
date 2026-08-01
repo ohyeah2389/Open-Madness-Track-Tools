@@ -1,9 +1,34 @@
 """Utility functions for AIW export."""
 
+import re
+
 import numpy as np
 from math import sqrt, atan2
 from typing import List
 from . import parser
+
+GARAGE_RE = re.compile(r"^SMS_AIW_GARAGE_(\d+)([A-Za-z])")
+
+
+def derive_spot_counts(scene):
+    """Count start/pit/garage objects in the scene."""
+    starting_grid = 0
+    pit_spots = 0
+    garages_by_team = {}
+    for obj in scene.objects:
+        name = obj.name
+        if name.startswith("SMS_AIW_START_"):
+            starting_grid += 1
+        elif name.startswith("SMS_AIW_PITBOX_"):
+            pit_spots += 1
+        else:
+            match = GARAGE_RE.match(name)
+            if match:
+                team = int(match.group(1))
+                letter = match.group(2).upper()
+                garages_by_team.setdefault(team, set()).add(letter)
+    garage_spots = max((len(letters) for letters in garages_by_team.values()), default=0)
+    return starting_grid, pit_spots, garage_spots
 
 
 def convert_coords_to_madness(pos: np.ndarray) -> np.ndarray:

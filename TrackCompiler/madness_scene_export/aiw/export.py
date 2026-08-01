@@ -14,11 +14,33 @@ from .connections import (
     generate_pit_connection_waypoints,
 )
 from .utils import (
+    GARAGE_RE,
     convert_coords_to_madness,
     calculate_euler_orientation,
     find_grid_connection_before_start,
 )
 from .writer import write_aiw_file
+
+
+def _garage_poses_for_team(garage_objects, team_index):
+    """Collect garage positions/orientations for a pit team, sorted by letter suffix."""
+    matched = []
+    for garage_obj in garage_objects:
+        match = GARAGE_RE.match(garage_obj.name)
+        if match and int(match.group(1)) == team_index:
+            matched.append((match.group(2).upper(), garage_obj))
+    positions = []
+    orientations = []
+    for _, garage_obj in sorted(matched, key=lambda x: x[0]):
+        garage_matrix = garage_obj.matrix_world
+        garage_location = convert_coords_to_madness(np.array(garage_matrix.translation))
+        garage_forward = np.array(garage_matrix.to_3x3() @ mathutils.Vector([0, 1, 0]))
+        garage_madness_forward = convert_coords_to_madness(garage_forward)
+        positions.append(
+            parser.Position(garage_location[0], garage_location[1], garage_location[2])
+        )
+        orientations.append(calculate_euler_orientation(garage_madness_forward))
+    return positions, orientations
 
 
 class AIWExporter(bpy.types.Operator, ExportHelper):
@@ -589,30 +611,9 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
 
         orientation = calculate_euler_orientation(madness_forward)
 
-        # Find associated garage objects
-        garage_positions = []
-        garage_orientations = []
-
-        for garage_obj in garage_objects:
-            if garage_obj.name.startswith(f"SMS_AIW_GARAGE_{team_index}"):
-                garage_matrix = garage_obj.matrix_world
-                garage_location = convert_coords_to_madness(
-                    np.array(garage_matrix.translation)
-                )
-
-                garage_forward = np.array(
-                    garage_matrix.to_3x3() @ mathutils.Vector([0, 1, 0])
-                )
-                garage_madness_forward = convert_coords_to_madness(garage_forward)
-
-                garage_orientation = calculate_euler_orientation(garage_madness_forward)
-
-                garage_positions.append(
-                    parser.Position(
-                        garage_location[0], garage_location[1], garage_location[2]
-                    )
-                )
-                garage_orientations.append(garage_orientation)
+        garage_positions, garage_orientations = _garage_poses_for_team(
+            garage_objects, team_index
+        )
 
         pit_spot = parser.PitSpot(
             team_index=team_index,
@@ -634,32 +635,9 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
 
         orientation = calculate_euler_orientation(madness_forward)
 
-        # Safety car typically doesn't have garage objects, but check anyway
-        garage_positions = []
-        garage_orientations = []
-
-        for garage_obj in garage_objects:
-            if garage_obj.name.startswith(
-                "SMS_AIW_GARAGE_63"
-            ):  # Safety car garage index
-                garage_matrix = garage_obj.matrix_world
-                garage_location = convert_coords_to_madness(
-                    np.array(garage_matrix.translation)
-                )
-
-                garage_forward = np.array(
-                    garage_matrix.to_3x3() @ mathutils.Vector([0, 1, 0])
-                )
-                garage_madness_forward = convert_coords_to_madness(garage_forward)
-
-                garage_orientation = calculate_euler_orientation(garage_madness_forward)
-
-                garage_positions.append(
-                    parser.Position(
-                        garage_location[0], garage_location[1], garage_location[2]
-                    )
-                )
-                garage_orientations.append(garage_orientation)
+        garage_positions, garage_orientations = _garage_poses_for_team(
+            garage_objects, 63
+        )
 
         safety_car_pit_spot = parser.PitSpot(
             team_index=63,  # Safety car is always team index 63
@@ -671,13 +649,15 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
         )
         pit_spots.append(safety_car_pit_spot)
 
+    garage_spots = max((len(ps.garage_positions) for ps in pit_spots), default=0)
+
     # Create track features
     features = parser.TrackFeatures(
         waypoint_span=waypoint_span,
         pitlanes=aiw_props.track_features.pitlanes,
         starting_grid=len(grid_spots),
-        pit_spots=len(pit_spots),
-        garage_spots=aiw_props.track_features.garage_spots,
+        pit_spots=len(pit_box_objects),
+        garage_spots=garage_spots,
         clipping_points=0,
         drift_version=0,
         corner_marker_version=1,

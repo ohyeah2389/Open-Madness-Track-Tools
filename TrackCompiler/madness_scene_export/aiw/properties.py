@@ -19,27 +19,6 @@ class AIWTrackFeatures(bpy.types.PropertyGroup):
         name="Pit Lanes", description="Number of pit lanes", default=1, min=0, max=2
     )  # type: ignore
 
-    starting_grid: IntProperty(
-        name="Starting Grid",
-        description="Number of starting grid positions",
-        default=32,
-        min=0,
-        max=256,
-    )  # type: ignore
-
-    pit_spots: IntProperty(
-        name="Pitboxes", description="Number of pitboxes", default=32, min=0, max=64
-    )  # type: ignore
-
-    garage_spots: IntProperty(
-        name="Garage Spots Per Pitbox",
-        description="Number of garage spots per pitbox",
-        default=2,
-        min=0,
-        max=4,
-    )  # type: ignore
-
-
     left_handed_pits: BoolProperty(
         name="Left-Handed Pits",
         description="Pit spots turn to the left to exit",

@@ -1,7 +1,7 @@
 """AIW UI panel in Blender."""
 
 import bpy  # type: ignore
-from .properties import AIWSceneProperties
+from .utils import derive_spot_counts
 
 
 class AIW_PT_ScenePanel(bpy.types.Panel):
@@ -21,6 +21,7 @@ class AIW_PT_ScenePanel(bpy.types.Panel):
             return
 
         aiw_props = scene.aiw_properties
+        starting_grid, pit_spots, garage_spots = derive_spot_counts(scene)
 
         # Track Features
         box = layout.box()
@@ -33,14 +34,12 @@ class AIW_PT_ScenePanel(bpy.types.Panel):
         col.separator()
         col.prop(aiw_props.track_features, "left_handed_pits")
         col.prop(aiw_props.track_features, "track_difficulty")
+        col.prop(aiw_props.track_features, "pitlanes")
 
-        row = col.row(align=True)
-        row.prop(aiw_props.track_features, "pitlanes")
-        row.prop(aiw_props.track_features, "starting_grid")
-
-        row = col.row(align=True)
-        row.prop(aiw_props.track_features, "pit_spots")
-        row.prop(aiw_props.track_features, "garage_spots")
+        col.separator()
+        col.label(text=f"Starting Grid: {starting_grid}")
+        col.label(text=f"Pitboxes: {pit_spots}")
+        col.label(text=f"Garage Spots Per Pitbox: {garage_spots}")
 
         # Track Type
         row = col.row(align=True)
@@ -92,4 +91,4 @@ class AIW_PT_ScenePanel(bpy.types.Panel):
         pit_col.prop(aiw_props.waypoint_metadata, "pit_stop_space_front")
         pit_col.prop(aiw_props.waypoint_metadata, "pit_stop_space_back")
         pit_col.prop(aiw_props.waypoint_metadata, "pit_stop_join_in")
-        pit_col.prop(aiw_props.waypoint_metadata, "pit_stop_join_out") 
+        pit_col.prop(aiw_props.waypoint_metadata, "pit_stop_join_out")
