@@ -2,7 +2,7 @@
 $ErrorActionPreference = "Stop"
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$sourceDir = Join-Path $scriptDir "madness_scene_export"
+$sourceDir = Join-Path $scriptDir "trackcompiler"
 $outputDir = $scriptDir
 
 if (-not (Test-Path (Join-Path $sourceDir "blender_manifest.toml"))) {
@@ -32,7 +32,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "Extension build failed with exit code $LASTEXITCODE"
 }
 
-$zip = Get-ChildItem $outputDir -Filter "madness_scene_export-*.zip" |
+$zip = Get-ChildItem $outputDir -Filter "trackcompiler-*.zip" |
     Sort-Object LastWriteTime -Descending |
     Select-Object -First 1
 

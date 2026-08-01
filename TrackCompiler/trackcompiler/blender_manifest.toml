@@ -1,6 +1,6 @@
 schema_version = "1.0.0"
 
-id = "madness_scene_export"
+id = "trackcompiler"
 version = "0.1.0"
 name = "OMTT TrackCompiler"
 tagline = "An open-source toolkit for Madness Engine track development"
