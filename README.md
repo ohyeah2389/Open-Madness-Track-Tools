@@ -15,7 +15,7 @@ I want people to be aware of the limitations of the current methodology upfront.
 
 ### VHF instance hierarchies and IMB instance models can't be added to a track
 This is because the SGX format does not support referencing these files. Certain scene preparation code, which runs if an SGB64 is loaded, doesn't run in the SGX loading pipeline.
-The SGB64 format does support VHFs and IMBs, as evidenced by filepath strings containing references to VHF and IMB files inside them, but the SGB64 format is still undocumented.
+The SGB64 format does support VHFs and IMBs, as evidenced by filepath strings containing references to VHF and IMB files inside them, but the SGB64 format is and will remain undocumented.
 
 ### LiveGrass isn't implemented
 I haven't begun research into the LiveGrass system because I highly suspect it'll only work with SGB64-formatted scenegraphs, not SGXs, for the reasons listed above, because the LiveGrass system likely makes heavy use of instancing.
