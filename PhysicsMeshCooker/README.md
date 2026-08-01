@@ -58,7 +58,29 @@ Set the `PHYSX_SDK_PATH` environment variable to the SDK root, for example:
 $env:PHYSX_SDK_PATH = "C:/PhysX3.3.4"
 ```
 
+### 6. Prepare release PhysX libs (for `-Release` / distribution builds)
 
+Debug cooker builds link the SDK's `*DEBUG*` libraries. Release builds link the unsuffixed names that match the game DLLs (`PhysX3_x64.dll`, etc.). The stock `vc14win64` package often only ships DEBUG libs, so prepare release link inputs once:
+
+1. **Import libs** from the game DLLs (names must match the EXE imports):
+
+```
+dumpbin /EXPORTS PhysX3_x64.dll
+# then lib /DEF:... /MACHINE:X64 /OUT:PhysX3_x64.lib
+# repeat for PhysX3Common_x64.dll and PhysX3Cooking_x64.dll into Lib\vc14win64\
+```
+
+2. **Static libs** `PhysX3Extensions.lib` and `PhysXProfileSDK.lib`; build the `release|x64` configs of those projects from `Source\compiler\vc14win64\`, and retarget the toolset/SDK if needed.
+
+You should end up with:
+
+```
+<SDK root>\Lib\vc14win64\PhysX3_x64.lib
+<SDK root>\Lib\vc14win64\PhysX3Common_x64.lib
+<SDK root>\Lib\vc14win64\PhysX3Cooking_x64.lib
+<SDK root>\Lib\vc14win64\PhysX3Extensions.lib
+<SDK root>\Lib\vc14win64\PhysXProfileSDK.lib
+```
 
 ## Building
 
@@ -87,12 +109,16 @@ The workspace is configured to use editor features only (no auto-CMake configure
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-Release` | Build in Release mode | Debug |
+| `-Release` | Build in Release mode (links game PhysX DLL names) | Debug |
 | `-PhysxSdkPath <path>` | Path to PhysX 3.3.4 SDK root | `$env:PHYSX_SDK_PATH` or `C:/PhysX3.3.4` |
+| `-GameDir <path>` | After a Release build, copy PhysX DLLs from this game install next to the exe | (none) |
 | `-Jobs <n>` | Number of parallel compile jobs | CPU count |
 | `-Clean` | Delete the `build/` directory before configuring | off |
 
-> Note: `-Release` enables release compile flags for this project, but PhysX 3.3.4 `vc14win64` only provides `DEBUG`-suffixed libraries, so those are linked in all configurations.
+| Build type | Linked PhysX runtime names | DLLs next to exe |
+|------------|----------------------------|------------------|
+| Debug | `PhysX3DEBUG_x64.dll`, ... | Copied from SDK `Bin\vc14win64` |
+| Release | `PhysX3_x64.dll`, ... | Not bundled; copied from the game (or use `-GameDir`) |
 
 | Environment variable | Description |
 |----------------------|-------------|
@@ -108,8 +134,9 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 # Release build with a custom PhysX path
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -Release -PhysxSdkPath D:/SDKs/PhysX3.3.4
 
-# Clean release build using 8 parallel jobs
-pwsh -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -Clean -Release -Jobs 8
+# Clean release build + copy PhysX DLLs from AMS2 for local testing
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -Clean -Release -Jobs 8 `
+  -GameDir "G:/SteamLibrary/steamapps/common/Automobilista 2"
 ```
 
 ### Manual CMake invocation
@@ -146,8 +173,18 @@ Example:
 build/PhysicsMeshCooker.exe my_track.obj my_track.csm
 ```
 
-If DLL resolution fails when running from another directory, run from `PhysicsMeshCooker/build` or ensure that directory is on `PATH`.
+### PhysX DLLs (Release / distributed builds)
 
+This tool does not redistribute NVIDIA PhysX. A Release `PhysicsMeshCooker.exe` loads the same DLL names as Automobilista 2 / Project CARS 2. Copy these from your game install next to the executable:
+
+```
+PhysX3_x64.dll
+PhysX3Common_x64.dll
+PhysX3Cooking_x64.dll
+nvToolsExt64_1.dll
+```
+
+If DLL resolution fails when running from another directory, run from the folder that contains the exe and those DLLs.
 ### Material mapping
 
 Material indices are assigned automatically based on the object/group names in the OBJ file using prefix matching (case-insensitive). The full mapping table is defined in `src/PhysicsMeshCooker.cpp`. A few examples:
@@ -192,6 +229,12 @@ Verify `PHYSX_SDK_PATH` points to the root of the PhysX 3.3.4 installation and t
 
 **`cannot open input file 'PhysX3DEBUG_x64.lib'`**
 The PhysX SDK ships pre-built against the MSVC runtime. Ensure you have the `vc14win64` library set at `$PHYSX_SDK_PATH/Lib/vc14win64/`. Clang on Windows can link MSVC-built static libraries directly.
+
+**`Missing .../PhysX3_x64.lib for Release build`**
+Release builds need unsuffixed PhysX libs. See [Prepare release PhysX libs](#6-prepare-release-physx-libs-for--release--distribution-builds).
+
+**`The code execution cannot proceed because PhysX3_x64.dll was not found`**
+Copy the four PhysX/nvTools DLLs from your game install next to `PhysicsMeshCooker.exe`, or rebuild with `-GameDir`.
 
 **PhysX cooking failed at runtime**
 Verify the OBJ file contains valid triangulated geometry. Each OBJ group must have at least one triangle. Degenerate or zero-area triangles will cause the cooker to fail.

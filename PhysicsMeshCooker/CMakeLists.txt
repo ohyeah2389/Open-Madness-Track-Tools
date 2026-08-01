@@ -35,8 +35,29 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
-set(PX_SUFFIX "DEBUG")
+# Debug > PhysX3DEBUG_x64.dll (SDK)
+# Release > PhysX3_x64.dll (game DLL names)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(PX_SUFFIX "DEBUG")
+else()
+    set(PX_SUFFIX "")
+endif()
+
 set(TARGET_NAME PhysicsMeshCooker)
+
+foreach(lib
+    "PhysX3${PX_SUFFIX}_x64"
+    "PhysX3Common${PX_SUFFIX}_x64"
+    "PhysX3Cooking${PX_SUFFIX}_x64"
+    "PhysX3Extensions${PX_SUFFIX}"
+    "PhysXProfileSDK${PX_SUFFIX}"
+)
+    if(NOT EXISTS "${PHYSX_LIB_DIR}/${lib}.lib")
+        message(FATAL_ERROR
+            "Missing ${PHYSX_LIB_DIR}/${lib}.lib for ${CMAKE_BUILD_TYPE} build. "
+            "Release needs unsuffixed PhysX libs (see PhysicsMeshCooker/README.md).")
+    endif()
+endforeach()
 
 add_executable(${TARGET_NAME} src/PhysicsMeshCooker.cpp)
 
@@ -87,16 +108,19 @@ target_link_libraries(${TARGET_NAME} PRIVATE
     "PhysXProfileSDK${PX_SUFFIX}"
 )
 
-set(PHYSX_RUNTIME_DLLS
-    "${PHYSX_BIN_DIR}/PhysX3${PX_SUFFIX}_x64.dll"
-    "${PHYSX_BIN_DIR}/PhysX3Common${PX_SUFFIX}_x64.dll"
-    "${PHYSX_BIN_DIR}/PhysX3Cooking${PX_SUFFIX}_x64.dll"
-    "${PHYSX_BIN_DIR}/nvToolsExt64_1.dll"
-)
-
-foreach(DLL IN LISTS PHYSX_RUNTIME_DLLS)
-    add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DLL}" "$<TARGET_FILE_DIR:${TARGET_NAME}>"
-        COMMENT "Copying ${DLL}"
+# Debug: copy SDK DEBUG DLLs for local runs.
+# Release: do not ship PhysX; users copy release DLLs from the game install.
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(PHYSX_RUNTIME_DLLS
+        "${PHYSX_BIN_DIR}/PhysX3${PX_SUFFIX}_x64.dll"
+        "${PHYSX_BIN_DIR}/PhysX3Common${PX_SUFFIX}_x64.dll"
+        "${PHYSX_BIN_DIR}/PhysX3Cooking${PX_SUFFIX}_x64.dll"
+        "${PHYSX_BIN_DIR}/nvToolsExt64_1.dll"
     )
-endforeach()
+    foreach(DLL IN LISTS PHYSX_RUNTIME_DLLS)
+        add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DLL}" "$<TARGET_FILE_DIR:${TARGET_NAME}>"
+            COMMENT "Copying ${DLL}"
+        )
+    endforeach()
+endif()

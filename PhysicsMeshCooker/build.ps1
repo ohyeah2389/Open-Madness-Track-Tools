@@ -1,6 +1,7 @@
 param(
     [switch]$Release,
     [string]$PhysxSdkPath = $(if ($env:PHYSX_SDK_PATH) { $env:PHYSX_SDK_PATH } else { "C:/PhysX3.3.4" }),
+    [string]$GameDir = "",
     [int]$Jobs = [Environment]::ProcessorCount,
     [switch]$Clean
 )
@@ -134,6 +135,32 @@ Assert-LastExit "CMake build"
 
 if (-not (Test-Path $exePath)) {
     Fail "Build appeared to succeed but executable not found at '$exePath'."
+}
+
+if ($Release) {
+    $dllNames = @(
+        "PhysX3_x64.dll",
+        "PhysX3Common_x64.dll",
+        "PhysX3Cooking_x64.dll",
+        "nvToolsExt64_1.dll"
+    )
+    if ($GameDir) {
+        if (-not (Test-Path $GameDir)) { Fail "GameDir not found: $GameDir" }
+        Write-Host "`nCopying PhysX DLLs from game install..."
+        foreach ($name in $dllNames) {
+            $src = Join-Path $GameDir $name
+            if (-not (Test-Path $src)) { Fail "Missing game DLL: $src" }
+            Copy-Item -Force $src (Join-Path $buildDir $name)
+            Write-Host "  Copied $name"
+        }
+    } else {
+        $missing = @($dllNames | Where-Object { -not (Test-Path (Join-Path $buildDir $_)) })
+        if ($missing.Count -gt 0) {
+            Write-Host "`nRelease build links game PhysX DLL names. Copy these next to the exe:"
+            foreach ($name in $missing) { Write-Host "  $name" }
+            Write-Host "From your AMS2/PCARS2 install, or re-run with -GameDir <game root>."
+        }
+    }
 }
 
 Write-Host "`nBuild succeeded!"
