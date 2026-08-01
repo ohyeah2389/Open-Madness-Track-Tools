@@ -56,9 +56,6 @@ Several different file formats are used for track data in the Madness Engine. Th
 - `/gui/trackphotos/TrackName.dds`
 	- Image of the track (screenshot, render, real photo, etc.)
 	- Used as loading screen background and preview in Automobilista 2
-- `/gui/trackmaps/TrackName.dds`
-	- Used in-session for the track background
-	- Not yet known how to map it properly to the 3D model
 - `/gui/trackmaps3d/TrackName.dds`
 	- Track layout image, overlaid on the track photo in Automobilista 2's track selection screen
 	- 2D white-red top-down layout for AMS2, 3D render with red-yellow-blue sectors and grey buildings in PC2
