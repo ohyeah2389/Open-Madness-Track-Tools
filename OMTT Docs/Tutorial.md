@@ -90,7 +90,17 @@ Several different file formats are used for track data in the Madness Engine. Th
 	- `PhysXCollection` XML-like file containing the mesh data for every dynamic physics object (cone, corner marker) used on the track, referenced to by the next file
 - `/tracks/_data/dynamic/physics/TrackName.env.xml`
 	- XML file containing listings of every dynamic physics object instance used on the track, referencing the previous file
-# Step 2: Build the Track Model
+# Step 2: Project File Setup
+The toolkit is designed to operate with a certain template folder structure in mind that you set up when creating each track. The Example Project provided contains that folder structure.
+
+The following files should be located at the project root:
+- `Automobilista 2`: a template "unpacked" folder structure that the game will internally load, and that TrackPacker will process into the correct assembly of BFF pakfiles and unpacked files.
+- `texture` or `textures`: a folder containing all the textures for this specific track. This is not strictly required, the Blender addon will pull files on export time from anywhere you link to on disk and assemble them to the correct location in the `Automobilista 2` template folder, so this isn't like Assetto Corsa where every texture file must be in the `texture` folder next to the FBX with no folder organization.
+- `BakePhysics.bat`: a batch script that runs PhysicsMeshCooker.exe with the exported OBJ physics mesh to create the cooked CSM file. This isn't strictly required as PhysicsMeshCooker.exe can be run manually too. If used, make sure its paths are correctly referencing the relative or absolute location of PhysicsMeshCooker.exe, otherwise you will get a "The system cannot find the path specified" error on run.
+- `trackname_project_file.blend`: the Blender project file for your track.
+- `trackname.zip`: emitted by TrackPacker.exe upon finishing packing of the template folder structure.
+- `trackname_physics.obj`: the physics collision mesh for your track. The name can be different if desired, and if `BakePhysics.bat` is to be used, make sure to update it to point to this file.
+# Step 3: Build the Track Model
 Instructions on general track modeling are outside the scope of this tutorial, but below are some guidelines for modeling for the Madness engine from what I've seen so far.
 - Track physical surface models from Reiza and SMS seem to be lower spatial resolution than those commonly used in other simulators. This may be a limitation of the Madness engine or it may not be; if you run into any performance limitations with high-density physical surface models, please let the community and I know.
 - The Madness engine, just like Assetto Corsa, runs on DirectX 11. The Madness engine does support instancing unlike Assetto Corsa, but again, SGX files do not have support for referencing instance meshes. Therefore, try to keep the object count low. The lower the object count, the quicker the track will load, and the better it will perform, to a limit. 
@@ -108,7 +118,7 @@ Instructions on general track modeling are outside the scope of this tutorial, b
 	- DDS A8R8G8B8 Uncompressed
 - The Madness Engine has been seen to NOT support the following texture formats so far:
 	- DDS R8G8B8 Uncompressed
-# Step 3: Author the Materials
+# Step 4: Author the Materials
 In the process of building the track model, you should have given each object a material. What that material looks like in Blender doesn't translate over to the game; the game uses its own method of defining materials to be used on each mesh object. Therefore, the Blender plugin provides an interface for setting up each material to work when exported to the Madness Engine. 
 Under the Material Properties page of the Properties panel, you will see a new pane named "Madness MTX Settings". Expanding the pane will show a configuration GUI with four sections:
 - Basic Settings
@@ -123,9 +133,9 @@ Under the Material Properties page of the Properties panel, you will see a new p
 This UI has been designed to closely mirror the MTX file format and therefore isn't the most visual or intuitive. Designing and configuring shaders may require trial and error until you gain experience with which shader does what and what options are available for each shader. The demo project contains preconfigured shaders for its used materials. If you misconfigure a shader, objects using it will fail to render in game.
 
 Certain shader defines and shader parameters require each other. The actual list of requirements has not been discovered; likely relationships have been noted and baked into the shader database distributed with the toolkit. The material UI will warn about mismatches in enabled shader parameters and defines as compared to the database to help you select an appropriate configuration of parameters and defines. However, the database is likely imperfect, and so the warnings do not block you from setting up any given configuration, even if it is thought to be invalid by the database, as it may still be valid. Again, trial and error will be needed to take full advantage of the material system due to the lack of documentation.
-# Step 4: Export the Track Model
+# Step 5: Export the Track Model
 As was covered in step 1, there are many files we must create using the toolkit. The following substeps will cover how to create each of the required files, in suggested order, using the tools in the toolkit.
-## Step 4.1: Cook the Physics Mesh
+## Step 5.1: Cook the Physics Mesh
 In your Blender project (which should be organized into collections), deactivate all collections containing objects that should not contribute to the collision surfaces of the track. Leave only the meshes such as the high-resolution road meshes, grass meshes, and invisible wall meshes. 
 
 The CSM we'll be preparing stores each mesh's material index beside it in the binary content. Creation of the CSM will be through the provided tool `PhysicsMeshCooker.exe`. It takes two arguments as input: a path to an input OBJ file and a path to an output CSM file.
@@ -192,7 +202,7 @@ In Blender, once all objects have been renamed according to their desired physic
 
 A Batch file is provided in the example project folder that contains a setup for the example track. You will have to adjust the path to `PhysicsMeshCooker.exe` if you move the project file.
 The exported CSM's path should be in the track's physics folder, named the same as the track (for the Meadowdale example: `\Automobilista 2\Tracks\meadowdale\physics\meadowdale.csm`).
-## Step 4.2: Create and Export the GCL
+## Step 5.2: Create and Export the GCL
 The GCL file contains two datasets, the first of which has to be set up manually, and the second of which is set up automatically by the toolkit on export time. The first dataset is assembled from four meshes that form the legal racing area of the track: the main racing surface, the pitlane, the pitlane exit area (within the white pit exit lines, usually), and the pitlane entry area. The first three are required; the last one is optional. To create these, it is usually sufficient to take the physical surface of the track and dissolve all interior geometry (all vertices not part of the non-manifold edge of the track), triangulate it, and split off the triangles that form the pitlane-related areas (some application of the knife tool may be necessary). Then, of the three to four resultant meshes, name them as follows:
 - `SMS_GCL_ROAD` (main racing surface)
 - `SMS_GCL_PIT` (pit area)
@@ -206,7 +216,7 @@ The role that these surfaces seem to play, as noted through experimentation, are
 Note that unlike Assetto Corsa which uses a physical mesh material to determine when the pit speed limiter is applied, the Madness Engine uses triggers instead, which are waypoint/gate-like objects you have to pass through in a certain direction to trigger. This means if the vehicle manages to make its way from the racing surface to the pit area without passing through the trigger, the game won't register it as being on pit road, and the speed limit won't apply. This is probably similar to the behavior in gMotor games; I don't have any experience authoring content for gMotor games, so I don't know for sure.
 
 Once all objects have been properly created and named, use the "Madness LiveTrack Cells" export function in Blender to export this data to the `\Automobilista 2\Tracks\TrackName\track_cut\TrackName.gcl` file for your track. In this process, the cell dectree will be calculated and saved into the GCL alongside the triangle data you just authored.
-## Step 4.3: Create and Export the Triggers
+## Step 5.3: Create and Export the Triggers
 Triggers are special zones that trigger certain events when the car passes them. To create a trigger, create a cube mesh and do the following with it:
 - Place it at the center point you want the trigger to be located at
 - Rotate it so its Z axis is upwards, its Y axis is forwards (along the direction the cars traveling through it are moving), and its X axis is right (compared to the direction the cars traveling through it are moving)
@@ -229,7 +239,7 @@ The possible and valid names for trigger cubes are as follows:
 - `TRG_DRSZONE2END` (end of DRS zone 2)
 - `TRG_DRSZONE3END` (end of DRS zone 3)
 After all required triggers have been set up, use the "Madness Triggers" export function to export them to `\Automobilista 2\Tracks\TrackName\physics\triggers.xml`.
-## Step 4.4: Create and Export the AIW Data
+## Step 5.4: Create and Export the AIW Data
 The AIW data serves the same purpose in Madness Engine games as it does in gMotor-based games (AMS1, rF2, rF1, GTR2, etc.): to define the waypoint graph used by the computer opponents. As the AIW system is internally point-based, the toolkit expects you to author a few meshes with ascending vertex indices along the path the computer opponents are to follow:
 - `SMS_AIW_CENTERLINE`: Defines the location of the individual waypoints forming the main path. Pay attention to the vertex indices; they should be ordered correctly counting up along the path, with no errors. To easily fix a disordered vertex series, convert the line mesh to a curve and back to a mesh. 
 - `SMS_AIW_PITLINE`: Defines the location of the individual waypoints forming the pit path. Same vertex index restrictions apply.
@@ -267,7 +277,7 @@ Optional AIW objects in Blender:
 - `SMS_AIW_WALLLINE_LEFT/RIGHT` If present, is used to calculate the lateral maximum offtrack position offset for the main path waypoints. Density and vertex index order does not matter for this line mesh. If not present, a default value of 10 meters of offset is used.
 
 Once created, the AIW data can be exported using the "Madness AIW" export option to `Automobilista 2\Tracks\_data\aiw\TrackName.aiw`. Ensure the collection the AIW objects are part of is enabled (and that all its parents are enabled) before export.
-## Step 4.5: Configure LiveTrack Weathering-In Data
+## Step 5.5: Configure LiveTrack Weathering-In Data
 The Weathering-In Data consists of a sparse grid of cells with specific float and flag data determining how to initialize the LiveTrack system for the preset track states (puddles, rubber, etc.). Officially, this is done with a tool present in debug builds of the game (see https://www.youtube.com/watch?v=3yjgO0yylhc for an example of its usage), but since debug builds are not provided to the public, we must find an alternate way of synthesizing that data. 
 
 The approach this toolkit takes is to use a Blender Geometry Nodes node tree to generate the data from some input parameters. A premade node tree, LiveTrackRasterGenerator, that achieves this goal is available in the example project. To use it for your track, do the following:
@@ -296,9 +306,9 @@ To preview the outputs at any step of the nodetree, you can use the Viewer syste
 Those who are adept with Geometry Nodes, feel free to make modifications and improvements to the node tree for your own use; there are certainly things that can be improved in it, such as the rubber generator not fully considering braking zones.
 
 To export the data to an MRDF, ensure the object with the LiveTrackRasterGenerator node tree is inside an enabled collection (and all of its parent collections are enabled as well), select it, then use the "Madness LiveTrack Data" exporter to render the data to `Automobilista 2\Tracks\_data\livetrack\TrackName.mrdf`.
-## Step 4.6: Assemble the Visuals
+## Step 5.6: Assemble the Visuals
 Reactivate all collections containing all objects intended to be visible. Deactivate all collections consisting of physics-only objects (wall collision, triggers, AIW data, LiveTrack generator, etc.) as well as all marker object collections ("Madness Objects" in the demo project). Ensure that every visible object has a material assigned and that every visible material has been configured (step 3). Then, export the scene using the "Madness Scene" option, and export to the SGX file named the same as the track under the track's folder (`Automobilista 2/tracks/TrackName/TrackName.sgx`). This will take a long time; it needs to export every object in the scene as its own MEB, each material as its own MTX, copy the referenced textures into the template game folder structure, and then write the assembled SGX scenegraph file. No caching is currently performed, so the entire operation is redone every time. No status updates are currently provided; the Blender UI will lock up and will unlock with a message in the bottom bar upon a successful export. To see progress reports, show the Blender Console window using the Window > Toggle System Console button in the top bar. 
-## Step 4.7: Author and Export Remaining Optional Data
+## Step 5.7: Author and Export Remaining Optional Data
 This section is WIP.
 
 The following datasets can also be authored with the tool, and the example project is set up with data for each:
@@ -306,5 +316,5 @@ The following datasets can also be authored with the tool, and the example proje
 - Lights
 - Sounds
 - Dynamic Physics Objects
-# Step 5: Package the Track
+# Step 6: Package the Track
 As provided for each release of this toolkit, there is included an EXE file PackTrack.exe. This is a PyInstaller-packaged version of the Python scripts available under the TrackPacker source folder in this repository. When run with no command line flags (such as by double-clicking on it in Explorer), it will open a file picker prompting you to pick the track folder to package. This supports track projects prepared in the same way the Example Project is packaged; to package it, select the `Automobilista 2` template folder inside the project folder. Packing will then start; after it is complete, a `.zip` file with the name of the track will be emitted next to the selected template folder. This file is then ready to be tested in-game by installing it with [Paolo Ambrosio's AMS2 CM](https://github.com/OpenSimTools/AMS2CM/).
