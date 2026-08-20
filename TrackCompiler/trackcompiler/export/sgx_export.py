@@ -749,7 +749,7 @@ def prepare_texture_mapping(
 
         mtx = blender_material.mtx_settings
         for param in mtx.shader_params:
-            if param.param_type != "EPT_TEXTURE" or not param.texture_value:
+            if param.param_type != "EPT_TEXTURE" or not param.enabled or not param.texture_value:
                 continue
             src_path, exists = resolve_texture_path(param.texture_value, context)
             if exists and src_path:
