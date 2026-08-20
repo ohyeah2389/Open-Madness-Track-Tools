@@ -414,6 +414,7 @@ def export_object_to_meb(
         )
 
     # Write MEB file
+    from ..settings.meb_export_settings import culling_sphere_radius_override
     bounds = write_meb_file(
         output_path=output_path,
         mesh_name=mesh_name,
@@ -432,6 +433,7 @@ def export_object_to_meb(
         bodywork_data=options.bodywork_data,
         w_sections=options.w_sections,
         uppercase_name=uppercase_name,
+        sphere_radius_override=culling_sphere_radius_override(obj),
     )
 
     return bounds

@@ -337,6 +337,7 @@ def write_meb_file(
     w_sections: Optional[List[Tuple[int, int]]] = None,  # List of (uv_layer_idx, w_section_type)
     log_prefix: str = "",
     uppercase_name: bool = True,
+    sphere_radius_override: Optional[float] = None,
 ) -> BoundingInfo:
     """Write a complete MEB file.
     
@@ -358,6 +359,8 @@ def write_meb_file(
         bodywork_data: If True, write bodywork section
         w_sections: Optional list of UV layers to write as UVW instead of UV
         log_prefix: Optional mesh label used to prefix log output
+        uppercase_name: Convert mesh name to uppercase
+        sphere_radius_override: If set, replace the computed culling sphere radius
     
     Returns:
         BoundingInfo for the entire mesh
@@ -377,6 +380,8 @@ def write_meb_file(
     
     # Calculate overall bounds
     bounds = _calculate_bounds(vertices, flip_coordinates)
+    if sphere_radius_override is not None:
+        bounds.sphere_radius = float(sphere_radius_override)
     
     # Count additional vertex parameters beyond the base 3 (positions, colors, normals)
     param_count = 0

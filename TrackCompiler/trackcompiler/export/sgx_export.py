@@ -21,6 +21,7 @@ from ..materials.mtx_processor import prepare_mtx_files_from_materials
 from ..meshes import MeshExportOptions
 from ..meshes.blender_meb_export import extract_mesh_data_from_blender
 from ..meshes.meb_writer import write_meb_file
+from ..settings.meb_export_settings import culling_sphere_radius_override
 from ..settings.userflags import DEFAULT_USERFLAGS
 from ..utils import effective_materials_for_object
 from ..utils.coordinate_transforms import decompose_matrix
@@ -202,6 +203,17 @@ def _get_group_skip_uv_compression(group_name: str, group_objects: List[object])
     return any(values)
 
 
+def _get_group_culling_sphere_override(group_name: str, group_objects: List[object]) -> float | None:
+    values = [culling_sphere_radius_override(obj) for obj in group_objects]
+    unique = set(values)
+    if len(unique) > 1 and group_objects:
+        print(
+            f"  Warning: {group_name} has mixed culling sphere overrides; "
+            f"using {values[0]} from {group_objects[0].name}"
+        )
+    return values[0] if values else None
+
+
 def _build_export_mesh_stem(base_name: str, skip_uv_compression: bool) -> str:
     if not skip_uv_compression or base_name.lower().endswith("_no_uv_comp"):
         return base_name
@@ -308,6 +320,7 @@ def _queue_object_export(
     max_in_flight: int,
     userflags_override: int | None = None,
     skip_uv_compression_override: bool | None = None,
+    culling_sphere_override: float | None = None,
 ):
     matrix = np.array(obj.matrix_world.copy())
     translation, quaternion = decompose_matrix(matrix)
@@ -318,6 +331,8 @@ def _queue_object_export(
         if skip_uv_compression_override is None
         else skip_uv_compression_override
     )
+    if culling_sphere_override is None:
+        culling_sphere_override = culling_sphere_radius_override(obj)
     base_name = sanitize(obj_name)
     export_name = _build_export_mesh_stem(base_name, skip_uv_compression)
     meb_path = output_dir / f"{export_name}.meb"
@@ -377,6 +392,7 @@ def _queue_object_export(
                 bodywork_data=options.bodywork_data,
                 w_sections=options.w_sections,
                 log_prefix=export_name,
+                sphere_radius_override=culling_sphere_override,
             ),
         )
     )
@@ -534,6 +550,9 @@ def export_single_meb_set(filepath: str, context, settings: SingleMebExportSetti
                         bodywork_data=options.bodywork_data,
                         w_sections=options.w_sections,
                         log_prefix=mesh_name,
+                        sphere_radius_override=_get_group_culling_sphere_override(
+                            "Single MEB export", source_meshes
+                        ),
                     )
                     exported_count = 1
                     all_materials.extend(extracted_data[4])
@@ -642,6 +661,7 @@ def export_objects_to_meb(
                             max_in_flight,
                             userflags_override=_get_group_userflags(name, group_objects),
                             skip_uv_compression_override=_get_group_skip_uv_compression(name, group_objects),
+                            culling_sphere_override=_get_group_culling_sphere_override(name, group_objects),
                         )
                 except Exception as e:
                     _log_export_error(f"Failed to process KSTREE_GROUP_{group_id}", e)
@@ -667,6 +687,7 @@ def export_objects_to_meb(
                             max_in_flight,
                             userflags_override=_get_group_userflags(name, group_objects),
                             skip_uv_compression_override=_get_group_skip_uv_compression(name, group_objects),
+                            culling_sphere_override=_get_group_culling_sphere_override(name, group_objects),
                         )
                 except Exception as e:
                     _log_export_error(f"Failed to process SMS_GRP_{group_name}", e)

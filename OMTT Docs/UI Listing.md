@@ -41,6 +41,7 @@ Visible for any material.
 ## MEB Export Settings
 Visible when a mesh is selected.
 - Export Options
+- Culling Sphere
 - UV Mapping
 - User Flags (Rendering, Shadows, Systems, Environment, Seasons)
 - Custom Arguments

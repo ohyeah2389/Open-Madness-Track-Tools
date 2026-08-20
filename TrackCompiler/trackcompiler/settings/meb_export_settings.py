@@ -1,8 +1,9 @@
+import math
 import shlex
 
 import bpy  # type: ignore
-from bpy.props import BoolProperty, IntProperty, StringProperty, PointerProperty, BoolVectorProperty  # type: ignore
-from typing import List
+from bpy.props import BoolProperty, FloatProperty, IntProperty, StringProperty, PointerProperty, BoolVectorProperty  # type: ignore
+from typing import List, Optional
 from .userflags import (
     USERFLAG_CATEGORIES,
     get_userflag_name,
@@ -124,6 +125,22 @@ class MEBExportSettings(bpy.types.PropertyGroup):
         max=6
     ) # type: ignore
 
+    override_culling_sphere: BoolProperty(
+        name="Override Radius",
+        description="Use a custom spherical culling radius instead of the evaluated mesh bounds",
+        default=False,
+        update=lambda self, context: _seed_culling_sphere_override(self, context),
+    ) # type: ignore
+
+    culling_sphere_radius: FloatProperty(
+        name="Culling Sphere Radius",
+        description="Override radius used for spherical culling",
+        default=1.0,
+        min=0.0,
+        soft_max=10000.0,
+        unit="LENGTH",
+    ) # type: ignore
+
     # Custom extra arguments for anything not covered above
     custom_args: StringProperty(
         name="Custom Arguments",
@@ -138,6 +155,46 @@ class MEBExportSettings(bpy.types.PropertyGroup):
         size=32,
         default=userflags_to_bool_vector()
     ) # type: ignore
+
+
+def evaluated_culling_sphere_radius(obj) -> float:
+    """AABB-diagonal culling radius from Blender's cached bound box.
+
+    Matches MEB export (half the scaled object-space AABB diagonal) without
+    iterating vertices. Uses the evaluated object so modifiers are included.
+    """
+    eval_obj = obj
+    try:
+        eval_obj = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    except (AttributeError, ReferenceError, TypeError):
+        pass
+    bb = getattr(eval_obj, "bound_box", None) or getattr(obj, "bound_box", None)
+    if not bb:
+        return 0.0
+    try:
+        sx, sy, sz = obj.matrix_world.to_scale()
+    except (AttributeError, TypeError):
+        sx = sy = sz = 1.0
+    dx = (max(c[0] for c in bb) - min(c[0] for c in bb)) * abs(sx) * 0.5
+    dy = (max(c[1] for c in bb) - min(c[1] for c in bb)) * abs(sy) * 0.5
+    dz = (max(c[2] for c in bb) - min(c[2] for c in bb)) * abs(sz) * 0.5
+    return math.sqrt(dx * dx + dy * dy + dz * dz)
+
+
+def _get_evaluated_culling_sphere_radius(self) -> float:
+    return evaluated_culling_sphere_radius(self)
+
+
+def culling_sphere_radius_override(obj) -> Optional[float]:
+    settings = getattr(getattr(obj, "data", None), "meb_export_settings", None)
+    if settings and settings.override_culling_sphere:
+        return float(settings.culling_sphere_radius)
+    return None
+
+
+def _seed_culling_sphere_override(settings, context):
+    if settings.override_culling_sphere and context and context.object:
+        settings.culling_sphere_radius = evaluated_culling_sphere_radius(context.object)
 
 
 def build_meb_args(settings: MEBExportSettings) -> List[str]:
@@ -301,6 +358,15 @@ class MEB_PT_export_settings(bpy.types.Panel):
         row.prop(settings, "wsection1")
         row.prop(settings, "wsection2")
 
+        box = layout.box()
+        box.label(text="Culling Sphere", icon="MESH_UVSPHERE")
+        eval_row = box.row()
+        eval_row.enabled = False
+        eval_row.prop(context.object, "meb_evaluated_culling_sphere_radius", text="Evaluated Radius")
+        box.prop(settings, "override_culling_sphere")
+        if settings.override_culling_sphere:
+            box.prop(settings, "culling_sphere_radius", text="Override Radius")
+
         # UV Mapping
         box = layout.box()
         box.label(text="UV Mapping", icon='UV')
@@ -422,10 +488,21 @@ def register():
     if not hasattr(bpy.types.Mesh, 'meb_export_settings'):
         bpy.types.Mesh.meb_export_settings = PointerProperty(type=MEBExportSettings)
 
+    bpy.types.Object.meb_evaluated_culling_sphere_radius = FloatProperty(
+        name="Evaluated Culling Sphere Radius",
+        description="Spherical culling radius from the mesh AABB (including modifiers and object scale)",
+        get=_get_evaluated_culling_sphere_radius,
+        unit="LENGTH",
+        options={"HIDDEN"},
+    )
+
 
 def unregister():
     if hasattr(bpy.types.Mesh, 'meb_export_settings'):
         del bpy.types.Mesh.meb_export_settings
+
+    if hasattr(bpy.types.Object, "meb_evaluated_culling_sphere_radius"):
+        del bpy.types.Object.meb_evaluated_culling_sphere_radius
 
     try:
         bpy.utils.unregister_class(MEB_PT_export_settings)
