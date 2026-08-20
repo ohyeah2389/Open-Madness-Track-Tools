@@ -18,7 +18,7 @@ import mtx2bmt
 logger = logging.getLogger(__name__)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-SEASONS = ("aut", "sno", "spr", "sum", "win")
+SEASONS = ("AUT", "SNO", "SPR", "SUM", "WIN")
 
 
 def build_seasonal_bff(output_bff: Path, name: str, season: str, materials: Path, staging: Path) -> None:
@@ -31,8 +31,9 @@ def build_seasonal_bff(output_bff: Path, name: str, season: str, materials: Path
     shutil.rmtree(staging, ignore_errors=True)
     season_dir = staging / materials.relative_to(materials.parents[1])
     season_dir.mkdir(parents=True)
+    suffix = season.lower()  # stock inner names use lowercase season tags (_aut, …)
     for bmt in sorted(materials.glob("*.bmt")):
-        shutil.copy2(bmt, season_dir / f"{bmt.stem}_{season}{bmt.suffix}")
+        shutil.copy2(bmt, season_dir / f"{bmt.stem}_{suffix}{bmt.suffix}")
 
     creator = bff_creator.BFFCreator(name)
     creator.compression_type = bff_creator.CompressionType.ZLIB
