@@ -232,20 +232,20 @@ Defines terrain geometry with specialized handling:
 
 ### PARTITION_ID Elements
 
-Defines spatial partitions for performance optimization using octree-like structures:
+Defines an authored tree of axis-aligned volumes used for culling. Every interior `PARTITION_ID` has exactly four `CHILD_PARTITIONS` (or `NONE` if it is a leaf), suggesting this is a quadtree-like format internally.
 
 ```xml
 <PARTITION_ID no="[partition_id]">
     <AABBOX min="[x] [y] [z]" max="[x] [y] [z]" />
     <CHILD_PARTITIONS IDs="[space_separated_ids]|NONE" />
-    <CHILD_OBJS IDs="[space_separated_object_ids]" />
+    <CHILD_OBJS IDs="[space_separated_object_ids]|NONE" />
 </PARTITION_ID>
 ```
 
 **Structure:**
-- `AABBOX`: Axis-aligned bounding box defining partition volume
-- `CHILD_PARTITIONS`: Space-separated list of child partition IDs or "NONE"
-- `CHILD_OBJS`: Space-separated list of object IDs contained in this partition
+- `AABBOX`: Axis-aligned bounding box of this partition. Parent boxes contain their children; sibling boxes may overlap.
+- `CHILD_PARTITIONS`: Four child partition IDs, or `NONE` for a leaf. The loader matches these IDs against later `PARTITION_ID/@no` values.
+- `CHILD_OBJS`: Space-separated list of object IDs contained in this partition, or `NONE`. Each object ID appears in exactly one partition. A parent may list both child partitions and its own objects.
 
 ## Data Format Specifications
 

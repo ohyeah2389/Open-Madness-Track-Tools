@@ -5,7 +5,9 @@ from typing import List, Dict, Any
 import mathutils  # type: ignore
 import numpy as np
 from ..properties.light import is_sms_light
-from ..utils.coordinate_transforms import decompose_matrix, convert_position
+from ..utils.coordinate_transforms import convert_position
+from .object_export import iter_visible_scene_objects
+from .partitions import PartitionItem, append_partitions, build_partition_tree
 
 
 def get_light_name(obj):
@@ -15,46 +17,34 @@ def get_light_name(obj):
     return obj.name
 
 
-def collect_lights(scene) -> List[Dict[str, Any]]:
-    """Collect all SMS lights from the scene"""
+def collect_lights(view_layer) -> List[Dict[str, Any]]:
+    """Collect SMS lights from visible collections."""
     lights = []
-    
-    for obj in scene.objects:
-        if is_sms_light(obj):
-            light_data = obj.data
-            light_props = light_data.madness_light
-            
-            # Get world transform and convert to Madness coordinate system
-            world_matrix = obj.matrix_world
-            
-            # Convert position using coordinate transforms
-            blender_position = world_matrix.translation
-            position_array = np.array([blender_position.x, blender_position.y, blender_position.z])
-            madness_position = convert_position(position_array)
-            
-            # Calculate direction vector in Blender space (lights point down -Z by default)
-            blender_direction = world_matrix.to_3x3() @ mathutils.Vector((0.0, 0.0, -1.0))
-            blender_direction.normalize()
-            
-            # Convert direction vector to Madness coordinates 
-            # Direction vectors transform the same way as positions but without translation
-            direction_array = np.array([blender_direction.x, blender_direction.y, blender_direction.z])
-            madness_direction = convert_position(direction_array)  # Same transform as position
-            
-            # Convert back to mathutils Vector for consistency
-            direction = mathutils.Vector(madness_direction)
-            position = mathutils.Vector(madness_position)
-            
-            light_info = {
-                'name': get_light_name(obj),
-                'object': obj,
-                'position': position,
-                'direction': direction,
-                'properties': light_props,
-                'world_matrix': world_matrix
-            }
-            lights.append(light_info)
-    
+
+    for obj in iter_visible_scene_objects(view_layer):
+        if not is_sms_light(obj):
+            continue
+        light_props = obj.data.madness_light
+        world_matrix = obj.matrix_world
+
+        blender_position = world_matrix.translation
+        position_array = np.array([blender_position.x, blender_position.y, blender_position.z])
+        madness_position = convert_position(position_array)
+
+        blender_direction = world_matrix.to_3x3() @ mathutils.Vector((0.0, 0.0, -1.0))
+        blender_direction.normalize()
+        direction_array = np.array([blender_direction.x, blender_direction.y, blender_direction.z])
+        madness_direction = convert_position(direction_array)
+
+        lights.append({
+            "name": get_light_name(obj),
+            "object": obj,
+            "position": mathutils.Vector(madness_position),
+            "direction": mathutils.Vector(madness_direction),
+            "properties": light_props,
+            "world_matrix": world_matrix,
+        })
+
     return lights
 
 
@@ -107,89 +97,52 @@ def generate_light_xml(light_info: Dict[str, Any], uid: int) -> ET.Element:
     return light_elem
 
 
-def calculate_scene_bounds(lights: List[Dict[str, Any]]) -> tuple:
-    """Calculate bounding box for all lights"""
-    if not lights:
-        return (-10.0, -10.0, -10.0), (10.0, 10.0, 10.0)
-    
-    min_x = min_y = min_z = float('inf')
-    max_x = max_y = max_z = float('-inf')
-    
-    for light in lights:
-        pos = light['position']
-        props = light['properties']
-        
-        # Expand bounds by light range
-        range_val = props.range
-        
-        min_x = min(min_x, pos.x - range_val)
-        min_y = min(min_y, pos.y - range_val)
-        min_z = min(min_z, pos.z - range_val)
-        
-        max_x = max(max_x, pos.x + range_val)
-        max_y = max(max_y, pos.y + range_val)
-        max_z = max(max_z, pos.z + range_val)
-    
-    return (min_x, min_y, min_z), (max_x, max_y, max_z)
-
-
-def generate_lights_sgx(lights: List[Dict[str, Any]], filepath: Path) -> None:
+def generate_lights_sgx(lights: List[Dict[str, Any]], filepath: Path, view_layer) -> None:
     """Generate a _lights.sgx file from light data"""
     if not lights:
         print("No SMS lights found in scene")
         return
-    
-    # Create root SCENE element
+
     scene = ET.Element(
         "SCENE",
         FileVersion="0.1.0.0",
         ExporterVersion="Open Madness Track Tools 0.1.0",
         NumObjects=str(len(lights)),
         Merged="1",
-        NumPartitions="1"
+        NumPartitions="1",
     )
-    
-    # Add light objects
+
+    items = []
     for i, light in enumerate(lights, 1):
         obj_elem = ET.SubElement(scene, "OBJ_ID", no=str(i))
-        light_elem = generate_light_xml(light, 0)  # UID 0 for all lights
-        obj_elem.append(light_elem)
-    
-    # Calculate scene bounds
-    scene_min, scene_max = calculate_scene_bounds(lights)
-    
-    # Add partition
-    partition = ET.SubElement(scene, "PARTITION_ID", no="0")
-    ET.SubElement(
-        partition,
-        "AABBOX",
-        min=f"{scene_min[0]:.6f} {scene_min[1]:.6f} {scene_min[2]:.6f}",
-        max=f"{scene_max[0]:.6f} {scene_max[1]:.6f} {scene_max[2]:.6f}"
-    )
-    
-    # Add child partitions and objects
-    ET.SubElement(partition, "CHILD_PARTITIONS", IDs="NONE")
-    child_ids = " ".join(str(i) for i in range(1, len(lights) + 1))
-    ET.SubElement(partition, "CHILD_OBJS", IDs=child_ids)
-    
-    # Format and write XML
+        obj_elem.append(generate_light_xml(light, 0))
+        pos = light["position"]
+        range_val = light["properties"].range
+        items.append(
+            PartitionItem(
+                obj_id=i,
+                source_objects=[light["object"]],
+                aabb_min=np.array([pos.x - range_val, pos.y - range_val, pos.z - range_val], dtype=np.float64),
+                aabb_max=np.array([pos.x + range_val, pos.y + range_val, pos.z + range_val], dtype=np.float64),
+            )
+        )
+
+    partition_count = append_partitions(scene, build_partition_tree(view_layer, items))
+    print(f"Built {partition_count} partition(s) from collection hierarchy")
     ET.indent(scene, space="  ")
-    tree = ET.ElementTree(scene)
-    tree.write(filepath, encoding="utf-8", xml_declaration=True)
+    ET.ElementTree(scene).write(filepath, encoding="utf-8", xml_declaration=True)
 
 
 def export_lights_sgx(filepath: str) -> int:
     """Export lights SGX file and return number of lights exported"""
-    lights = collect_lights(bpy.context.scene)
-    
-    # Ensure the filename ends with _lights.sgx
+    view_layer = bpy.context.view_layer
+    lights = collect_lights(view_layer)
+
     filepath_obj = Path(filepath)
-    if not filepath_obj.stem.endswith('_lights'):
-        # Replace .sgx with _lights.sgx
-        new_stem = filepath_obj.stem + '_lights'
-        filepath_obj = filepath_obj.parent / (new_stem + '.sgx')
-    
-    generate_lights_sgx(lights, filepath_obj)
-    
+    if not filepath_obj.stem.endswith("_lights"):
+        filepath_obj = filepath_obj.parent / (filepath_obj.stem + "_lights.sgx")
+
+    generate_lights_sgx(lights, filepath_obj, view_layer)
+
     print(f"Exported {len(lights)} lights to {filepath_obj}")
     return len(lights)

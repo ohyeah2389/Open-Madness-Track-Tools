@@ -65,6 +65,7 @@ class ObjectInfo:
         bb_min: np.ndarray = np.array([0, 0, 0]),
         bb_max: np.ndarray = np.array([0, 0, 0]),
         userflags: int = DEFAULT_USERFLAGS,
+        source_objects: List = None,
     ):
         self.name = name
         self.meb_path = meb_path
@@ -76,6 +77,7 @@ class ObjectInfo:
         self.bb_min = bb_min
         self.bb_max = bb_max
         self.userflags = userflags
+        self.source_objects = list(source_objects or [])
 
 
 def _iter_visible_layer_collections(root_layer_collection):
@@ -263,7 +265,7 @@ def combine_objects_into_mesh(
 def collect_empty_objects_with_meb(context):
     """Collect Empty objects with MEB references from visible collections.
 
-    Returns: List of (object_name, meb_path, translation, quaternion, sphere_radius, userflags)
+    Returns: List of (object, object_name, meb_path, translation, quaternion, sphere_radius, userflags)
     """
     results = []
 
@@ -303,6 +305,7 @@ def collect_empty_objects_with_meb(context):
         userflags = bool_vector_to_userflags(obj.empty_meb_settings.userflags)
 
         results.append((
+            obj,
             obj.name,
             relative_meb_path,
             translation,

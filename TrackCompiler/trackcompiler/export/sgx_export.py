@@ -39,6 +39,7 @@ from .object_export import (
     skip_viewport_disabled_modifiers,
     tag_temp_export_datablock,
 )
+from .partitions import PartitionItem, append_partitions, build_partition_tree
 
 
 @dataclass
@@ -50,6 +51,7 @@ class _PendingObjectExport:
     materials: List[str]
     userflags: int
     future: Future
+    source_objects: List = None
 
 
 @dataclass
@@ -303,6 +305,7 @@ def _complete_next_pending_export(pending_exports, objects_list):
             bb_min=bounds.bb_min,
             bb_max=bounds.bb_max,
             userflags=pending.userflags,
+            source_objects=pending.source_objects,
         )
     )
     print(f"Successfully exported {pending.name} -> {pending.meb_path.name}")
@@ -321,6 +324,7 @@ def _queue_object_export(
     userflags_override: int | None = None,
     skip_uv_compression_override: bool | None = None,
     culling_sphere_override: float | None = None,
+    source_objects=None,
 ):
     matrix = np.array(obj.matrix_world.copy())
     translation, quaternion = decompose_matrix(matrix)
@@ -373,6 +377,7 @@ def _queue_object_export(
             quaternion=quaternion,
             materials=material_names,
             userflags=userflags,
+            source_objects=list(source_objects or [obj]),
             future=writer_pool.submit(
                 write_meb_file,
                 output_path=meb_path,
@@ -662,6 +667,7 @@ def export_objects_to_meb(
                             userflags_override=_get_group_userflags(name, group_objects),
                             skip_uv_compression_override=_get_group_skip_uv_compression(name, group_objects),
                             culling_sphere_override=_get_group_culling_sphere_override(name, group_objects),
+                            source_objects=group_objects,
                         )
                 except Exception as e:
                     _log_export_error(f"Failed to process KSTREE_GROUP_{group_id}", e)
@@ -688,6 +694,7 @@ def export_objects_to_meb(
                             userflags_override=_get_group_userflags(name, group_objects),
                             skip_uv_compression_override=_get_group_skip_uv_compression(name, group_objects),
                             culling_sphere_override=_get_group_culling_sphere_override(name, group_objects),
+                            source_objects=group_objects,
                         )
                 except Exception as e:
                     _log_export_error(f"Failed to process SMS_GRP_{group_name}", e)
@@ -784,17 +791,7 @@ def export_textures(texture_mapping: dict, texture_export_dir: Path):
     print(f"Exported {texture_count} textures to {texture_export_dir}")
 
 
-def build_sgx(objects: List[ObjectInfo], dest_path: Path, resource_prefix: str = ""):
-    if not objects:
-        zero = np.array([0.0, 0.0, 0.0], dtype=np.float32)
-        scene_min, scene_max = zero.copy(), zero.copy()
-    else:
-        first = objects[0]
-        scene_min = first.translation + first.bb_min
-        scene_max = first.translation + first.bb_max
-        for obj in objects[1:]:
-            scene_min = np.minimum(scene_min, obj.translation + obj.bb_min)
-            scene_max = np.maximum(scene_max, obj.translation + obj.bb_max)
+def build_sgx(objects: List[ObjectInfo], dest_path: Path, resource_prefix: str = "", view_layer=None):
     scene = ET.Element(
         "SCENE",
         FileVersion="0.1.0.0",
@@ -802,8 +799,7 @@ def build_sgx(objects: List[ObjectInfo], dest_path: Path, resource_prefix: str =
         NumObjects=str(len(objects)),
         NumPartitions="1",
     )
-    obj_id = 1
-    for obj in objects:
+    for obj_id, obj in enumerate(objects, 1):
         obj_elem = ET.SubElement(scene, "OBJ_ID", no=str(obj_id))
         lod_node = ET.SubElement(
             obj_elem,
@@ -851,18 +847,21 @@ def build_sgx(objects: List[ObjectInfo], dest_path: Path, resource_prefix: str =
             Centre=f"{cx:.6f} {cy:.6f} {cz:.6f} 1.000000",
             Radius=f"{obj.sphere_radius:.6f}",
         )
-        obj_id += 1
 
-    part = ET.SubElement(scene, "PARTITION_ID", no="0")
-    ET.SubElement(
-        part,
-        "AABBOX",
-        min=f"{scene_min[0]:.6f} {scene_min[1]:.6f} {scene_min[2]:.6f}",
-        max=f"{scene_max[0]:.6f} {scene_max[1]:.6f} {scene_max[2]:.6f}",
-    )
-    child_ids = " ".join(str(i) for i in range(1, obj_id)) + " "
-    ET.SubElement(part, "CHILD_OBJS", IDs=child_ids)
-    ET.SubElement(part, "CHILD_PARTITIONS", IDs="NONE")
+    if view_layer is None:
+        view_layer = bpy.context.view_layer
+    items = [
+        PartitionItem(
+            obj_id=obj_id,
+            source_objects=obj.source_objects,
+            aabb_min=obj.translation + obj.bb_min,
+            aabb_max=obj.translation + obj.bb_max,
+        )
+        for obj_id, obj in enumerate(objects, 1)
+    ]
+    root = build_partition_tree(view_layer, items)
+    partition_count = append_partitions(scene, root)
+    print(f"Built {partition_count} partition(s) from collection hierarchy")
     ET.indent(scene, space="    ")
     ET.ElementTree(scene).write(dest_path, encoding="utf-8", xml_declaration=True)
 
@@ -889,7 +888,7 @@ def export_madness_scene(filepath: str, resource_prefix: str, context):
         print(f"Found {len(empty_data)} Empty objects with MEB references")
 
         print("Processing Empty objects with MEB references...")
-        for obj_name, meb_path, translation, quaternion, sphere_radius, userflags in empty_data:
+        for src_obj, obj_name, meb_path, translation, quaternion, sphere_radius, userflags in empty_data:
             objects.append(
                 ObjectInfo(
                     name=obj_name,
@@ -902,6 +901,7 @@ def export_madness_scene(filepath: str, resource_prefix: str, context):
                     bb_min=np.array([-sphere_radius, -sphere_radius, -sphere_radius]),
                     bb_max=np.array([sphere_radius, sphere_radius, sphere_radius]),
                     userflags=userflags,
+                    source_objects=[src_obj],
                 )
             )
             print(f"Added Empty object: {obj_name} -> {meb_path} (radius: {sphere_radius})")
@@ -939,7 +939,7 @@ def export_madness_scene(filepath: str, resource_prefix: str, context):
             export_textures(texture_mapping, texture_export_dir)
 
         print("Generating SGX file...")
-        build_sgx(objects, sgx_path, resource_prefix)
+        build_sgx(objects, sgx_path, resource_prefix, context.view_layer)
         print(f"Generated SGX file: {sgx_path}")
 
     return {
