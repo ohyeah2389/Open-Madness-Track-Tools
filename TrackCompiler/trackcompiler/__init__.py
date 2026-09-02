@@ -54,7 +54,7 @@ class MadnessSceneExporter(bpy.types.Operator, ExportHelper):
 
     export_mtx_files: BoolProperty(
         name="Export MTX Files",
-        description="Export MTX Files with MEBs",
+        description="Write MTX material files next to the exported SGX and MEB files",
         default=True,
     )  # type: ignore
 
