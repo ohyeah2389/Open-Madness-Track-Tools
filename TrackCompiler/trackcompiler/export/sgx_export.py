@@ -931,9 +931,12 @@ def export_madness_scene(filepath: str, resource_prefix: str, context):
             else {}
         )
 
-        print("Generating MTX files...")
-        prepare_mtx_files_from_materials(unique_materials, output_dir, context, track_name, texture_mapping)
-        print(f"Generated {len(unique_materials)} material files")
+        if export_mtx_files:
+            print("Generating MTX files...")
+            prepare_mtx_files_from_materials(unique_materials, output_dir, context, track_name, texture_mapping)
+            print(f"Generated {len(unique_materials)} material files")
+        else:
+            print("Skipped mtx files export")
 
         if texture_mapping:
             export_textures(texture_mapping, texture_export_dir)
