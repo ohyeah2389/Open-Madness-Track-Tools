@@ -866,7 +866,7 @@ def build_sgx(objects: List[ObjectInfo], dest_path: Path, resource_prefix: str =
     ET.ElementTree(scene).write(dest_path, encoding="utf-8", xml_declaration=True)
 
 
-def export_madness_scene(filepath: str, resource_prefix: str, context):
+def export_madness_scene(filepath: str, resource_prefix: str, context, export_mtx_files: bool = True):
     output_dir = Path(filepath).parent
     sgx_path = Path(filepath)
     track_name = sgx_path.stem
@@ -931,9 +931,12 @@ def export_madness_scene(filepath: str, resource_prefix: str, context):
             else {}
         )
 
-        print("Generating MTX files...")
-        prepare_mtx_files_from_materials(unique_materials, output_dir, context, track_name, texture_mapping)
-        print(f"Generated {len(unique_materials)} material files")
+        if export_mtx_files:
+            print("Generating MTX files...")
+            prepare_mtx_files_from_materials(unique_materials, output_dir, context, track_name, texture_mapping)
+            print(f"Generated {len(unique_materials)} material files")
+        else:
+            print("Skipped MTX file export")
 
         if texture_mapping:
             export_textures(texture_mapping, texture_export_dir)

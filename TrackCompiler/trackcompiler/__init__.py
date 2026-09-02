@@ -52,6 +52,15 @@ class MadnessSceneExporter(bpy.types.Operator, ExportHelper):
         maxlen=255,
     )  # type: ignore
 
+    export_mtx_files: BoolProperty(
+        name="Export MTX Files",
+        description="Write MTX material files next to the exported SGX and MEB files",
+        default=True,
+    )  # type: ignore
+
+    def draw(self, context):
+        self.layout.prop(self, "export_mtx_files")
+
     def execute(self, context):
         # Derive resource prefix from output filename
         output_path = Path(self.filepath)
@@ -63,6 +72,7 @@ class MadnessSceneExporter(bpy.types.Operator, ExportHelper):
                 filepath=self.filepath,
                 resource_prefix=resource_prefix,
                 context=context,
+                export_mtx_files=self.export_mtx_files,
             )
             self.report({"INFO"}, "Madness scene exported successfully")
             texture_warnings = export_result.get("texture_warnings", {}) if isinstance(export_result, dict) else {}
