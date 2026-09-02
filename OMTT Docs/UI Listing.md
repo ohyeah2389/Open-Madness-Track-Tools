@@ -97,7 +97,7 @@ Visible for empties.
 # File > Export
 Most exporters have no options UI beyond the file browser.
 - Madness Scene `.sgx`, `.meb`, `.mtx`
-	- No options
+	- Export MTX Files
 - Madness Cameras `.xml`
 	- No options
 - Madness Single MEB `.meb` + `.mtx`
