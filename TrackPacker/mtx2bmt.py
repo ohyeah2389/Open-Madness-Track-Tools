@@ -163,14 +163,19 @@ class BmtBuilder:
         return bytes(out)
 
 
-def convert(mtx_path, bmt_path: Optional[str] = None) -> None:
+def convert(mtx_path, bmt_path: Optional[str] = None, name_suffix: str = "") -> None:
+    """Convert an MTX to a BMT, optionally appending a suffix to the material's name"""
     mtx_file = Path(mtx_path)
     if not mtx_file.exists():
         raise FileNotFoundError(f"MTX file not found: {mtx_path}")
     bmt_path = Path(bmt_path) if bmt_path else mtx_file.with_suffix(".bmt")
 
+    root = ET.parse(mtx_file).getroot()
+    if name_suffix:
+        root.set("name", root.get("name", mtx_file.stem) + name_suffix)
+
     builder = BmtBuilder()
-    data = builder.build(ET.parse(mtx_file).getroot())
+    data = builder.build(root)
     Path(bmt_path).write_bytes(data)
 
     logger.debug("Converted %s -> %s (elements=%d, attributes=%d, numbers=%d, booleans=%d, strings=%dB)",

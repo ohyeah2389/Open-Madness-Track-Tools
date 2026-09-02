@@ -22,18 +22,19 @@ SEASONS = ("AUT", "SNO", "SPR", "SUM", "WIN")
 
 
 def build_seasonal_bff(output_bff: Path, name: str, season: str, materials: Path, staging: Path) -> None:
-    """Build a seasonal BFF holding season-suffixed copies of the track's materials.
-
-    Every stock track has a pak per season, and the loader stalls without them. It
-    also stalls on an archive of inert filler, so each pak carries `<material>_<season>.bmt`
-    variants of the track's own materials, matching the stock per-track layout.
-    """
+    """Build a seasonal BFF holding season-renamed variants of the track's content."""
     shutil.rmtree(staging, ignore_errors=True)
     season_dir = staging / materials.relative_to(materials.parents[1])
     season_dir.mkdir(parents=True)
-    suffix = season.lower()  # stock inner names use lowercase season tags (_aut, …)
-    for bmt in sorted(materials.glob("*.bmt")):
-        shutil.copy2(bmt, season_dir / f"{bmt.stem}_{suffix}{bmt.suffix}")
+    suffix = f"_{season.lower()}"
+    for mtx in sorted(materials.glob("*.mtx")):
+        mtx2bmt.convert(mtx, season_dir / f"{mtx.stem}{suffix}.bmt", name_suffix=suffix)
+
+    meshes = sorted(materials.glob("*.meb"), key=lambda p: p.stat().st_size)
+    if meshes:
+        shutil.copy2(meshes[0], season_dir / f"{meshes[0].stem}{suffix}.meb")
+    else:
+        logger.warning("No mesh available to insert into %s", name)
 
     creator = bff_creator.BFFCreator(name)
     creator.compression_type = bff_creator.CompressionType.ZLIB
