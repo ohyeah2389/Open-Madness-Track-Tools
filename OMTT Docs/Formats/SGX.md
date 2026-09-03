@@ -1,108 +1,87 @@
-The SGX (Scene Graph XML) format is used to define 3D scenes for tracks, including geometry object references, lighting, particle systems, spatial partitioning, and transformation hierarchies. SGX files are typically found in `tracks/trackname/` directories.
-
-## Format Overview
+The SGX (Scene Graph XML) format is used to define 3D scenes for tracks, including geometry object references, lighting, particle systems, spatial partitioning, and transformation hierarchies. 
 
 SGX files are XML documents with a hierarchical structure describing a complete track scenegraph in human-readable form. They are loaded with priority over track SGB64 files. They are usually loaded in pairs for tracks, with a `trackname.sgx` and `trackname_lights.sgx` pair describing the main scenegraph and lights scenegraph of a track. SGX files are only used in the base game for the showroom and its lights; no stock game track from PC2 or AMS2 has been seen to use an SGX instead of an SGB64. 
 
-SGX files have limitations as compared to SGB64 files.
-Known limitations are listed below:
+SGX files have limitations as compared to SGB64 files. Known limitations are listed below:
 
 - Lack of support for referencing VHF instance hierarchies
 - Lack of support for referencing IMB instance meshes
 
-### Header
-
-```xml
-<SCENE FileVersion="0.1.0.0" ExporterVersion="Tool Name" NumObjects="50" NumPartitions="25" Merged="0">
-```
-
-## Root Element
-
 ### SCENE Element
 
 ```xml
-<SCENE FileVersion="[major.minor.patch.build]" 
-       ExporterVersion="[tool_name]" 
-       NumObjects="[count]" 
-       NumPartitions="[count]" 
-       Merged="[0|1]">
-    <!-- Scene content -->
+<SCENE FileVersion="[major.minor.patch.build]" ExporterVersion="[tool_name]" NumObjects="[count]" NumPartitions="[count]" Merged="[0|1]">
+    <!-- OBJ_ID, PARTITION_ID, etc. placed here -->
 </SCENE>
 ```
 
-**Required Attributes:**
+Required attributes:
 - `FileVersion`: Version string in dotted format
 - `ExporterVersion`: Name of the tool that created the file
-- `NumObjects`: Total number of objects in the scene
+- `NumObjects`: Object count NOTE: Lights files match the `OBJ_ID` count; stock main-track scenegraph files are seen to list `0` here regardless of the number of referenced meshes
 - `NumPartitions`: Number of spatial partitions
-- `Merged`: Boolean indicating if scene data is merged (0 or 1)
 
-## Object Types
+Optional attributes:
+- `Merged`: Present on lights files as `1`; omitted on geometry files
 
 ### OBJ_ID Elements
 
-All scene objects are contained within `OBJ_ID` elements with universal attributes:
+All scene objects are contained within `OBJ_ID` elements:
 
 ```xml
-<OBJ_ID no="[unique_id]" Visible="[0|1]" Animated="[0|1]" LodLevel="[integer]" VariationIndex="[integer]" Instances="[count]">
+<OBJ_ID no="[unique_id]">
     <!-- Object-specific content -->
 </OBJ_ID>
 ```
 
-**Universal Attributes:**
-- `no`: Unique object identifier (integer)
-- `Visible`: Object visibility (0=hidden, 1=visible)
-- `Animated`: Animation flag (0=static, 1=animated)
-- `LodLevel`: Level of detail index
-- `VariationIndex`: Material variation index
-- `Instances`: Number of instances to render (default: 1)
+Attributes:
+- `no`: Unique object identifier (integer, 1-based)
 
-### NODE Objects
+#### NODE Objects
 
 Defines 3D geometry objects with transformation and rendering properties:
 
 ```xml
 <OBJ_ID no="1">
-    <NODE type="OBJECT|LOD|TRANSFORM" Name="[object_name]" MatrixNumber="[id]" instances="[count]" userflags="[flags]" matrices="[count]" subobjects="[count]">
-        
-        <!-- Resource Reference -->
+    <NODE type="OBJECT|LOD" Name="[object_name]" MatrixNumber="[id]" instances="[count]" userflags="[flags]" matrices="[count]" subobjects="[count]">
+        <!-- Resource reference (OBJECT nodes) -->
         <RESOURCE Filename="[path_to_meb_file]" />
-        <VariationPaletteFile>[path_to_palette]</VariationPaletteFile>
         
-        <!-- Bounding Volumes -->
+        <!-- Culling sphere -->
         <SPHERE Centre="[x] [y] [z] [w]" Radius="[radius]" />
-        <AABBOX min="[x] [y] [z]" max="[x] [y] [z]" />
         
-        <!-- Transformation (Method 1) -->
-        <TRANSFORM>
-            <Position>[x] [y] [z]</Position>
-            <Orientation>[x] [y] [z] [w]</Orientation>
-            <Scale>[scale_factor]</Scale>
-        </TRANSFORM>
-        
-        <!-- Transformation (Method 2) -->
+        <!-- Transformation (present on top-level OBJECT and on LOD; omitted on LOD children) -->
         <MATRIX Offset="[x] [y] [z]" Orientation="[x] [y] [z] [w]" Scale="[scale]" />
         
-        <!-- LOD Configuration -->
-        <CONTROL Distances="[space_separated_distances]" />
-        
-        <!-- Hierarchical Children -->
+        <!-- Hierarchical children (LOD nodes), then distances -->
         <NODE type="OBJECT" Name="child_object">
-            <!-- Recursive NODE structure -->
+            <!-- Child OBJECT: RESOURCE + SPHERE only -->
         </NODE>
+        <CONTROL Distances="[space_separated_distances]" />
     </NODE>
 </OBJ_ID>
 ```
 
+`OBJECT` nodes list attributes `type`, `Name`, `MatrixNumber`, `instances`, and `userflags`.
+
+`LOD` nodes list attributes `type`, `Name`, `MatrixNumber`, `matrices`, and `subobjects`, with `MatrixNumber` being `-1` when the node has its own `MATRIX`, or `0` for a child that uses the parent LOD matrix.
+
 **NODE Types:**
-- `OBJECT`: Standard geometry object
-- `LOD`: Level-of-detail container with multiple children
-- `TRANSFORM`: Transform-only node (no geometry)
+- `OBJECT`: Standard single geometry object
+- `LOD`: Level-of-detail container listing two or more child `OBJECT` nodes for the detail levels and using `CONTROL Distances` to list the transition distances between them
 
-#### `userflags`
+```xml
+<NODE type="LOD" Name="lod_object">
+    <NODE type="OBJECT" Name="high_detail"><!-- High LOD --></NODE>
+    <NODE type="OBJECT" Name="medium_detail"><!-- Medium LOD --></NODE>
+    <NODE type="OBJECT" Name="low_detail"><!-- Low LOD --></NODE>
+    <CONTROL Distances="10.0 50.0 100.0" />
+</NODE>
+```
 
-Decimal-encoded bitmask determining special visual properties about the node.
-Quotes are the inline comments from SMS (or Reiza) developers.
+Userflags:
+
+Userflags are a decimal-encoded bitmask determining special visual properties about the node. Quotes shown here are the inline comments from SMS (or Reiza) developers.
 
 0. `FarDistantMesh` "This mesh draws beyond the usual automatic LOD cutoff limits"
 1. `GarageNodePlaceHolder` "Object if a node for where cars are to be positioned"
@@ -137,31 +116,45 @@ Quotes are the inline comments from SMS (or Reiza) developers.
 30. `Trees` "After this we are into the flags which are code generated only"
 31. `DontRenderInStaticEnvmap` "Force not to render in static envmap"
 
+#### LIGHT Objects
 
-### LIGHT Objects
-
-Defines lighting sources with various types and properties:
+Defines lighting sources with various types and properties. Used in the `*_lights.sgx` files.
 
 ```xml
 <OBJ_ID no="2">
-    <LIGHT UID="[unique_id]" Name="[light_name]" 
-           Type="AMBIENT|DIRECTIONAL|POINT|SPOTLIGHT|SPOTLIGHTPROJECTED"
-           Position="[x] [y] [z]" Direction="[x] [y] [z]" 
-           Colour="[r] [g] [b]" Intensity="[value]" Range="[value]"
-           InnerAngle="[degrees]" OuterAngle="[degrees]"
-           HorizontalAngle="[degrees]" VerticalAngle="[degrees]"
-           CastsShadows="TRUE|FALSE" NoSpecular="TRUE|FALSE" 
-           NoSmoothDistanceAttenuation="TRUE|FALSE"
-           IncludeInLightMaps="TRUE|FALSE" LightIntensityTweakable="TRUE|FALSE"
-           LightGroup="[group_id]" GroundPlaneDistance="[value]" 
-           GroundPlaneNormal="[x] [y] [z]" GroundPlaneAutoSet="TRUE|FALSE" 
-           GroundPlaneShow="TRUE|FALSE" ProjectedTexture="[texture_path]" />
+    <LIGHT 
+        UID="[unique_id]"
+        Name="[light_name]"
+        Type="AMBIENT|DIRECTIONAL|POINT|SPOTLIGHT|SPOTLIGHTPROJECTED"
+        Position="[x] [y] [z]"
+        Direction="[x] [y] [z]"
+        Colour="[r] [g] [b]"
+        Intensity="[value]"
+        Range="[value]"
+        InnerAngle="[degrees]"
+        OuterAngle="[degrees]"
+        HorizontalAngle="[degrees]"
+        VerticalAngle="[degrees]"
+        CastsShadows="TRUE|FALSE"
+        NoSpecular="TRUE|FALSE"
+        NoSmoothDistAtten="TRUE|FALSE"
+        IncludeInLightMaps="TRUE|FALSE"
+        LightIntensityTweakable="TRUE|FALSE"
+        LightGroup="[group_id]"
+        GroundPlaneDistance="[value]"
+        GroundPlaneNormal="[x] [y] [z]"
+        GroundPlaneAutoSet="TRUE|FALSE"
+        GroundPlaneShow="TRUE|FALSE"
+        ProjectedTexture="[texture_path]"
+    />
 </OBJ_ID>
 ```
 
-### PARTICLES Objects (WIP)
+#### PARTICLES Objects (WIP)
 
-Defines particle systems with complex emission and behavior controls:
+Defines particle systems with complex emission and behavior controls.
+
+> This is speculative and may not be accurate. No stock SGX uses this object type.
 
 ```xml
 <OBJ_ID no="3">
@@ -196,39 +189,38 @@ Defines particle systems with complex emission and behavior controls:
 </OBJ_ID>
 ```
 
-**Particle Types:**
+Particle types:
 - `Billboard`: Camera-facing quads (default)
 - `GenericQuad`: Fixed-orientation quads
 - `AxisFacingQuadStrip`: Strip aligned to axis
 - `OrientedQuad`: Velocity-oriented quads
 - `PhysicsMesh`: Physics-simulated meshes
 
-### OCCLUDER Objects
+#### OCCLUDER Objects (WIP)
 
-Defines occlusion culling volumes with quad corners:
+Defines occlusion culling volumes with quad corners.
+
+> This is speculative and may not be accurate. No stock SGX uses this object type.
 
 ```xml
 <OBJ_ID no="4">
-    <OCCLUDER Shape="[shape_type]" Resource="[resource_path]"
-              PositionTL="[x] [y] [z]" PositionTR="[x] [y] [z]"
-              PositionBL="[x] [y] [z]" PositionBR="[x] [y] [z]" />
+    <OCCLUDER Shape="[shape_type]" Resource="[resource_path]" PositionTL="[x] [y] [z]" PositionTR="[x] [y] [z]" PositionBL="[x] [y] [z]" PositionBR="[x] [y] [z]" />
 </OBJ_ID>
 ```
 
-### TERRAIN Objects (WIP)
+#### TERRAIN Objects (WIP)
 
-Defines terrain geometry with specialized handling:
+Defines some node type, presumably related to terrain.
+
+> This is speculative and may not be accurate. No stock SGX uses this object type.
 
 ```xml
 <OBJ_ID no="5">
     <TERRAIN>
-        <!-- Terrain-specific configuration -->
-        <!-- Processed by specialized terrain system -->
+        <!-- ??? -->
     </TERRAIN>
 </OBJ_ID>
 ```
-
-## Spatial Partitioning
 
 ### PARTITION_ID Elements
 
@@ -246,124 +238,3 @@ Defines an authored tree of axis-aligned volumes used for culling. Every interio
 - `AABBOX`: Axis-aligned bounding box of this partition. Parent boxes contain their children; sibling boxes may overlap.
 - `CHILD_PARTITIONS`: Four child partition IDs, or `NONE` for a leaf. The loader matches these IDs against later `PARTITION_ID/@no` values.
 - `CHILD_OBJS`: Space-separated list of object IDs contained in this partition, or `NONE`. Each object ID appears in exactly one partition. A parent may list both child partitions and its own objects.
-
-## Data Format Specifications
-
-### Vector3 Format
-
-Used for positions, directions, colors, etc.:
-```
-Format: "x y z"
-Example: "-232.191 2.84887 -505.046"
-```
-
-### Quaternion Format
-
-Used for rotations/orientations:
-```
-Format: "x y z w"
-Example: "0.0 0.0 0.0 1.0"
-Note: Order is (x,y,z,w) where w is the scalar component
-```
-
-### Matrix Format
-
-4x4 transformation matrices constructed from:
-1. Scale transformation
-2. Rotation (from quaternion)
-3. Translation (from position)
-
-Applied in order: **Scale → Rotation → Translation**
-
-### Child ID Lists
-
-Space-separated integer lists:
-```
-Format: "id1 id2 id3 ..."
-Example: "1 2 3 4 5 6"
-Special: "NONE" for empty lists
-```
-
-## Advanced Features
-
-### Hierarchical Objects
-
-- NODE elements support unlimited nesting depth
-- Child objects inherit parent transformations
-- Supports complex hierarchical assemblies
-
-### Level of Detail (LOD)
-
-```xml
-<NODE type="LOD" Name="lod_object">
-    <CONTROL Distances="10.0 50.0 100.0" />
-    <NODE type="OBJECT" Name="high_detail"><!-- High LOD --></NODE>
-    <NODE type="OBJECT" Name="medium_detail"><!-- Medium LOD --></NODE>
-    <NODE type="OBJECT" Name="low_detail"><!-- Low LOD --></NODE>
-</NODE>
-```
-
-- `type="LOD"` creates LOD container
-- `CONTROL Distances` specifies transition distances
-- Child objects represent different detail levels
-
-### Object Instancing
-
-- `instances` attribute creates multiple copies
-- `MatrixNumber` references transformation matrices
-- Efficient rendering of repeated geometry
-
-### Material Variations
-
-- `VariationIndex` selects material variant
-- `VariationPaletteFile` defines available variations
-- Runtime material swapping support
-
-## Parser Validation
-
-The SGX parser performs comprehensive validation:
-
-1. **Version Checking**: FileVersion attribute parsing and compatibility
-2. **XML Structure**: Proper element hierarchy and nesting
-3. **Data Types**: Automatic string-to-numeric conversion
-4. **Bounding Volumes**: Sphere and AABB validation
-5. **Reference Integrity**: Resource file and ID reference checking
-
-## Examples
-
-### Basic Geometry Object
-
-```xml
-<OBJ_ID no="1" Visible="1" Animated="0" LodLevel="0" VariationIndex="0" Instances="1">
-    <NODE type="OBJECT" Name="track_object" MatrixNumber="1" instances="1" userflags="0">
-        <RESOURCE Filename="objects/barrier.meb" />
-        <SPHERE Centre="0.0 0.0 0.0 1.0" Radius="5.0" />
-        <TRANSFORM>
-            <Position>100.0 0.0 50.0</Position>
-            <Orientation>0.0 0.0 0.0 1.0</Orientation>
-            <Scale>1.0</Scale>
-        </TRANSFORM>
-    </NODE>
-</OBJ_ID>
-```
-
-### Directional Light
-
-```xml
-<OBJ_ID no="2">
-    <LIGHT UID="sun_light" Name="main_sun" Type="DIRECTIONAL"
-           Position="0.0 1000.0 0.0" Direction="0.2 -0.8 0.3" 
-           Colour="1.0 0.95 0.8" Intensity="2.0" 
-           CastsShadows="TRUE" LightGroup="0" />
-</OBJ_ID>
-```
-
-### Spatial Partition
-
-```xml
-<PARTITION_ID no="1">
-    <AABBOX min="-500.0 -10.0 -500.0" max="500.0 50.0 500.0" />
-    <CHILD_PARTITIONS IDs="2 3 4 5" />
-    <CHILD_OBJS IDs="1 6 7 8 15 22" />
-</PARTITION_ID>
-```
