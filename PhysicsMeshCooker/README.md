@@ -1,14 +1,118 @@
-# PhysicsMeshCooker
+This is the source code for PhysicsMeshCooker, a command-line tool that converts OBJ mesh files into the Madness Engine's semi-proprietary CSM format, using the PhysX 3.3.4 SDK to cook triangle meshes.
 
-A command-line tool that converts OBJ (Wavefront) mesh files into the Madness engine's proprietary CSM (Cooked Static Mesh) format, using the PhysX 3.3.4 SDK to cook triangle meshes.
+## For Artists
+
+### Setup
+
+This tool requires compiled NVIDIA PhysX binaries. Release builds of `PhysicsMeshCooker.exe` load the same DLLs as Automobilista 2 / Project CARS 2 use. Copy these DLLs from your game install next to the `PhysicsMeshCooker.exe` executable:
+
+```
+PhysX3_x64.dll
+PhysX3Common_x64.dll
+PhysX3Cooking_x64.dll
+nvToolsExt64_1.dll
+```
+
+If you do not do this, the program will be unable to run properly.
+
+### Usage
+
+The tool is distributed in compiled binary form in the Releases page of this repository. To use it to convert a prepared OBJ mesh to a CSM mesh, run the following command:
+
+```
+PhysicsMeshCooker.exe <path/to/input.obj> <path/to/output.csm>
+```
+
+### Material mapping
+
+Material indices are assigned automatically based on the object/group names in the OBJ file using prefix matching (case-insensitive). The full mapping table is provided below (and is also present in `src/PhysicsMeshCooker.cpp`):
+
+| Name prefix | Index |
+| --- | --- |
+| `ROADS`, `ROAD` | 0 |
+| `LOWGRIPROADS`, `LGROAD` | 1 |
+| `BUMPYROADS1`, `B1ROAD` | 2 |
+| `BUMPYROADS2`, `B2ROAD`, `CONC` | 3 |
+| `BUMPYROADS3`, `B3ROAD` | 4 |
+| `MARBLES` | 5 |
+| `GRASSYBERMS`, `GBRM` | 6 |
+| `GRASS`, `GRAS`, `LOGO`, `FLDGRASS`, `RDGRASS` | 7 |
+| `GRAVEL`, `GRV`, `GRAV`, `GBER` | 8 |
+| `BUMPYGRAVEL`, `BGRV` | 9 |
+| `RUMBLESTRIPS`, `BRICK`, `RMBL` | 10 |
+| `DRAINS`, `DRAIN` | 11 |
+| `TIREWALLS`, `TWALL` | 12 |
+| `CEMENTWALLS`, `CEMA`, `CWAL`, `CMWL` | 13 |
+| `GUARDRAILS`, `GRDR` | 14 |
+| `SAND`, `SBER` | 15 |
+| `BUMPYSAND`, `BSAND` | 16 |
+| `DIRT` | 17 |
+| `BUMPYDIRT`, `BDIRT` | 18 |
+| `DIRT_ROAD` | 19 |
+| `BUMPYDIRT_ROAD`, `BDIRT_ROAD` | 20 |
+| `PAVEMENT` | 21 |
+| `DIRT BANK`, `DBANK` | 22 |
+| `WOODRAILS`, `WDRL` | 23 |
+| `DRY VERGE`, `DVERGE` | 24 |
+| `EXITRUMBLES`, `ERUMBLE`, `RMBBL` | 25 |
+| `GRASSCRETE`, `GCRETE` | 26 |
+| `LONGGRASS`, `LNGGRS` | 27 |
+| `SLOPEGRASS`, `SLPGRS` | 28 |
+| `COBBLES` | 29 |
+| `SAND_ROAD`, `SNDROAD` | 30 |
+| `BAKED_CLAY`, `BAKEDCLAY` | 31 |
+| `ASTROTURF`, `ASTRO` | 32 |
+| `SNOWHALF`, `SNOW` | 33 |
+| `SNOWFULL` | 34 |
+| `DAMAGEDROAD1`, `DAMROAD1` | 35 |
+| `TRAIN_TRACKS`, `TRAINROAD` | 36 |
+| `BUMPYCOBBLES`, `RAMP_METAL` | 37 |
+| `RMPMTL`, `RAMP` | 38 |
+| `ORION_ONLY`, `ORIONONLY` | 39 |
+| `B1RUMBLES`, `B1RUMBLE` | 40 |
+| `B2RUMBLES`, `B2RUMBLE` | 41 |
+| `ROUGHSAND1`, `RSAND1` | 42 |
+| `ROUGHSAND2`, `RSAND2` | 43 |
+| `SNOWWALLS`, `SWALLS` | 44 |
+| `ICEROAD` | 45 |
+| `RUNOFFROAD` | 46 |
+| `ILLEGAL_STRIP`, `ILLEGALSTRIP` | 47 |
+| `PAINTCRETE_LEGAL`, `PCRETE_LEGAL` | 48 |
+| `PAINTCRETE_ILLEGAL`, `PCRETE_ILLEGAL`, `RDGREEN` | 49 |
+| `RALLYTARMAC` | 50 |
+| `RALLY_TARMAC` | 51 |
+
+If no prefix matches, the surface defaults to `ROAD` (index 0).
+
+## Output format
+
+The CSM file has the following binary layout:
+
+```
+[version : uint32]                         // always 330
+  [mesh_size : uint32]                     // byte length of the cooked PhysX data
+  [cooked_mesh : mesh_size bytes]          // PhysX triangle mesh (PxTriangleMesh)
+  [material_index : uint32]                // terrain material index
+  ... repeated once per OBJ group
+```
+
+### Troubleshooting
+
+**`The code execution cannot proceed because PhysX3_x64.dll was not found`**
+Copy the four PhysX/nvTools DLLs from your game install next to `PhysicsMeshCooker.exe`, or rebuild with `-GameDir`.
+
+**PhysX cooking failed at runtime**
+Verify the OBJ file contains valid triangulated geometry. Each OBJ group must have at least one triangle. Degenerate or zero-area triangles will cause the cooker to fail.
+
+## For Developers
 
 ## System requirements
 
-- **OS**: Windows 10 or later (64-bit)
-- **Shell**: PowerShell 7 (`pwsh`)
-- **Compiler**: Clang (clang++) targeting `x86_64-pc-windows-msvc` from the standalone LLVM Windows installer
-- **Build system**: CMake 3.20+ and Ninja
-- **Dependencies**:
+- OS: Windows 10 or later (64-bit)
+- Shell: PowerShell 7 (`pwsh`)
+- Compiler: Clang (clang++) targeting `x86_64-pc-windows-msvc` from the standalone LLVM Windows installer
+- Build system: CMake 3.20+ and Ninja
+- Dependencies:
   - NVIDIA PhysX SDK 3.3.4 (vc14win64 build)
 
 ## Setup
@@ -41,7 +145,7 @@ winget install --id Ninja-build.Ninja -e
 
 ### 4. Install the Windows SDK
 
-The standalone LLVM clang++ uses MSVC headers and libraries. Ensure the **Windows SDK** (10.0 or later) and the **MSVC runtime headers** are installed. These are included with any Visual Studio installation, or can be installed via the [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022) (select the "Desktop development with C++" workload).
+The standalone LLVM clang++ uses MSVC headers and libraries. Ensure the Windows SDK (10.0 or later) and the MSVC runtime headers are installed. These are included with any Visual Studio installation, or can be installed via the [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022) (select the "Desktop development with C++" workload).
 
 ### 5. Install PhysX SDK 3.3.4
 
@@ -97,18 +201,10 @@ The script will locate `clang++` and `cmake` automatically, configure the projec
 build/PhysicsMeshCooker.exe
 ```
 
-### VSCode / Cursor
-
-The workspace is configured to use editor features only (no auto-CMake configure) and provides explicit tasks that call `build.ps1`:
-
-- `PhysicsMeshCooker: Build (Debug)` (default build task / `Ctrl+Shift+B`)
-- `PhysicsMeshCooker: Clean + Build (Debug)`
-- `PhysicsMeshCooker: Build (Release)`
-
 ### Build options
 
 | Flag | Description | Default |
-|------|-------------|---------|
+| --- | --- | --- |
 | `-Release` | Build in Release mode (links game PhysX DLL names) | Debug |
 | `-PhysxSdkPath <path>` | Path to PhysX 3.3.4 SDK root | `$env:PHYSX_SDK_PATH` or `C:/PhysX3.3.4` |
 | `-GameDir <path>` | After a Release build, copy PhysX DLLs from this game install next to the exe | (none) |
@@ -116,12 +212,12 @@ The workspace is configured to use editor features only (no auto-CMake configure
 | `-Clean` | Delete the `build/` directory before configuring | off |
 
 | Build type | Linked PhysX runtime names | DLLs next to exe |
-|------------|----------------------------|------------------|
+| --- | --- | --- |
 | Debug | `PhysX3DEBUG_x64.dll`, ... | Copied from SDK `Bin\vc14win64` |
 | Release | `PhysX3_x64.dll`, ... | Not bundled; copied from the game (or use `-GameDir`) |
 
 | Environment variable | Description |
-|----------------------|-------------|
+| --- | --- |
 | `PHYSX_SDK_PATH` | PhysX 3.3.4 SDK root (default for `-PhysxSdkPath`) |
 | `LLVM_PATH` | Root of the standalone LLVM installation (e.g. `C:/Program Files/LLVM`) |
 
@@ -135,8 +231,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -Release -PhysxSdkPath D:/SDKs/PhysX3.3.4
 
 # Clean release build + copy PhysX DLLs from AMS2 for local testing
-pwsh -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -Clean -Release -Jobs 8 `
-  -GameDir "G:/SteamLibrary/steamapps/common/Automobilista 2"
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -Clean -Release -Jobs 8 -GameDir "G:/SteamLibrary/steamapps/common/Automobilista 2"
 ```
 
 ### Manual CMake invocation
@@ -154,63 +249,6 @@ cmake -S . -B build `
       -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 cmake --build build --config Debug -- -j4
-```
-
-## Usage
-
-```
-PhysicsMeshCooker.exe <input.obj> <output.csm>
-```
-
-| Argument | Description |
-|----------|-------------|
-| `<input.obj>` | Path to the input Wavefront OBJ file |
-| `<output.csm>` | Path where the cooked CSM file will be written |
-
-Example:
-
-```
-build/PhysicsMeshCooker.exe my_track.obj my_track.csm
-```
-
-### PhysX DLLs (Release / distributed builds)
-
-This tool does not redistribute NVIDIA PhysX. A Release `PhysicsMeshCooker.exe` loads the same DLL names as Automobilista 2 / Project CARS 2. Copy these from your game install next to the executable:
-
-```
-PhysX3_x64.dll
-PhysX3Common_x64.dll
-PhysX3Cooking_x64.dll
-nvToolsExt64_1.dll
-```
-
-If DLL resolution fails when running from another directory, run from the folder that contains the exe and those DLLs.
-### Material mapping
-
-Material indices are assigned automatically based on the object/group names in the OBJ file using prefix matching (case-insensitive). The full mapping table is defined in `src/PhysicsMeshCooker.cpp`. A few examples:
-
-| Name prefix | Material | Index |
-|-------------|----------|-------|
-| `ROAD`, `ROADS` | Road surface | 0 |
-| `GRASS`, `GRAS` | Grass | 7 |
-| `GRAVEL`, `GRV` | Gravel | 8 |
-| `SAND`, `SBER` | Sand | 15 |
-| `DIRT`, `BDIRT` | Dirt | 17–18 |
-| `RMBL`, `RUMBLESTRIPS` | Rumble strips | 10 |
-| `SNOW`, `SNOWFULL` | Snow | 33–34 |
-
-If no prefix matches, the surface defaults to `ROAD` (index 0).
-
-## Output format
-
-The CSM file has the following binary layout:
-
-```
-[version : uint32]                         // always 330
-  [mesh_size : uint32]                     // byte length of the cooked PhysX data
-  [cooked_mesh : mesh_size bytes]          // PhysX triangle mesh (PxTriangleMesh)
-  [material_index : uint32]                // terrain material index
-  ... repeated once per OBJ group
 ```
 
 ## IntelliSense / clangd
@@ -232,9 +270,3 @@ The PhysX SDK ships pre-built against the MSVC runtime. Ensure you have the `vc1
 
 **`Missing .../PhysX3_x64.lib for Release build`**
 Release builds need unsuffixed PhysX libs. See [Prepare release PhysX libs](#6-prepare-release-physx-libs-for--release--distribution-builds).
-
-**`The code execution cannot proceed because PhysX3_x64.dll was not found`**
-Copy the four PhysX/nvTools DLLs from your game install next to `PhysicsMeshCooker.exe`, or rebuild with `-GameDir`.
-
-**PhysX cooking failed at runtime**
-Verify the OBJ file contains valid triangulated geometry. Each OBJ group must have at least one triangle. Degenerate or zero-area triangles will cause the cooker to fail.
