@@ -22,5 +22,4 @@ paths_exclude_pattern = [
   "/*.zip",
   "*.pyc",
   ".*",
-  "database/build_shader_database.py",
 ]

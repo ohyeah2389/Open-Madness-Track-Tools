@@ -7,7 +7,6 @@ import struct
 from typing import Optional
 from .shader_definitions import (
     SHADER_TECHNIQUES,
-    SHADER_DEFINES,
     get_shader_items,
     get_shader_database_items,
     load_shader_database,
@@ -20,6 +19,13 @@ from .shader_definitions import (
     get_param_stats,
     get_option_pairings,
     get_missing_pairings,
+    migrate_material_options,
+    suppress_shader_updates,
+    _norm_name,
+    get_packed_permutation_help,
+    get_packed_permutation_warning,
+    get_packed_param_help,
+    get_packed_param_warning,
 )
 from ..utils import sanitize
 
@@ -36,6 +42,90 @@ def _enabled_option_names(mtx_settings):
     enabled_params = {param.name for param in mtx_settings.shader_params if param.enabled}
     enabled_defines = {define.name for define in mtx_settings.defines if define.enabled}
     return enabled_params, enabled_defines
+
+
+def _enabled_define_names_ordered(mtx_settings):
+    return [define.name for define in mtx_settings.defines if define.enabled and define.name]
+
+
+def _enabled_param_names(mtx_settings):
+    return [param.name for param in mtx_settings.shader_params if param.enabled and param.name]
+
+
+def _draw_packed_permutation_warning(layout, mtx_settings):
+    help_info = get_packed_permutation_help(
+        mtx_settings.shader_path,
+        mtx_settings.technique,
+        _enabled_define_names_ordered(mtx_settings),
+        limit=1,
+    )
+    if help_info:
+        box = layout.box()
+        warn_row = box.row()
+        warn_row.alert = True
+        warn_row.label(text=help_info["warning"], icon="ERROR")
+        for suggestion in help_info["suggestions"]:
+            op = box.row(align=True).operator(
+                "mtx.apply_packed_defines", text=suggestion["label"], icon="CHECKMARK"
+            )
+            op.defines = "\n".join(suggestion["defines"])
+        return
+    help_info = get_packed_param_help(
+        mtx_settings.shader_path,
+        mtx_settings.technique,
+        _enabled_define_names_ordered(mtx_settings),
+        _enabled_param_names(mtx_settings),
+    )
+    if not help_info:
+        return
+    box = layout.box()
+    warn_row = box.row()
+    warn_row.alert = True
+    warn_row.label(text=help_info["warning"], icon="ERROR")
+    for suggestion in help_info["suggestions"]:
+        op = box.row(align=True).operator(
+            "mtx.apply_packed_params", text=suggestion["label"], icon="CHECKMARK"
+        )
+        op.parameters = "\n".join(suggestion["parameters"])
+
+
+def packed_permutation_warning_for_settings(mtx_settings):
+    defines = _enabled_define_names_ordered(mtx_settings)
+    warning = get_packed_permutation_warning(
+        mtx_settings.shader_path,
+        defines,
+        mtx_settings.technique,
+    )
+    if warning:
+        return warning
+    return get_packed_param_warning(
+        mtx_settings.shader_path,
+        mtx_settings.technique,
+        defines,
+        _enabled_param_names(mtx_settings),
+    )
+
+
+def apply_packed_define_names(mtx_settings, names):
+    wanted = [name for name in names if name]
+    wanted_set = set(wanted)
+    leftovers = [item.name for item in mtx_settings.defines if item.name not in wanted_set]
+    mtx_settings.defines.clear()
+    for name in wanted:
+        item = mtx_settings.defines.add()
+        item.name = name
+        item.enabled = True
+    for name in leftovers:
+        item = mtx_settings.defines.add()
+        item.name = name
+        item.enabled = False
+
+
+def apply_packed_param_names(mtx_settings, names):
+    wanted = {_norm_name(name) for name in names if name}
+    for item in mtx_settings.shader_params:
+        if _norm_name(item.name) in wanted:
+            item.enabled = True
 
 
 def _pairing_group_badge(pairings):
@@ -62,12 +152,12 @@ def _refresh_materials_for_current_database(context):
         settings = material.mtx_settings
         remapped_shader = resolve_shader_path(settings.shader_path)
         if remapped_shader and remapped_shader != settings.shader_path:
-            settings.shader_path = remapped_shader
-        if settings.shader_path in SHADER_TECHNIQUES:
-            try:
-                update_shader_change(settings, context)
-            except Exception as exc:
-                print(f"Skipping shader refresh for material '{material.name}': {exc}")
+            with suppress_shader_updates():
+                settings.shader_path = remapped_shader
+        try:
+            migrate_material_options(settings, context)
+        except Exception as exc:
+            print(f"Skipping shader refresh for material '{material.name}': {exc}")
 
 
 @persistent
@@ -87,8 +177,8 @@ def _restore_scene_shader_database(_dummy):
         scene.mtx_shader_database = selected_id
 
     scene[SCENE_SHADER_DB_KEY] = selected_id
-    # Loading a database on file open should not rewrite material settings.
     load_shader_database(selected_id)
+    _refresh_materials_for_current_database(bpy.context)
 
 
 def update_shader_database_selection(self, context):
@@ -538,6 +628,7 @@ class MTX_PT_material_settings(bpy.types.Panel):
 
         box.prop(mtx, "shader_path")
         box.prop(mtx, "technique")
+        _draw_packed_permutation_warning(box, mtx)
 
         # Material flags
         col = box.column()
@@ -858,19 +949,10 @@ def write_mtx_file(material, filepath: Path, track_name: str = None, texture_map
     alpha_elem = ET.SubElement(material_elem, "alphablendparams")
     ET.SubElement(alpha_elem, "enabled", e=str(mtx.alpha_blend_enabled).lower())
 
-    # Add shader defines
-    normalized_shader_path = mtx.shader_path.replace("\\\\", "\\")
-
-    if (
-        normalized_shader_path in SHADER_DEFINES
-        and mtx.technique in SHADER_DEFINES[normalized_shader_path]
-    ):
-        predefined_order = SHADER_DEFINES[normalized_shader_path][mtx.technique]
-        enabled_defines_map = {d.name: d for d in mtx.defines if d.enabled}
-
-        for define_name in predefined_order:
-            if define_name in enabled_defines_map:
-                ET.SubElement(material_elem, "define", name=define_name)
+    # Add shader defines in the material's stored order
+    for define in mtx.defines:
+        if define.enabled and define.name:
+            ET.SubElement(material_elem, "define", name=define.name)
 
     # Write file
     ET.indent(material_elem, space="  ", level=0)
@@ -914,46 +996,54 @@ def read_mtx_file(filepath: Path, material):
     # Initialize parameters and defines
     update_shader_change(mtx, bpy.context)
 
+    def _apply_param_value(param, param_type, value_str):
+        if param_type == "EPT_F32":
+            try:
+                param.float_value = float(value_str)
+            except ValueError:
+                pass
+        elif param_type == "EPT_S32":
+            try:
+                param.int_value = int(value_str)
+            except ValueError:
+                pass
+        elif param_type == "EPT_VEC4":
+            try:
+                values = [float(x) for x in value_str.split()]
+                if len(values) >= 4:
+                    param.vec4_value = values[:4]
+            except ValueError:
+                pass
+        elif param_type == "EPT_TEXTURE":
+            param.texture_value = value_str
+        elif param_type == "EPT_BOOL":
+            param.bool_value = value_str.lower() == "true"
+
     # Read shader parameters
     found_params = set()
     for shaderparam in root.findall("shaderparam"):
         param_name = shaderparam.get("name")
-        param_type = shaderparam.get("type")
-        found_params.add(param_name)
+        param_type = shaderparam.get("type") or "EPT_F32"
+        if not param_name:
+            continue
+        found_params.add(_norm_name(param_name))
+        value_elem = shaderparam.find("value")
+        value_str = value_elem.get("v", "") if value_elem is not None else ""
 
-        for param in mtx.shader_params:
-            if param.name == param_name:
-                param.enabled = True
-                value_elem = shaderparam.find("value")
-                if value_elem is not None:
-                    value_str = value_elem.get("v", "")
-
-                    if param_type == "EPT_F32":
-                        try:
-                            param.float_value = float(value_str)
-                        except ValueError:
-                            pass
-                    elif param_type == "EPT_S32":
-                        try:
-                            param.int_value = int(value_str)
-                        except ValueError:
-                            pass
-                    elif param_type == "EPT_VEC4":
-                        try:
-                            values = [float(x) for x in value_str.split()]
-                            if len(values) >= 4:
-                                param.vec4_value = values[:4]
-                        except ValueError:
-                            pass
-                    elif param_type == "EPT_TEXTURE":
-                        param.texture_value = value_str
-                    elif param_type == "EPT_BOOL":
-                        param.bool_value = value_str.lower() == "true"
-                break
+        matched = next(
+            (param for param in mtx.shader_params if _norm_name(param.name) == _norm_name(param_name)),
+            None,
+        )
+        if matched is None:
+            matched = mtx.shader_params.add()
+            matched.name = param_name
+            matched.param_type = param_type
+        matched.enabled = True
+        _apply_param_value(matched, param_type, value_str)
 
     # Disable parameters not in file
     for param in mtx.shader_params:
-        if param.name not in found_params:
+        if _norm_name(param.name) not in found_params:
             param.enabled = False
 
     # Read depth parameters
@@ -974,16 +1064,27 @@ def read_mtx_file(filepath: Path, material):
         if enabled_elem is not None:
             mtx.alpha_blend_enabled = enabled_elem.get("e", "false").lower() == "true"
 
-    # Read defines
-    found_defines = set()
+    # Read defines in file order, keeping unknown names
+    found_defines = []
+    found_define_keys = set()
     for define_elem in root.findall("define"):
         define_name = define_elem.get("name")
-        if define_name:
-            found_defines.add(define_name)
+        if not define_name or _norm_name(define_name) in found_define_keys:
+            continue
+        found_defines.append(define_name)
+        found_define_keys.add(_norm_name(define_name))
 
     # Enable defines found in file
     for define in mtx.defines:
-        define.enabled = define.name in found_defines
+        define.enabled = _norm_name(define.name) in found_define_keys
+    existing_define_keys = {_norm_name(define.name) for define in mtx.defines}
+    for define_name in found_defines:
+        if _norm_name(define_name) in existing_define_keys:
+            continue
+        extra = mtx.defines.add()
+        extra.name = define_name
+        extra.enabled = True
+        existing_define_keys.add(_norm_name(define_name))
 
 
 # Operators for MTX operations
@@ -1028,6 +1129,9 @@ class MTX_OT_save_mtx(bpy.types.Operator):
                 if not filepath.suffix:
                     filepath = filepath.with_suffix(".mtx")
                 write_mtx_file(context.material, filepath)
+                warning = packed_permutation_warning_for_settings(context.material.mtx_settings)
+                if warning:
+                    self.report({"WARNING"}, warning)
                 self.report({"INFO"}, f"Saved MTX: {filepath.name}")
             except Exception as e:
                 self.report({"ERROR"}, f"Failed to save MTX: {str(e)}")
@@ -1041,6 +1145,48 @@ class MTX_OT_save_mtx(bpy.types.Operator):
             self.filepath = f"{material_name}.mtx"
         context.window_manager.fileselect_add(self)
         return {"RUNNING_MODAL"}
+
+
+class MTX_OT_apply_packed_defines(bpy.types.Operator):
+    """Apply a nearby packed define combination"""
+
+    bl_idname = "mtx.apply_packed_defines"
+    bl_label = "Apply Packed Defines"
+    bl_description = "Switch this material to a similar packed shader permutation"
+    bl_options = {"REGISTER", "UNDO"}
+
+    defines: StringProperty(options={"HIDDEN", "SKIP_SAVE"}, maxlen=4096)  # type: ignore
+
+    def execute(self, context):
+        material = context.material
+        if not material or not hasattr(material, "mtx_settings"):
+            self.report({"ERROR"}, "No active material")
+            return {"CANCELLED"}
+        names = [name for name in self.defines.split("\n") if name]
+        apply_packed_define_names(material.mtx_settings, names)
+        self.report({"INFO"}, "Applied packed define combination")
+        return {"FINISHED"}
+
+
+class MTX_OT_apply_packed_params(bpy.types.Operator):
+    """Enable parameters required by the current packed permutation"""
+
+    bl_idname = "mtx.apply_packed_params"
+    bl_label = "Apply Packed Parameters"
+    bl_description = "Enable parameters bound by this packed shader permutation"
+    bl_options = {"REGISTER", "UNDO"}
+
+    parameters: StringProperty(options={"HIDDEN", "SKIP_SAVE"}, maxlen=4096)  # type: ignore
+
+    def execute(self, context):
+        material = context.material
+        if not material or not hasattr(material, "mtx_settings"):
+            self.report({"ERROR"}, "No active material")
+            return {"CANCELLED"}
+        names = [name for name in self.parameters.split("\n") if name]
+        apply_packed_param_names(material.mtx_settings, names)
+        self.report({"INFO"}, "Enabled packed permutation parameters")
+        return {"FINISHED"}
 
 
 class MTX_OT_pick_texture(bpy.types.Operator):
@@ -1317,6 +1463,8 @@ def register():
     bpy.utils.register_class(MTX_PT_shader_defines)
     bpy.utils.register_class(MTX_OT_load_mtx)
     bpy.utils.register_class(MTX_OT_save_mtx)
+    bpy.utils.register_class(MTX_OT_apply_packed_defines)
+    bpy.utils.register_class(MTX_OT_apply_packed_params)
     bpy.utils.register_class(MTX_OT_pick_texture)
     bpy.utils.register_class(MTX_OT_clear_texture)
     bpy.utils.register_class(MTX_OT_copy_param_to_selected)
@@ -1344,6 +1492,8 @@ def unregister():
     bpy.utils.unregister_class(MTX_OT_copy_param_to_selected)
     bpy.utils.unregister_class(MTX_OT_clear_texture)
     bpy.utils.unregister_class(MTX_OT_pick_texture)
+    bpy.utils.unregister_class(MTX_OT_apply_packed_params)
+    bpy.utils.unregister_class(MTX_OT_apply_packed_defines)
     bpy.utils.unregister_class(MTX_OT_save_mtx)
     bpy.utils.unregister_class(MTX_OT_load_mtx)
     bpy.utils.unregister_class(MTX_PT_shader_defines)

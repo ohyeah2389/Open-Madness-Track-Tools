@@ -1,4 +1,6 @@
 from pathlib import Path
+from contextlib import contextmanager
+from itertools import combinations
 import json
 
 SHADER_TECHNIQUES = {}
@@ -12,10 +14,86 @@ ALWAYS_ON_DEFINES = {}
 DEFAULT_PARAM_VALUES = {}
 PARAM_METADATA = {}
 OPTION_PAIRINGS = {}
+PACKED_HASHES = {}
+PACKED_PARAMS = {}
+PACKED_PARAM_BASE = {}
+PACKED_AA_SUFFIXES = ("_NO_AA", "_NORMAL_AA", "_HIGH_AA", "_LOW_AA", "")
+_UID64_EMPTY = 0x8DB63936938575BF
+_PACKED_HELP_CACHE = {}
+_PACKED_PARAM_HELP_CACHE = {}
 
 DATABASE_DIR = Path(__file__).resolve().parent.parent / "database"
 SHADER_DATABASE_DIR = DATABASE_DIR / "shaders"
 DATABASE_REGISTRY = {}
+_SUPPRESS_SHADER_UPDATES = 0
+SHADER_ENUM_NUMBERS = {}
+TECHNIQUE_ENUM_NUMBERS = {}
+_SHADER_ITEMS_CACHE = []
+_TECHNIQUE_ITEMS_CACHE = []
+_DATABASE_ITEMS_CACHE = []
+_FROZEN_DATABASE_IDS = (
+    "shaders/ams2_shader_database.json",
+    "shaders/pc2_shader_database.json",
+)
+
+
+@contextmanager
+def suppress_shader_updates():
+    """Skip EnumProperty rebuilds while silently remapping shader paths."""
+    global _SUPPRESS_SHADER_UPDATES
+    _SUPPRESS_SHADER_UPDATES += 1
+    try:
+        yield
+    finally:
+        _SUPPRESS_SHADER_UPDATES -= 1
+
+
+def _mix64(a, b, c):
+    m = 0xFFFFFFFFFFFFFFFF
+    a = (a - b - c) & m; a ^= c >> 43
+    b = (b - c - a) & m; b ^= (a << 9) & m
+    c = (c - a - b) & m; c ^= b >> 8
+    a = (a - b - c) & m; a ^= c >> 38
+    b = (b - c - a) & m; b ^= (a << 23) & m
+    c = (c - a - b) & m; c ^= b >> 5
+    a = (a - b - c) & m; a ^= c >> 35
+    b = (b - c - a) & m; b ^= (a << 49) & m
+    c = (c - a - b) & m; c ^= b >> 11
+    a = (a - b - c) & m; a ^= c >> 12
+    b = (b - c - a) & m; b ^= (a << 18) & m
+    c = (c - a - b) & m; c ^= b >> 22
+    return a, b, c
+
+
+def _uid64(data: bytes) -> int:
+    if not data:
+        return _UID64_EMPTY
+    length, m = len(data), 0xFFFFFFFFFFFFFFFF
+    a = b = 0
+    c = 0x9E3779B97F4A7C13
+    i, rem = 0, length
+    while rem >= 24:
+        a = (a + int.from_bytes(data[i:i + 8], "big")) & m
+        b = (b + int.from_bytes(data[i + 8:i + 16], "big")) & m
+        c = (c + int.from_bytes(data[i + 16:i + 24], "big")) & m
+        a, b, c = _mix64(a, b, c)
+        i += 24
+        rem -= 24
+    c = (c + length) & m
+    for n in range(min(rem, 8)):
+        a = (a + (data[i + n] << (8 * n))) & m
+    for n in range(min(max(rem - 8, 0), 8)):
+        b = (b + (data[i + 8 + n] << (8 * n))) & m
+    for n in range(min(max(rem - 16, 0), 7)):
+        c = (c + (data[i + 16 + n] << (8 * (n + 1)))) & m
+    return _mix64(a, b, c)[2]
+
+
+def _permutation_digest(define_names, suffix="_NO_AA") -> str:
+    text = "".join(define_names) + suffix
+    if not text:
+        return f"{_UID64_EMPTY:016x}"
+    return f"{_uid64(text.lower().encode('ascii')):016x}"
 
 
 def _norm_name(value: str) -> str:
@@ -76,6 +154,27 @@ def _coerce_param_value(existing, param_type):
     return {}
 
 
+def _init_new_param_values(param, param_name, param_type, shader, technique):
+    """Fill default values for a newly appended parameter without enabling it."""
+    param_defaults = DEFAULT_PARAM_VALUES.get(shader, {}).get(technique, {})
+    if param_type == "EPT_F32":
+        if param_name in param_defaults and param_defaults[param_name][0] == "EPT_F32":
+            param.float_value = float(param_defaults[param_name][1])
+        elif "Factor" in param_name or "Power" in param_name or "Scale" in param_name:
+            param.float_value = 1.0
+        else:
+            param.float_value = 0.0
+    elif param_type == "EPT_S32":
+        param.int_value = 1 if "Dim" in param_name else 0
+    elif param_type == "EPT_VEC4":
+        if param_name in param_defaults and param_defaults[param_name][0] == "EPT_VEC4":
+            param.vec4_value = param_defaults[param_name][1]
+        else:
+            param.vec4_value = (1.0, 1.0, 1.0, 1.0)
+    elif param_type == "EPT_BOOL":
+        param.bool_value = False
+
+
 def _shader_display_name(shader_value):
     """Return a safe display name for shader enum labels."""
     shader_text = str(shader_value or "").replace("/", "\\")
@@ -87,20 +186,31 @@ def _shader_display_name(shader_value):
 
 def get_shader_items(self, context):
     """Shader list from the active database only."""
-    items = [
-        (shader, _shader_display_name(shader), shader)
-        for shader in sorted(str(shader_path) for shader_path in SHADER_TECHNIQUES.keys())
+    global _SHADER_ITEMS_CACHE
+    _SHADER_ITEMS_CACHE = [
+        (shader, _shader_display_name(shader), shader, SHADER_ENUM_NUMBERS.get(shader, index))
+        for index, shader in enumerate(sorted(SHADER_TECHNIQUES))
     ]
-    return items or [('Render\\Shaders\\basic.fx', 'basic', 'Render\\Shaders\\basic.fx')]
+    return _SHADER_ITEMS_CACHE or [('Render\\Shaders\\basic.fx', 'basic', 'Render\\Shaders\\basic.fx', 0)]
 
 
 def get_shader_database_items(self, context):
     """List available shader databases from database/shaders."""
+    global _DATABASE_ITEMS_CACHE
     _discover_shader_databases()
-    return [
-        (db_id, db_info["label"], str(db_info["path"]))
-        for db_id, db_info in DATABASE_REGISTRY.items()
-    ] or [("builtin", "Built-in", "Built-in shader table")]
+    items = []
+    for number, db_id in enumerate(_FROZEN_DATABASE_IDS):
+        db_info = DATABASE_REGISTRY.get(db_id)
+        if db_info:
+            items.append((db_id, db_info["label"], str(db_info["path"]), number))
+    next_number = len(_FROZEN_DATABASE_IDS)
+    for db_id, db_info in DATABASE_REGISTRY.items():
+        if db_id in _FROZEN_DATABASE_IDS:
+            continue
+        items.append((db_id, db_info["label"], str(db_info["path"]), next_number))
+        next_number += 1
+    _DATABASE_ITEMS_CACHE = items or [("builtin", "Built-in", "Built-in shader table", 0)]
+    return _DATABASE_ITEMS_CACHE
 
 
 def resolve_shader_path(shader: str) -> str:
@@ -122,6 +232,18 @@ def resolve_shader_path(shader: str) -> str:
             return next(iter(candidates))
 
     return ""
+
+
+def _match_name(wanted, names):
+    names = list(names)
+    if wanted in names:
+        return wanted
+    key = _norm_name(wanted)
+    return next((name for name in names if _norm_name(name) == key), None)
+
+
+def _canonical_technique(shader, technique):
+    return _match_name(technique, SHADER_TECHNIQUES.get(shader) or SHADER_PARAMETERS.get(shader, {}))
 
 
 def _normalize_loaded_database(db_dict):
@@ -310,6 +432,8 @@ def _discover_shader_databases():
 
     if SHADER_DATABASE_DIR.exists():
         for path in sorted(SHADER_DATABASE_DIR.glob("*.json")):
+            if path.name.endswith("_packed_hashes.json") or path.name.endswith("_packed_params.json"):
+                continue
             db_id = f"shaders/{path.name}"
             label = path.stem.replace("_", " ").replace("-", " ").upper()
             DATABASE_REGISTRY[db_id] = {"path": path, "label": label}
@@ -385,9 +509,99 @@ def load_shader_database(database_id=None):
     PARAM_METADATA.update(param_metadata)
     OPTION_PAIRINGS.clear()
     OPTION_PAIRINGS.update(option_pairings)
+    _load_packed_sidecars(database_id)
+    _assign_enum_numbers(database_id)
 
     print(f"Loaded shader database: {len(SHADER_TECHNIQUES)} shaders from {db_path}")
     return True
+
+
+def _stable_enum_ids(preferred, current):
+    mapping = {}
+    current = list(current)
+    for name in list(preferred) + current:
+        if name in current and name not in mapping:
+            mapping[name] = len(mapping)
+    return mapping
+
+
+def _assign_enum_numbers(database_id):
+    """Keep Blender enum integers stable so pre-merge .blend files still resolve."""
+    SHADER_ENUM_NUMBERS.clear()
+    TECHNIQUE_ENUM_NUMBERS.clear()
+    legacy_shaders = {}
+    if "ams2" in str(database_id or "").lower():
+        legacy_path = SHADER_DATABASE_DIR / "ams2_shader_database_legacy.json"
+    elif "pc2" in str(database_id or "").lower():
+        legacy_path = SHADER_DATABASE_DIR / "pc2_shader_database_legacy.json"
+    else:
+        legacy_path = None
+    if legacy_path and legacy_path.exists():
+        try:
+            legacy_shaders = json.loads(legacy_path.read_text(encoding="utf-8")).get("shaders") or {}
+        except Exception as exc:
+            print(f"Failed to read legacy shader enum order at {legacy_path}: {exc}")
+
+    preferred = []
+    legacy_techs = {}
+    for path in sorted(legacy_shaders):
+        canonical = SHADER_ALIASES.get(_norm_shader_path(path))
+        if not canonical:
+            continue
+        preferred.append(canonical)
+        legacy_techs[canonical] = sorted((legacy_shaders[path] or {}).get("techniques") or {})
+    SHADER_ENUM_NUMBERS.update(_stable_enum_ids(preferred, sorted(SHADER_TECHNIQUES)))
+    for shader, techniques in SHADER_TECHNIQUES.items():
+        preferred_techs = []
+        for name in legacy_techs.get(shader, []):
+            matched = _match_name(name, techniques)
+            if matched:
+                preferred_techs.append(matched)
+        TECHNIQUE_ENUM_NUMBERS[shader] = _stable_enum_ids(preferred_techs, techniques)
+
+
+def _load_packed_sidecars(database_id):
+    """Load packed PB1 hashes and parameter tables for the active database."""
+    PACKED_HASHES.clear()
+    PACKED_PARAMS.clear()
+    PACKED_PARAM_BASE.clear()
+    _PACKED_HELP_CACHE.clear()
+    _PACKED_PARAM_HELP_CACHE.clear()
+    name = str(database_id or "").lower()
+    if "ams2" in name:
+        prefix = "ams2"
+    elif "pc2" in name:
+        prefix = "pc2"
+    else:
+        return
+    hash_path = SHADER_DATABASE_DIR / f"{prefix}_packed_hashes.json"
+    param_path = SHADER_DATABASE_DIR / f"{prefix}_packed_params.json"
+    if hash_path.exists():
+        try:
+            payload = json.loads(hash_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            print(f"Failed to read packed shader hashes at {hash_path}: {exc}")
+        else:
+            for shader, hashes in (payload.get("shaders") or {}).items():
+                PACKED_HASHES[_norm_shader_path(shader)] = {str(digest).lower() for digest in hashes}
+    if not param_path.exists():
+        return
+    try:
+        payload = json.loads(param_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(f"Failed to read packed shader parameters at {param_path}: {exc}")
+        return
+    catalog = payload.get("names") or []
+    for shader, tables in (payload.get("shaders") or {}).items():
+        resolved = {}
+        for digest, indices in (tables or {}).items():
+            names = tuple(catalog[index] for index in indices if 0 <= int(index) < len(catalog))
+            resolved[str(digest).lower()] = names
+        if not resolved:
+            continue
+        key = _norm_shader_path(shader)
+        PACKED_PARAMS[key] = resolved
+        PACKED_PARAM_BASE[key] = set.intersection(*(set(names) for names in resolved.values()))
 
 
 load_shader_database()
@@ -424,6 +638,218 @@ def get_option_pairings(shader: str, technique: str, option_kind: str, option_na
     )
 
 
+def _combo_is_packed(hashes, names):
+    return any(_permutation_digest(names, suffix) in hashes for suffix in PACKED_AA_SUFFIXES)
+
+
+def _packed_define_order(shader, technique):
+    techs = SHADER_DEFINES.get(shader) or {}
+    matched = _match_name(technique, techs)
+    if matched:
+        return list(techs[matched])
+    return list(max(techs.values(), key=len)) if techs else []
+
+
+def _format_define_list(names, limit=4):
+    names = list(names)
+    if not names:
+        return "(none)"
+    extra = f" +{len(names) - limit}" if len(names) > limit else ""
+    return ", ".join(names[:limit]) + extra
+
+
+def _suggestion_label(current, suggested):
+    cur_set, sug_set = set(current), set(suggested)
+    off = [name for name in current if name not in sug_set]
+    on = [name for name in suggested if name not in cur_set]
+    if not off and not on:
+        return "Reorder defines to packed order" if suggested else "Clear all defines"
+    parts = []
+    if off:
+        parts.append("Disable " + _format_define_list(off))
+    if on:
+        parts.append("Enable " + _format_define_list(on))
+    kept = [name for name in current if name in sug_set]
+    if kept != [name for name in suggested if name in cur_set]:
+        parts.append("reorder")
+    return "; ".join(parts)
+
+
+def _define_orders(target, current, define_order):
+    target = set(target)
+    kept = [name for name in current if name in target]
+    canonical = [name for name in define_order if name in target]
+    canonical += [name for name in target if name not in set(define_order)]
+    orders = []
+    for names in (kept + [name for name in canonical if name not in set(current)], canonical):
+        if names not in orders:
+            orders.append(names)
+    return orders
+
+
+def get_packed_permutation_help(shader, technique, define_names, limit=3):
+    """Return warning plus nearby packed define suggestions, or None if valid."""
+    if not PACKED_HASHES:
+        return None
+    resolved = resolve_shader_path(shader)
+    hashes = PACKED_HASHES.get(_norm_shader_path(resolved)) if resolved else None
+    if not hashes:
+        return None
+    names = [str(name) for name in (define_names or []) if name]
+    cache_key = (_norm_shader_path(resolved), str(technique or ""), tuple(names))
+    if cache_key in _PACKED_HELP_CACHE:
+        cached = _PACKED_HELP_CACHE[cache_key]
+        return None if not cached else {"warning": cached["warning"], "suggestions": cached["suggestions"][:limit]}
+
+    def store(value):
+        if len(_PACKED_HELP_CACHE) > 256:
+            _PACKED_HELP_CACHE.clear()
+        _PACKED_HELP_CACHE[cache_key] = value
+        return None if not value else {"warning": value["warning"], "suggestions": value["suggestions"][:limit]}
+
+    if _combo_is_packed(hashes, names):
+        return store(None)
+
+    define_order = _packed_define_order(resolved, technique)
+    current_set = set(names)
+    enabled = list(names)
+    disabled = [name for name in dict.fromkeys([*define_order, *names]) if name not in current_set]
+    best = {}
+
+    def record(ordered, n_off, n_on):
+        if not _combo_is_packed(hashes, ordered):
+            return
+        score = (n_off + n_on, n_on, int(ordered != names))
+        key = frozenset(ordered)
+        if key not in best or score < best[key][0]:
+            best[key] = (score, list(ordered))
+
+    for ordered in _define_orders(current_set, names, define_order):
+        if ordered != names:
+            record(ordered, 0, 0)
+    for budget in (1, 2, 3):
+        if best:
+            break
+        for n_off in range(budget + 1):
+            n_on = budget - n_off
+            if n_off > min(3, len(enabled)) or n_on > min(2, len(disabled)):
+                continue
+            for off in combinations(enabled, n_off) if n_off else [()]:
+                for on in combinations(disabled, n_on) if n_on else [()]:
+                    target = (current_set - set(off)) | set(on)
+                    for ordered in _define_orders(target, names, define_order):
+                        record(ordered, n_off, n_on)
+
+    return store({
+        "warning": "This define combination is not a packed permutation",
+        "suggestions": [
+            {"label": _suggestion_label(names, defines), "defines": defines}
+            for _, defines in sorted(best.values())[:3]
+        ],
+    })
+
+
+def get_packed_permutation_warning(shader, define_names, technique=""):
+    """Return a warning if enabled defines are not a packed permutation."""
+    help_info = get_packed_permutation_help(shader, technique, define_names, limit=1)
+    if not help_info:
+        return None
+    suggestions = help_info["suggestions"]
+    if suggestions:
+        return f"{help_info['warning']}. Try: {suggestions[0]['label']}"
+    return help_info["warning"]
+
+
+def _shader_param_names(shader, technique):
+    techs = SHADER_PARAMETERS.get(shader) or {}
+    matched = _match_name(technique, techs)
+    if matched:
+        return [name for name, _ in techs[matched]]
+    ordered, seen = [], set()
+    for items in techs.values():
+        for name, _ in items:
+            if name not in seen:
+                seen.add(name)
+                ordered.append(name)
+    return ordered
+
+
+def _packed_param_names(shader_key, define_names):
+    tables = PACKED_PARAMS.get(shader_key)
+    hashes = PACKED_HASHES.get(shader_key)
+    if not tables or not hashes:
+        return None
+    matched = []
+    for suffix in PACKED_AA_SUFFIXES:
+        digest = _permutation_digest(define_names, suffix)
+        if digest not in hashes:
+            continue
+        params = tables.get(digest)
+        if params is None:
+            return None
+        matched.append(set(params))
+    if not matched:
+        return None
+    return set.intersection(*matched)
+
+
+def get_packed_param_help(shader, technique, define_names, enabled_params):
+    """Return missing packed-permutation parameters, or None if the combo is valid."""
+    if not PACKED_PARAMS:
+        return None
+    resolved = resolve_shader_path(shader)
+    shader_key = _norm_shader_path(resolved) if resolved else ""
+    if not shader_key or shader_key not in PACKED_PARAMS:
+        return None
+    names = [str(name) for name in (define_names or []) if name]
+    enabled = [str(name) for name in (enabled_params or []) if name]
+    cache_key = (shader_key, str(technique or ""), tuple(names), tuple(sorted(_norm_name(name) for name in enabled)))
+    if cache_key in _PACKED_PARAM_HELP_CACHE:
+        cached = _PACKED_PARAM_HELP_CACHE[cache_key]
+        return None if not cached else dict(cached)
+
+    def store(value):
+        if len(_PACKED_PARAM_HELP_CACHE) > 256:
+            _PACKED_PARAM_HELP_CACHE.clear()
+        _PACKED_PARAM_HELP_CACHE[cache_key] = value
+        return None if not value else dict(value)
+
+    hashes = PACKED_HASHES.get(shader_key)
+    if not hashes or not _combo_is_packed(hashes, names):
+        return store(None)
+    packed = _packed_param_names(shader_key, names)
+    if packed is None:
+        return store(None)
+    db_names = _shader_param_names(resolved, technique)
+    packed_keys = {_norm_name(name) for name in packed}
+    always_keys = {_norm_name(name) for name in PACKED_PARAM_BASE.get(shader_key, set())}
+    enabled_keys = {_norm_name(name) for name in enabled}
+    missing = [
+        name for name in db_names
+        if _norm_name(name) in packed_keys and _norm_name(name) not in always_keys and _norm_name(name) not in enabled_keys
+    ]
+    if not missing:
+        return store(None)
+    return store({
+        "warning": "This packed permutation expects additional parameters",
+        "suggestions": [{
+            "label": "Enable " + _format_define_list(missing),
+            "parameters": missing,
+        }],
+    })
+
+
+def get_packed_param_warning(shader, technique, define_names, enabled_params):
+    """Return a warning if enabled params omit packed permutation requirements."""
+    help_info = get_packed_param_help(shader, technique, define_names, enabled_params)
+    if not help_info:
+        return None
+    suggestions = help_info["suggestions"]
+    if suggestions:
+        return f"{help_info['warning']}. Try: {suggestions[0]['label']}"
+    return help_info["warning"]
+
+
 def get_missing_pairings(
     shader: str,
     technique: str,
@@ -445,6 +871,7 @@ def get_missing_pairings(
 
 def get_technique_items(self, context):
     """Technique list for the currently selected shader."""
+    global _TECHNIQUE_ITEMS_CACHE
     shader = ""
     try:
         value = self.shader_path
@@ -455,9 +882,15 @@ def get_technique_items(self, context):
 
     shader_key = resolve_shader_path(shader) or shader
     techniques = SHADER_TECHNIQUES.get(shader_key, [])
+    numbers = TECHNIQUE_ENUM_NUMBERS.get(shader_key, {})
     if not techniques:
-        return [('Basic', 'Basic', 'Fallback technique')]
-    return [(name, name, f'{name} technique') for name in techniques]
+        _TECHNIQUE_ITEMS_CACHE = [('Basic', 'Basic', 'Fallback technique', 0)]
+    else:
+        _TECHNIQUE_ITEMS_CACHE = [
+            (name, name, f'{name} technique', numbers.get(name, index))
+            for index, name in enumerate(techniques)
+        ]
+    return _TECHNIQUE_ITEMS_CACHE
 
 def _update_shader_params_impl(self, context, preserve_unmapped=False):
     """Update available parameters when technique changes"""
@@ -658,8 +1091,47 @@ def _update_shader_defines_impl(self, context, preserve_unmapped=False):
             old_define.name = old_name
             old_define.enabled = old_enabled
 
+def migrate_material_options(settings, context=None):
+    """Add new database options to an existing material, safely"""
+    if not hasattr(settings, "shader_params") or not hasattr(settings, "defines"):
+        return
+    shader = resolve_shader_path(settings.shader_path) or settings.shader_path
+    if shader not in SHADER_PARAMETERS:
+        return
+    technique = _canonical_technique(shader, settings.technique)
+    if not technique or technique not in SHADER_PARAMETERS[shader]:
+        return
+    if not settings.shader_params and not settings.defines:
+        return
+
+    existing_params = {_norm_name(param.name) for param in settings.shader_params}
+    for param_name, param_type in SHADER_PARAMETERS[shader][technique]:
+        if _norm_name(param_name) in existing_params:
+            continue
+        param = settings.shader_params.add()
+        param.name = param_name
+        param.param_type = param_type
+        param.enabled = False
+        _init_new_param_values(param, param_name, param_type, shader, technique)
+        existing_params.add(_norm_name(param_name))
+
+    existing_defines = {_norm_name(define.name) for define in settings.defines}
+    for define_name in SHADER_DEFINES.get(shader, {}).get(technique, []):
+        if _norm_name(define_name) in existing_defines:
+            continue
+        define = settings.defines.add()
+        define.name = define_name
+        define.enabled = False
+        existing_defines.add(_norm_name(define_name))
+
+    settings["_last_shader_path"] = shader
+    settings["_last_shader_technique"] = technique
+
+
 def update_shader_change(self, context):
     """Update technique, parameters, and defines when shader changes"""
+    if _SUPPRESS_SHADER_UPDATES:
+        return
     prev_shader = str(self.get("_last_shader_path", ""))
     prev_technique = str(self.get("_last_shader_technique", ""))
     shader = resolve_shader_path(self.shader_path)
@@ -671,9 +1143,7 @@ def update_shader_change(self, context):
 
     valid_techniques = list(SHADER_TECHNIQUES[shader])
     if self.technique not in valid_techniques:
-        desired = _norm_name(self.technique)
-        matched = next((name for name in valid_techniques if _norm_name(name) == desired), None)
-        self.technique = matched or valid_techniques[0]
+        self.technique = _canonical_technique(shader, self.technique) or valid_techniques[0]
 
     same_shader = prev_shader and _norm_shader_path(prev_shader) == _norm_shader_path(shader)
     same_technique = prev_technique and _norm_name(prev_technique) == _norm_name(self.technique)
@@ -688,6 +1158,8 @@ def update_shader_change(self, context):
 
 def update_shader_params(self, context):
     """Blender property callback (must be exactly 2 args)."""
+    if _SUPPRESS_SHADER_UPDATES:
+        return
     _update_shader_params_impl(self, context, preserve_unmapped=False)
 
 

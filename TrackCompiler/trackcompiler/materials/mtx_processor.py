@@ -33,6 +33,11 @@ def prepare_mtx_files_from_materials(
                 mtx_material_system.write_mtx_file(
                     blender_material, dest, track_name, texture_mapping
                 )
+                warning = mtx_material_system.packed_permutation_warning_for_settings(
+                    blender_material.mtx_settings
+                )
+                if warning:
+                    print(f"Warning: {dest.name}: {warning}")
                 print(f"Generated MTX from material: {dest.name}")
                 continue
             except Exception as e:
