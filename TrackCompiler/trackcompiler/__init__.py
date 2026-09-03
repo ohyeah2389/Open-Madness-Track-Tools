@@ -21,9 +21,12 @@ from .export import triggers_export
 from .export.dynamic_export import export_dynamic_objects
 from .export.environment_export import export_environment_xml
 from .export.sgx_export import (
+    PurgeError,
     SingleMebExportSettings,
+    collect_purge_targets,
     export_madness_scene,
     export_single_meb_set,
+    validate_purge_request,
 )
 from .export.gcl_export import export_gcl
 from .export.lights_export import export_lights_sgx
@@ -58,8 +61,63 @@ class MadnessSceneExporter(bpy.types.Operator, ExportHelper):
         default=True,
     )  # type: ignore
 
+    purge_mtx: BoolProperty(
+        name="Purge MTX",
+        description="Delete leftover .mtx files in the SGX export folder before writing new ones",
+        default=False,
+        options={"SKIP_SAVE"},
+    )  # type: ignore
+
+    purge_meb: BoolProperty(
+        name="Purge MEB",
+        description="Delete leftover .meb files in the SGX export folder before writing new ones",
+        default=False,
+        options={"SKIP_SAVE"},
+    )  # type: ignore
+
+    purge_dds: BoolProperty(
+        name="Purge DDS",
+        description="Delete leftover .dds files in the track textures folder before copying new ones",
+        default=False,
+        options={"SKIP_SAVE"},
+    )  # type: ignore
+
     def draw(self, context):
-        self.layout.prop(self, "export_mtx_files")
+        layout = self.layout
+        layout.prop(self, "export_mtx_files")
+        layout.separator()
+        layout.prop(self, "purge_mtx")
+        layout.prop(self, "purge_meb")
+        layout.prop(self, "purge_dds")
+        if not (self.purge_mtx or self.purge_meb or self.purge_dds):
+            return
+        box = layout.box()
+        box.alert = True
+        box.label(text="Permanent delete, cannot be undone")
+        if not self.filepath:
+            box.label(text="Choose the SGX path first")
+            return
+        try:
+            track_dir, texture_dir = validate_purge_request(
+                self.filepath, self.purge_mtx, self.purge_meb, self.purge_dds
+            )
+            counts = []
+            if self.purge_mtx or self.purge_meb:
+                box.label(text=str(track_dir), translate=False)
+            if self.purge_dds:
+                box.label(text=str(texture_dir), translate=False)
+            if self.purge_mtx:
+                counts.append(f"{len(collect_purge_targets(track_dir, '.mtx'))} MTX")
+            if self.purge_meb:
+                counts.append(f"{len(collect_purge_targets(track_dir, '.meb'))} MEB")
+            if self.purge_dds:
+                counts.append(f"{len(collect_purge_targets(texture_dir, '.dds'))} DDS")
+            if counts:
+                box.label(text="Will delete: " + ", ".join(counts))
+        except PurgeError as exc:
+            box.label(text=str(exc), translate=False)
+        except Exception as exc:
+            box.label(text=f"Purge preview failed: {exc}", translate=False)
 
     def execute(self, context):
         # Derive resource prefix from output filename
@@ -73,8 +131,21 @@ class MadnessSceneExporter(bpy.types.Operator, ExportHelper):
                 resource_prefix=resource_prefix,
                 context=context,
                 export_mtx_files=self.export_mtx_files,
+                purge_mtx=self.purge_mtx,
+                purge_meb=self.purge_meb,
+                purge_dds=self.purge_dds,
             )
             self.report({"INFO"}, "Madness scene exported successfully")
+            purged = export_result.get("purged", {}) if isinstance(export_result, dict) else {}
+            purge_parts = []
+            if self.purge_mtx:
+                purge_parts.append(f"{int(purged.get('mtx', 0))} MTX")
+            if self.purge_meb:
+                purge_parts.append(f"{int(purged.get('meb', 0))} MEB")
+            if self.purge_dds:
+                purge_parts.append(f"{int(purged.get('dds', 0))} DDS")
+            if purge_parts:
+                self.report({"INFO"}, "Purged leftover files: " + ", ".join(purge_parts))
             texture_warnings = export_result.get("texture_warnings", {}) if isinstance(export_result, dict) else {}
             missing = int(texture_warnings.get("missing", 0))
             unsupported = int(texture_warnings.get("unsupported", 0))
@@ -120,6 +191,9 @@ class MadnessSceneExporter(bpy.types.Operator, ExportHelper):
                         f"{detail.get('mesh', '<unknown mesh>')} | {issues}",
                     )
             return {"FINISHED"}
+        except PurgeError as e:
+            self.report({"ERROR"}, f"Purge refused: {e}")
+            return {"CANCELLED"}
         except Exception as e:
             self.report({"ERROR"}, f"Export failed: {str(e)}")
             return {"CANCELLED"}

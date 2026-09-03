@@ -74,9 +74,158 @@ class SingleMebExportSettings:
     export_textures: bool = False
 
 
+_PURGE_EXTENSIONS = frozenset({".mtx", ".meb", ".dds"})
+_RESERVED_TRACK_NAMES = frozenset({"_data", "textures"})
+
+
+class PurgeError(ValueError):
+    """Raised when a leftover-file purge is refused or cannot complete safely."""
+
+
 def _log_export_error(context: str, exc: Exception):
     print(f"ERROR: {context}: {exc}")
     traceback.print_exc()
+
+
+def _is_link(path: Path) -> bool:
+    try:
+        if path.is_symlink():
+            return True
+        is_junction = getattr(path, "is_junction", None)
+        return bool(is_junction and is_junction())
+    except OSError:
+        return True
+
+
+def _same_dir(a: Path, b: Path) -> bool:
+    return os.path.normcase(os.path.normpath(str(a))) == os.path.normcase(os.path.normpath(str(b)))
+
+
+def resolve_sgx_purge_layout(filepath: str) -> tuple[Path, Path]:
+    """Return (track_dir, texture_dir) only for Tracks/<TrackName>/<TrackName>.sgx."""
+    sgx_path = Path(filepath)
+    if sgx_path.suffix.lower() != ".sgx":
+        raise PurgeError("Purge requires exporting a .sgx file.")
+    track_name = sgx_path.stem
+    if (
+        not track_name
+        or track_name.lower() in _RESERVED_TRACK_NAMES
+        or any(sep in track_name for sep in "/\\")
+    ):
+        raise PurgeError(f"Refusing to purge using track name '{track_name}'.")
+    track_dir = sgx_path.parent
+    if track_dir.name.lower() != track_name.lower():
+        raise PurgeError(
+            "Purge requires Tracks/<TrackName>/<TrackName>.sgx "
+            f"(folder '{track_dir.name}' vs '{track_name}.sgx')."
+        )
+    if track_dir.parent.name.lower() != "tracks":
+        raise PurgeError("Purge requires the SGX to live in a 'Tracks/<TrackName>' folder.")
+    if track_dir.exists():
+        if _is_link(track_dir):
+            raise PurgeError("Refusing to purge a track folder that is a shortcut or junction.")
+        track_dir = track_dir.resolve()
+        if not track_dir.is_dir() or track_dir.parent == track_dir:
+            raise PurgeError("Refusing to purge an invalid track folder.")
+        if track_dir.name.lower() != track_name.lower() or track_dir.parent.name.lower() != "tracks":
+            raise PurgeError("Track folder did not resolve to Tracks/<TrackName>.")
+    texture_dir = track_dir.parent / "textures" / track_name
+    if texture_dir.exists():
+        if _is_link(texture_dir):
+            raise PurgeError("Refusing to purge a textures folder that is a shortcut or junction.")
+        resolved_tex = texture_dir.resolve()
+        tracks_dir = track_dir.parent.resolve() if track_dir.exists() else track_dir.parent
+        if (
+            resolved_tex.name.lower() != track_name.lower()
+            or resolved_tex.parent.name.lower() != "textures"
+            or not _same_dir(resolved_tex.parent.parent, tracks_dir)
+        ):
+            raise PurgeError("Textures folder did not resolve to Tracks/textures/<TrackName>.")
+        texture_dir = resolved_tex
+    return track_dir, texture_dir
+
+
+def _assert_not_source_dir(folder: Path):
+    if not folder.exists():
+        return
+    resolved = folder.resolve()
+    blend_path = getattr(bpy.data, "filepath", "") or ""
+    if blend_path:
+        blend_dir = Path(bpy.path.abspath(blend_path)).resolve().parent
+        if _same_dir(resolved, blend_dir):
+            raise PurgeError("Refusing to purge the folder that contains the open Blender file.")
+    try:
+        has_blend = any(
+            not _is_link(path) and path.is_file() and path.suffix.lower() == ".blend"
+            for path in resolved.iterdir()
+        )
+    except OSError as exc:
+        raise PurgeError(f"Could not inspect folder for purge: {exc}") from exc
+    if has_blend:
+        raise PurgeError("Refusing to purge a folder that contains .blend files.")
+
+
+def validate_purge_request(filepath: str, purge_mtx: bool, purge_meb: bool, purge_dds: bool) -> tuple[Path, Path]:
+    track_dir, texture_dir = resolve_sgx_purge_layout(filepath)
+    if purge_mtx or purge_meb:
+        _assert_not_source_dir(track_dir)
+    if purge_dds:
+        _assert_not_source_dir(texture_dir)
+    return track_dir, texture_dir
+
+
+def collect_purge_targets(folder: Path, extension: str) -> list:
+    """List matching files in folder. Never follows links or recurses."""
+    ext = extension.lower()
+    if ext not in _PURGE_EXTENSIONS:
+        raise PurgeError(f"Refusing unknown purge type '{extension}'.")
+    if not folder.exists():
+        return []
+    if _is_link(folder):
+        raise PurgeError(f"Refusing to purge through a shortcut: {folder}")
+    folder = folder.resolve()
+    if not folder.is_dir() or folder.parent == folder:
+        raise PurgeError(f"Refusing to purge an invalid folder: {folder}")
+    try:
+        entries = list(folder.iterdir())
+    except OSError as exc:
+        raise PurgeError(f"Could not list folder for purge: {exc}") from exc
+    targets = []
+    for path in entries:
+        if _is_link(path) or not path.is_file() or path.suffix.lower() != ext:
+            continue
+        if not path.stem or path.stem in {".", ".."}:
+            continue
+        resolved = path.resolve()
+        if not _same_dir(resolved.parent, folder) or _is_link(resolved) or not resolved.is_file():
+            continue
+        targets.append(resolved)
+    return targets
+
+
+def _purge_extension(folder: Path, extension: str) -> int:
+    targets = collect_purge_targets(folder, extension)
+    deleted = 0
+    errors = []
+    folder = folder.resolve() if folder.exists() else folder
+    for path in targets:
+        if (
+            _is_link(path)
+            or not _same_dir(path.parent, folder)
+            or path.suffix.lower() != extension.lower()
+            or not path.is_file()
+        ):
+            continue
+        try:
+            path.unlink()
+            deleted += 1
+            print(f"  Purged {path.name}")
+        except OSError as exc:
+            errors.append(f"{path.name}: {exc}")
+    print(f"Purged {deleted} {extension} file(s) from {folder}")
+    if errors:
+        raise PurgeError("Failed to delete leftover file(s): " + "; ".join(errors))
+    return deleted
 
 
 def _build_mesh_validation_summary(mesh_validation_issues: List[_MeshValidationIssue]) -> dict:
@@ -866,10 +1015,31 @@ def build_sgx(objects: List[ObjectInfo], dest_path: Path, resource_prefix: str =
     ET.ElementTree(scene).write(dest_path, encoding="utf-8", xml_declaration=True)
 
 
-def export_madness_scene(filepath: str, resource_prefix: str, context, export_mtx_files: bool = True):
+def export_madness_scene(
+    filepath: str,
+    resource_prefix: str,
+    context,
+    export_mtx_files: bool = True,
+    purge_mtx: bool = False,
+    purge_meb: bool = False,
+    purge_dds: bool = False,
+):
     output_dir = Path(filepath).parent
     sgx_path = Path(filepath)
     track_name = sgx_path.stem
+    texture_export_dir = output_dir.parent / "textures" / track_name
+    purged = {"mtx": 0, "meb": 0, "dds": 0}
+    if purge_mtx or purge_meb or purge_dds:
+        track_dir, texture_dir = validate_purge_request(filepath, purge_mtx, purge_meb, purge_dds)
+        if purge_mtx:
+            print("Purging MTX files...")
+            purged["mtx"] = _purge_extension(track_dir, ".mtx")
+        if purge_meb:
+            print("Purging MEB files...")
+            purged["meb"] = _purge_extension(track_dir, ".meb")
+        if purge_dds:
+            print("Purging DDS files...")
+            purged["dds"] = _purge_extension(texture_dir, ".dds")
 
     with tempfile.TemporaryDirectory() as temp_dir_str:
         print(f"Using temporary directory: {Path(temp_dir_str)}")
@@ -916,7 +1086,6 @@ def export_madness_scene(filepath: str, resource_prefix: str, context, export_mt
             for mat_name in obj.materials:
                 material_to_objects.setdefault(mat_name, []).append(obj.name)
 
-        texture_export_dir = output_dir.parent / "textures" / track_name
         print(f"Texture export directory: {texture_export_dir}")
         unique_materials = sorted(set(all_materials))
         texture_warning_summary = summarize_texture_warnings_for_material_names(set(unique_materials), context)
@@ -949,15 +1118,20 @@ def export_madness_scene(filepath: str, resource_prefix: str, context, export_mt
         "status": "FINISHED",
         "texture_warnings": texture_warning_summary,
         "mesh_warnings": _build_mesh_validation_summary(mesh_validation_issues),
+        "purged": purged,
     }
 
 
 __all__ = [
+    "PurgeError",
     "SingleMebExportSettings",
+    "collect_purge_targets",
     "export_single_meb_set",
     "export_objects_to_meb",
     "export_madness_scene",
     "prepare_texture_mapping",
     "export_textures",
     "build_sgx",
+    "resolve_sgx_purge_layout",
+    "validate_purge_request",
 ]
