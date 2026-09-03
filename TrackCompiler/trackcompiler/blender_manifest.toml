@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "trackcompiler"
-version = "0.1.0"
+version = "0.2.0"
 name = "OMTT TrackCompiler"
 tagline = "An open-source toolkit for Madness Engine track development"
 maintainer = "ohyeah2389"
