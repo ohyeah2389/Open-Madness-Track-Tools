@@ -975,7 +975,7 @@ def build_sgx(objects: List[ObjectInfo], dest_path: Path, resource_prefix: str =
             Orientation=f"{qx:.6f} {qy:.6f} {qz:.6f} {qw:.6f}",
             Scale="1.000000",
         )
-        ET.SubElement(lod_node, "CONTROL", Distances="1000 ")
+        ET.SubElement(lod_node, "CONTROL", Distances="10000 ")
         node = ET.SubElement(
             lod_node,
             "NODE",
