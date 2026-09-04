@@ -109,6 +109,46 @@ class OBJECT_OT_copy_empty_userflag(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class OBJECT_OT_copy_all_empty_userflags(bpy.types.Operator):
+    """Copy all empty userflags to selected empty objects."""
+    bl_idname = "object.copy_all_empty_userflags"
+    bl_label = "Copy All User Flags To Selected"
+    bl_description = "Copy all userflags from the active object to all selected Empty objects"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return (
+            context.object
+            and context.object.type == "EMPTY"
+            and len(context.selected_objects) > 1
+            and hasattr(context.object, "empty_meb_settings")
+        )
+
+    def execute(self, context):
+        active_obj = context.object
+        if not active_obj or active_obj.type != "EMPTY":
+            return {"CANCELLED"}
+        if not hasattr(active_obj, "empty_meb_settings"):
+            self.report({"ERROR"}, "Active object has no MEB settings")
+            return {"CANCELLED"}
+
+        source_flags = tuple(active_obj.empty_meb_settings.userflags)
+        copied_count = 0
+
+        for obj in context.selected_objects:
+            if obj == active_obj or obj.type != "EMPTY":
+                continue
+            if not hasattr(obj, "empty_meb_settings"):
+                continue
+
+            obj.empty_meb_settings.userflags = source_flags
+            copied_count += 1
+
+        self.report({"INFO"}, f"Copied all userflags to {copied_count} objects")
+        return {"FINISHED"}
+
+
 def convert_to_relative_game_path(absolute_path: str, game_folder: str = None) -> str:
     r"""Convert absolute path to relative game path format for MEB files.
 
@@ -236,6 +276,13 @@ class EMPTY_PT_meb_reference(bpy.types.Panel):
         binary_str = format(userflags_value, "032b")
         box.label(text=f"Value: {userflags_value} (0b{binary_str})")
 
+        if len(context.selected_objects) > 1:
+            box.operator(
+                "object.copy_all_empty_userflags",
+                text="Copy All Userflags To Selected",
+                icon="COPYDOWN",
+            )
+
         # Clean single-column category layout with tooltip descriptions.
         flags_col = box.column(align=True)
         for category_name, bit_indices in USERFLAG_CATEGORIES:
@@ -277,6 +324,7 @@ def register():
     bpy.utils.register_class(EmptyMEBSettings)
     bpy.utils.register_class(OBJECT_OT_toggle_empty_userflag)
     bpy.utils.register_class(OBJECT_OT_copy_empty_userflag)
+    bpy.utils.register_class(OBJECT_OT_copy_all_empty_userflags)
     bpy.utils.register_class(EMPTY_PT_meb_reference)
 
     # Add MEB settings to Empty objects
@@ -287,6 +335,7 @@ def unregister():
     del bpy.types.Object.empty_meb_settings
 
     bpy.utils.unregister_class(EMPTY_PT_meb_reference)
+    bpy.utils.unregister_class(OBJECT_OT_copy_all_empty_userflags)
     bpy.utils.unregister_class(OBJECT_OT_copy_empty_userflag)
     bpy.utils.unregister_class(OBJECT_OT_toggle_empty_userflag)
     bpy.utils.unregister_class(EmptyMEBSettings)
