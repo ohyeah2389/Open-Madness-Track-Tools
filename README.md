@@ -20,9 +20,6 @@ The SGB64 format does support VHFs and IMBs, as evidenced by filepath strings co
 ### LiveGrass isn't implemented
 I haven't begun research into the LiveGrass system because I highly suspect it'll only work with SGB64-formatted scenegraphs, not SGXs, for the reasons listed above, because the LiveGrass system likely makes heavy use of instancing.
 
-### LODs are not implemented
-This feature is possible to implement and will be implemented at a later date.
-
 ## Contents:
 
 ### Documentation

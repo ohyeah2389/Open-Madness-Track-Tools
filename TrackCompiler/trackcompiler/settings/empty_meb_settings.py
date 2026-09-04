@@ -201,8 +201,8 @@ class EMPTY_PT_meb_reference(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        # Only show when we have an empty object selected
-        return context.object and context.object.type == "EMPTY"
+        obj = context.object
+        return obj and obj.type == "EMPTY" and not obj.name.startswith("SMS_LOD_")
 
     def draw(self, context):
         layout = self.layout

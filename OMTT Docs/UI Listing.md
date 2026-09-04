@@ -46,7 +46,7 @@ Visible when a mesh is selected.
 - User Flags (Rendering, Shadows, Systems, Environment, Seasons)
 - Custom Arguments
 ## Madness MEB Asset Reference
-Visible when an empty is selected.
+Visible when an empty is selected, except empties named `SMS_LOD_*`.
 - MEB Asset Reference
 - User Flags (Rendering, Shadows, Systems, Environment, Seasons)
 ## Madness Camera
@@ -84,6 +84,10 @@ Visible for empties named `SMS_SOUND_*`.
 - sound_type
 - Type-specific fields (name/path, volume, fade, range, reverb, orientation, etc.) sit unsectioned at the panel root
 - Sound Area Definition (ambient sound and local reverb only)
+## Madness LOD Control
+Visible for empties named `SMS_LOD_*`.
+- Per-level object picker and Distance (two slots by default; highest detail first)
+- Add LOD Level
 # Properties > Object
 ## Madness Dynamic Definition
 Visible for meshes and empties.

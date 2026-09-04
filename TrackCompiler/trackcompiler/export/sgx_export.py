@@ -12,6 +12,7 @@ import xml.etree.ElementTree as ET
 import numpy as np
 
 import bpy  # type: ignore
+import mathutils  # type: ignore
 
 from ..materials.mtx_material_system import (
     resolve_texture_path,
@@ -21,6 +22,7 @@ from ..materials.mtx_processor import prepare_mtx_files_from_materials
 from ..meshes import MeshExportOptions
 from ..meshes.blender_meb_export import extract_mesh_data_from_blender
 from ..meshes.meb_writer import write_meb_file
+from ..properties.lod import assigned_lod_levels, get_lod_name, is_sms_lod
 from ..settings.meb_export_settings import culling_sphere_radius_override
 from ..settings.userflags import DEFAULT_USERFLAGS
 from ..utils import effective_materials_for_object
@@ -52,6 +54,16 @@ class _PendingObjectExport:
     userflags: int
     future: Future
     source_objects: List = None
+    lod_key: object = None
+    lod_index: int = 0
+    lod_distance: float = 0.0
+
+
+@dataclass
+class _LodGroupSpec:
+    empty: object
+    name: str
+    members: List[Tuple[int, object, str, float]]
 
 
 @dataclass
@@ -439,24 +451,27 @@ def _validate_extracted_mesh(mesh_name: str, extracted_data) -> Tuple[_MeshValid
     return None, False
 
 
-def _complete_next_pending_export(pending_exports, objects_list):
+def _complete_next_pending_export(pending_exports, objects_list, lod_children=None):
     pending = pending_exports.popleft()
     bounds = pending.future.result()
-    objects_list.append(
-        ObjectInfo(
-            name=pending.name,
-            meb_path=pending.meb_path,
-            translation=pending.translation,
-            quaternion=pending.quaternion,
-            sphere_center=bounds.sphere_center,
-            sphere_radius=bounds.sphere_radius,
-            materials=pending.materials,
-            bb_min=bounds.bb_min,
-            bb_max=bounds.bb_max,
-            userflags=pending.userflags,
-            source_objects=pending.source_objects,
-        )
+    info = ObjectInfo(
+        name=pending.name,
+        meb_path=pending.meb_path,
+        translation=pending.translation,
+        quaternion=pending.quaternion,
+        sphere_center=bounds.sphere_center,
+        sphere_radius=bounds.sphere_radius,
+        materials=pending.materials,
+        bb_min=bounds.bb_min,
+        bb_max=bounds.bb_max,
+        userflags=pending.userflags,
+        source_objects=pending.source_objects,
+        lod_distance=pending.lod_distance,
     )
+    if pending.lod_key is not None and lod_children is not None:
+        lod_children.setdefault(pending.lod_key, []).append((pending.lod_index, info))
+    else:
+        objects_list.append(info)
     print(f"Successfully exported {pending.name} -> {pending.meb_path.name}")
 
 
@@ -474,10 +489,17 @@ def _queue_object_export(
     skip_uv_compression_override: bool | None = None,
     culling_sphere_override: float | None = None,
     source_objects=None,
+    bake_matrix=None,
+    lod_key=None,
+    lod_index: int = 0,
+    lod_distance: float = 0.0,
+    lod_children=None,
 ):
     matrix = np.array(obj.matrix_world.copy())
     translation, quaternion = decompose_matrix(matrix)
     options = _build_maybe_overridden_options(obj, resource_prefix)
+    if bake_matrix is not None:
+        options.bake_matrix = bake_matrix
     userflags = _get_userflags(obj) if userflags_override is None else userflags_override
     skip_uv_compression = (
         options.skip_uv_compression
@@ -527,6 +549,9 @@ def _queue_object_export(
             materials=material_names,
             userflags=userflags,
             source_objects=list(source_objects or [obj]),
+            lod_key=lod_key,
+            lod_index=lod_index,
+            lod_distance=lod_distance,
             future=writer_pool.submit(
                 write_meb_file,
                 output_path=meb_path,
@@ -552,7 +577,7 @@ def _queue_object_export(
     )
 
     if len(pending_exports) >= max_in_flight:
-        _complete_next_pending_export(pending_exports, objects)
+        _complete_next_pending_export(pending_exports, objects, lod_children)
 
 
 def _collect_export_entries(source_objects, context, include_non_mesh_skips: bool):
@@ -615,6 +640,72 @@ def _collect_export_entries(source_objects, context, include_non_mesh_skips: boo
         export_entries.append((temp_curve_mesh, obj.name))
 
     return export_entries, temp_objects_to_cleanup, skipped_objects
+
+
+def _lod_bake_matrix(lod_empty, obj):
+    loc, rot, _scale = lod_empty.matrix_world.decompose()
+    parent_tr = mathutils.Matrix.LocRotScale(loc, rot, (1.0, 1.0, 1.0))
+    try:
+        return parent_tr.inverted() @ obj.matrix_world
+    except ValueError:
+        return obj.matrix_world.copy()
+
+
+def _collect_lod_groups(source_objects) -> Tuple[List[_LodGroupSpec], set]:
+    claimed_ptrs = set()
+    groups = []
+    for obj in source_objects:
+        if not is_sms_lod(obj):
+            continue
+        members = []
+        for index, (target, distance) in enumerate(assigned_lod_levels(obj)):
+            ptr = target.as_pointer()
+            if ptr in claimed_ptrs:
+                print(
+                    f"  Warning: {target.name} is already used by another LOD group; "
+                    f"skipping in {obj.name}"
+                )
+                continue
+            members.append((index, target, target.name, distance))
+        if len(members) < 2:
+            print(f"Skipping {obj.name}: LOD control needs at least two assigned meshes")
+            continue
+        for _, target, _, _ in members:
+            claimed_ptrs.add(target.as_pointer())
+        groups.append(_LodGroupSpec(empty=obj, name=get_lod_name(obj), members=members))
+        print(f"LOD group {groups[-1].name}: {len(members)} level(s)")
+    return groups, claimed_ptrs
+
+
+def _assemble_lod_objects(lod_specs: List[_LodGroupSpec], lod_children: dict) -> List[ObjectInfo]:
+    assembled = []
+    for spec in lod_specs:
+        children = [info for _, info in sorted(lod_children.get(spec.empty.as_pointer(), []), key=lambda item: item[0])]
+        if len(children) < 2:
+            print(
+                f"Warning: LOD {spec.name} exported {len(children)} level(s); "
+                "skipping LOD node"
+            )
+            continue
+        first = children[0]
+        translation, quaternion = decompose_matrix(np.array(spec.empty.matrix_world))
+        materials = [name for child in children for name in child.materials]
+        assembled.append(
+            ObjectInfo(
+                name=sanitize(spec.name),
+                meb_path=first.meb_path,
+                translation=translation,
+                quaternion=quaternion,
+                sphere_center=first.sphere_center,
+                sphere_radius=first.sphere_radius,
+                materials=materials,
+                bb_min=np.minimum.reduce([child.bb_min for child in children]),
+                bb_max=np.maximum.reduce([child.bb_max for child in children]),
+                source_objects=[spec.empty] + [target for _, target, _, _ in spec.members],
+                lod_levels=children,
+            )
+        )
+    return assembled
 
 
 def export_single_meb_set(filepath: str, context, settings: SingleMebExportSettings):
@@ -767,11 +858,14 @@ def export_objects_to_meb(
     try:
         with ThreadPoolExecutor(max_workers=writer_workers) as writer_pool:
             pending_exports = deque()
+            lod_children = {}
             bpy.ops.object.select_all(action="DESELECT")
 
             source_objects = list(iter_visible_scene_objects(context.view_layer))
+            lod_specs, claimed_ptrs = _collect_lod_groups(source_objects)
+            regular_sources = [obj for obj in source_objects if obj.as_pointer() not in claimed_ptrs]
             export_entries, temp_seen, _ = _collect_export_entries(
-                source_objects, context, include_non_mesh_skips=False
+                regular_sources, context, include_non_mesh_skips=False
             )
             temp_objects_to_cleanup.extend(temp_seen)
             print(f"Found {len(export_entries)} visible exportable objects (meshes + beveled curves)")
@@ -791,8 +885,12 @@ def export_objects_to_meb(
 
             print(
                 f"Grouped: {len(kstree_groups)} KSTREE groups, {len(sms_groups)} SMS groups, "
-                f"{len(ungrouped_objects)} ungrouped objects"
+                f"{len(ungrouped_objects)} ungrouped objects, {len(lod_specs)} LOD group(s)"
             )
+
+            def _queue(*args, **kwargs):
+                kwargs.setdefault("lod_children", lod_children)
+                _queue_object_export(*args, **kwargs)
 
             for group_id, group_objects in kstree_groups.items():
                 try:
@@ -803,7 +901,7 @@ def export_objects_to_meb(
                     )
                     if combined_obj:
                         temp_objects_to_cleanup.append(combined_obj)
-                        _queue_object_export(
+                        _queue(
                             combined_obj,
                             name,
                             output_dir,
@@ -830,7 +928,7 @@ def export_objects_to_meb(
                     )
                     if combined_obj:
                         temp_objects_to_cleanup.append(combined_obj)
-                        _queue_object_export(
+                        _queue(
                             combined_obj,
                             name,
                             output_dir,
@@ -850,7 +948,7 @@ def export_objects_to_meb(
 
             for obj, source_name in ungrouped_objects:
                 try:
-                    _queue_object_export(
+                    _queue(
                         obj,
                         source_name,
                         output_dir,
@@ -864,8 +962,45 @@ def export_objects_to_meb(
                 except Exception as e:
                     _log_export_error(f"Failed to export {source_name}", e)
 
+            for spec in lod_specs:
+                print(f"Processing LOD {spec.name} ({len(spec.members)} levels)...")
+                for index, target, source_name, distance in spec.members:
+                    try:
+                        entries, temps, _ = _collect_export_entries(
+                            [target], context, include_non_mesh_skips=False
+                        )
+                        temp_objects_to_cleanup.extend(temps)
+                        if not entries:
+                            print(f"  Warning: LOD {spec.name} level {source_name} is not exportable")
+                            continue
+                        export_obj, export_name = entries[0]
+                        _queue(
+                            export_obj,
+                            export_name,
+                            output_dir,
+                            resource_prefix,
+                            pending_exports,
+                            writer_pool,
+                            mesh_validation_issues,
+                            objects,
+                            max_in_flight,
+                            userflags_override=_get_userflags(target),
+                            skip_uv_compression_override=_get_group_skip_uv_compression(
+                                source_name, [target]
+                            ),
+                            culling_sphere_override=culling_sphere_radius_override(target),
+                            source_objects=[target],
+                            bake_matrix=_lod_bake_matrix(spec.empty, export_obj),
+                            lod_key=spec.empty.as_pointer(),
+                            lod_index=index,
+                            lod_distance=distance,
+                        )
+                    except Exception as e:
+                        _log_export_error(f"Failed to export LOD {spec.name} level {source_name}", e)
+
             while pending_exports:
-                _complete_next_pending_export(pending_exports, objects)
+                _complete_next_pending_export(pending_exports, objects, lod_children)
+            objects.extend(_assemble_lod_objects(lod_specs, lod_children))
     finally:
         _restore_original_mesh_bindings(original_mesh_bindings)
         if temp_objects_to_cleanup:
@@ -940,6 +1075,72 @@ def export_textures(texture_mapping: dict, texture_export_dir: Path):
     print(f"Exported {texture_count} textures to {texture_export_dir}")
 
 
+def _resource_filename(obj: ObjectInfo, resource_prefix: str) -> str:
+    meb_path = obj.meb_path
+    name = meb_path.name if hasattr(meb_path, "name") else Path(str(meb_path)).name
+    if name != obj.name + ".meb":
+        return str(meb_path).replace("\\", "/").lstrip("/")
+    return f"{resource_prefix}{name}"
+
+
+def _add_sphere(parent, center, radius):
+    cx, cy, cz = center
+    ET.SubElement(
+        parent,
+        "SPHERE",
+        Centre=f"{cx:.6f} {cy:.6f} {cz:.6f} 1.000000",
+        Radius=f"{radius:.6f}",
+    )
+
+
+def _add_matrix(parent, translation, quaternion):
+    tx, ty, tz = translation
+    qw, qx, qy, qz = quaternion
+    ET.SubElement(
+        parent,
+        "MATRIX",
+        Offset=f"{tx:.6f} {ty:.6f} {tz:.6f}",
+        Orientation=f"{qx:.6f} {qy:.6f} {qz:.6f} {qw:.6f}",
+        Scale="1.000000",
+    )
+
+
+def _add_object_node(parent, obj: ObjectInfo, resource_prefix: str, matrix_number: str, include_matrix: bool):
+    node = ET.SubElement(
+        parent,
+        "NODE",
+        type="OBJECT",
+        Name=obj.name,
+        MatrixNumber=matrix_number,
+        instances="1",
+        userflags=str(obj.userflags),
+    )
+    ET.SubElement(node, "RESOURCE", Filename=_resource_filename(obj, resource_prefix))
+    _add_sphere(node, obj.sphere_center, obj.sphere_radius)
+    if include_matrix:
+        _add_matrix(node, obj.translation, obj.quaternion)
+    return node
+
+
+def _add_lod_node(parent, obj: ObjectInfo, resource_prefix: str):
+    lod_node = ET.SubElement(
+        parent,
+        "NODE",
+        matrices="1",
+        type="LOD",
+        Name=obj.name,
+        MatrixNumber="-1",
+        subobjects=str(len(obj.lod_levels)),
+    )
+    _add_sphere(lod_node, obj.sphere_center, obj.sphere_radius)
+    _add_matrix(lod_node, obj.translation, obj.quaternion)
+    for level in obj.lod_levels:
+        _add_object_node(lod_node, level, resource_prefix, matrix_number="0", include_matrix=False)
+    distances = " ".join(f"{level.lod_distance:g}" for level in obj.lod_levels) + " "
+    ET.SubElement(lod_node, "CONTROL", Distances=distances)
+    return lod_node
+
+
 def build_sgx(objects: List[ObjectInfo], dest_path: Path, resource_prefix: str = "", view_layer=None):
     scene = ET.Element(
         "SCENE",
@@ -950,52 +1151,10 @@ def build_sgx(objects: List[ObjectInfo], dest_path: Path, resource_prefix: str =
     )
     for obj_id, obj in enumerate(objects, 1):
         obj_elem = ET.SubElement(scene, "OBJ_ID", no=str(obj_id))
-        lod_node = ET.SubElement(
-            obj_elem,
-            "NODE",
-            type="LOD",
-            Name=obj.name,
-            MatrixNumber="-1",
-            matrices="1",
-            subobjects="1",
-        )
-        cx, cy, cz = obj.sphere_center
-        ET.SubElement(
-            lod_node,
-            "SPHERE",
-            Centre=f"{cx:.6f} {cy:.6f} {cz:.6f} 1.000000",
-            Radius=f"{obj.sphere_radius:.6f}",
-        )
-        tx, ty, tz = obj.translation
-        qw, qx, qy, qz = obj.quaternion
-        ET.SubElement(
-            lod_node,
-            "MATRIX",
-            Offset=f"{tx:.6f} {ty:.6f} {tz:.6f}",
-            Orientation=f"{qx:.6f} {qy:.6f} {qz:.6f} {qw:.6f}",
-            Scale="1.000000",
-        )
-        ET.SubElement(lod_node, "CONTROL", Distances="10000 ")
-        node = ET.SubElement(
-            lod_node,
-            "NODE",
-            type="OBJECT",
-            Name=obj.name,
-            MatrixNumber="0",
-            instances="1",
-            userflags=str(obj.userflags),
-        )
-        if obj.meb_path.name != obj.name + ".meb":
-            resource_filename = str(obj.meb_path).replace("\\", "/").lstrip("/")
+        if obj.lod_levels:
+            _add_lod_node(obj_elem, obj, resource_prefix)
         else:
-            resource_filename = f"{resource_prefix}{obj.meb_path.name}"
-        ET.SubElement(node, "RESOURCE", Filename=resource_filename)
-        ET.SubElement(
-            node,
-            "SPHERE",
-            Centre=f"{cx:.6f} {cy:.6f} {cz:.6f} 1.000000",
-            Radius=f"{obj.sphere_radius:.6f}",
-        )
+            _add_object_node(obj_elem, obj, resource_prefix, matrix_number="-1", include_matrix=True)
 
     if view_layer is None:
         view_layer = bpy.context.view_layer

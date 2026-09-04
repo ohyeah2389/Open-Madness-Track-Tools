@@ -32,12 +32,13 @@ from .export.gcl_export import export_gcl
 from .export.lights_export import export_lights_sgx
 from .export.sound_export import export_sounds
 from .materials import mtx_material_system
-from .properties import area, camera, dynamic, light, sound
+from .properties import area, camera, dynamic, light, lod, sound
 from .settings import meb_export_settings
 from .settings import empty_meb_settings
 from .ui import camera_ui
 from .ui import light_ui
 from .ui import dynamic_ui
+from .ui import lod_ui
 from .ui import sound_ui
 
 
@@ -495,6 +496,8 @@ def register():
     dynamic_ui.register()
     sound.register()
     sound_ui.register()
+    lod.register()
+    lod_ui.register()
 
     main_classes = [
         MadnessSceneExporter,
@@ -536,6 +539,8 @@ def unregister():
         except RuntimeError:
             pass  # Already unregistered
 
+    lod_ui.unregister()
+    lod.unregister()
     dynamic_ui.unregister()
     dynamic.unregister()
     sound_ui.unregister()

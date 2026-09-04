@@ -51,6 +51,7 @@ class MeshExportOptions:
     # Coordinate system
     flip_coordinates: bool = False
     vertex_transform_mode: str = "SCALE_ONLY"
+    bake_matrix: Any = None
 
     # UV maps (indices into the mesh's UV layers)
     uv_map_indices: List[int] = field(default_factory=list)
@@ -112,7 +113,9 @@ def extract_mesh_data_from_blender(
 
     try:
         # Control how object transforms are baked into exported vertices.
-        if options.vertex_transform_mode == "WORLD":
+        if options.bake_matrix is not None:
+            eval_mesh.transform(options.bake_matrix)
+        elif options.vertex_transform_mode == "WORLD":
             eval_mesh.transform(obj.matrix_world)
         elif options.vertex_transform_mode == "NONE":
             pass

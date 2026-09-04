@@ -12,6 +12,7 @@ from .light import is_sms_light
 from .camera import is_sms_camera
 from .area import is_sms_area, get_area_name
 from .sound import is_sms_sound, get_sound_name
+from .lod import is_sms_lod, get_lod_name
 
 __all__ = [
     'get_definition_name',
@@ -25,5 +26,7 @@ __all__ = [
     'is_sms_area',
     'get_area_name',
     'is_sms_sound',
-    'get_sound_name'
+    'get_sound_name',
+    'is_sms_lod',
+    'get_lod_name',
 ]

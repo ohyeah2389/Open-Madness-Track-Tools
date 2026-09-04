@@ -66,6 +66,8 @@ class ObjectInfo:
         bb_max: np.ndarray = np.array([0, 0, 0]),
         userflags: int = DEFAULT_USERFLAGS,
         source_objects: List = None,
+        lod_levels: List = None,
+        lod_distance: float = 0.0,
     ):
         self.name = name
         self.meb_path = meb_path
@@ -78,6 +80,8 @@ class ObjectInfo:
         self.bb_max = bb_max
         self.userflags = userflags
         self.source_objects = list(source_objects or [])
+        self.lod_levels = list(lod_levels or [])
+        self.lod_distance = lod_distance
 
 
 def _iter_visible_layer_collections(root_layer_collection):
@@ -273,7 +277,7 @@ def collect_empty_objects_with_meb(context):
         if obj.type != "EMPTY":
             continue
 
-        if obj.hide_get():
+        if obj.hide_get() or obj.name.startswith("SMS_LOD_"):
             continue
 
         # Check if this Empty has MEB reference settings
