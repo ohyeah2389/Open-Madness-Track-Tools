@@ -1,0 +1,13 @@
+<material VERSION="v1.0.0.1" name="seasonal" shader="Render\Shaders\basic.fx" technique="Basic" supportsSpecialisedLighting="false" fog="false" antialias="1" numparams="1" cull="EBFCT_ANTICLOCKWISE">
+	<shaderparam name="diffuseTexture" type="EPT_TEXTURE">
+		<type t="ET_STANDARD" />
+		<value v="tracks\textures\3d_trees\tree_seasonal_elm_1_summer.dds" />
+	</shaderparam>
+	<depthparams>
+		<enabled e="true" />
+		<writeenabled w="true" />
+	</depthparams>
+	<alphablendparams>
+		<enabled e="false" />
+	</alphablendparams>
+</material>

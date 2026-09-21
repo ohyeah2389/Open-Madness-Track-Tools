@@ -4,6 +4,6 @@
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
-pyinstaller --onefile --noupx --clean --name PackTrack pack_track.py
+pyinstaller --onefile --noupx --clean --name PackTrack --add-data "placeholder;placeholder" pack_track.py
 
 Write-Host "`nBuilt: $PSScriptRoot\dist\PackTrack.exe"
