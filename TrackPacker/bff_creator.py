@@ -477,6 +477,7 @@ class BFFCreator:
             out.extend(struct.pack("<Q", (i << 32) & 0xFFFFFFFFFFFFFFFF))
             out.extend(struct.pack("<I", 1))
             out.extend(struct.pack("<I", e.compressed_size))
+        out.extend(b"\0" * 4)  # terminator; every stock pak has one after the last run
         return bytes(out)
 
     def _write_section_info(self, f, section_blob: bytes) -> None:
