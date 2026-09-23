@@ -8,6 +8,7 @@ __pycache__/
 /TrackPacker/build/
 /TrackPacker/dist/
 /TrackPacker/_bff_build/
+/SplineRecorder/recordings/
 /dist/
 /Art
 /.vscode

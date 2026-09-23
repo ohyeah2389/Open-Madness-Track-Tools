@@ -10,6 +10,7 @@ You keep the copyright in what you write. By contributing, you agree that your c
 | --- | --- |
 | `TrackCompiler` | GPL-3.0-or-later + output exception |
 | `TrackPacker` | GPL-3.0-or-later + output exception |
+| `SplineRecorder` | GPL-3.0-or-later + output exception |
 | `PhysicsMeshCooker` | MIT |
 | `OMTT Docs` | CC BY-SA 4.0 |
 

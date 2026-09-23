@@ -22,7 +22,7 @@ I haven't begun research into the LiveGrass system because I highly suspect it'l
 
 ## Contents:
 
-### Documentation
+### OMTT Docs
 In the development of this toolkit, I conducted extensive research into the Madness Engine and the file formats it uses. These are some of the notes I took on each file format and the file structure of tracks in both games.
 
 ### PhysicsMeshCooker
@@ -43,6 +43,14 @@ It has the following capabilities:
 - Export a paired `dynamic_objects.xml` and `trackname.env.xml` dynamic physics objects layout fileset, along with each object's visual mesh, materials, and textures under `tracks/_data/dynamic`
 - Export a Level Sound Definition LSD file from a set of scene objects with a specific naming convention, configured data, placements, and orientation (see Example Files)
 - Export a LiveTrack Point Grid and track cut area GCL file from a set of scene objects representing the drivable surface of the track (see Example Files)
+
+### SplineRecorder
+A Python tool that records the player car's position while driving around a track and allows export of that data to CSV files. These CSV files can then be imported to Blender after installing the one-file Blender addon `import_racing_line.py`. The resultant curve objects can then be further transformed into AIW source data meshes by hand, following the tutorial (see OMTT Docs).
+Contains the following:
+- `spline_recorder.py` is the Python tool itself, providing a GUI showing the recording/export controls and recorded laps.
+- `shared_memory.py` is a Python script called by the recorder which handles acquisition and processing of the telemetry frames from AMS2's shared memory.
+- `recorder.py` is a Python file handling recording of data from `shared_memory.py`.
+- `import_racing_line.py` is the single-file Blender addon which provides import of the CSV files exportable from `spline_recorder.py`.
 
 ### TrackPacker
 A command-line utility that converts and packs files for distribution and installation with [Paolo Ambrosio's AMS2 CM](https://github.com/OpenSimTools/AMS2CM/). This is distributed in each release as `PackTrack.exe`; a PyInstaller-built version of the `pack_track.py` script; which can be used instead if you have Python installed.
@@ -71,6 +79,7 @@ This project is free software. Different components carry different licenses:
 | --- | --- |
 | `TrackCompiler` | [GPL-3.0-or-later](LICENSE) + [output exception](LICENSE-EXCEPTION.txt) |
 | `TrackPacker` | [GPL-3.0-or-later](LICENSE) + [output exception](LICENSE-EXCEPTION.txt) |
+| `SplineRecorder` | [GPL-3.0-or-later](LICENSE) + [output exception](LICENSE-EXCEPTION.txt) |
 | `PhysicsMeshCooker` | [MIT](PhysicsMeshCooker/LICENSE) |
 | `OMTT Docs` | [CC BY-SA 4.0](OMTT%20Docs/LICENSE) |
 | `Example Project` | CC BY 4.0 |
