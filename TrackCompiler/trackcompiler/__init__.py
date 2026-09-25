@@ -19,6 +19,7 @@ from .aiw import export as aiw_export
 from .export import livetrack_mrdf_export
 from .export import triggers_export
 from .export.dynamic_export import export_dynamic_objects
+from .export.vhf_export import export_vehicle_vhf
 from .export.environment_export import export_environment_xml
 from .export.sgx_export import (
     PurgeError,
@@ -351,6 +352,59 @@ class MadnessLightsExporter(bpy.types.Operator, ExportHelper):
             return {"CANCELLED"}
 
 
+class MadnessVhfExporter(bpy.types.Operator, ExportHelper):
+    """Export a vehicle VHF hierarchy, its MEBs, and materials"""
+
+    bl_idname = "export_scene.madness_vhf"
+    bl_label = "Export VHF"
+
+    filename_ext = ".vhf"
+
+    filter_glob: StringProperty(
+        default="*.vhf",
+        options={"HIDDEN"},
+        maxlen=255,
+    )  # type: ignore
+
+    export_scope: EnumProperty(
+        name="Objects",
+        description="Choose whether to export selected objects or all visible scene objects",
+        items=[
+            ("ALL", "Export All", "Export every visible vehicle mesh and LOD control"),
+            ("SELECTED", "Export Selected", "Export selected meshes and LOD controls"),
+        ],
+        default="ALL",
+    )  # type: ignore
+
+    export_mtx: BoolProperty(
+        name="Export MTX Files",
+        description="Write MTX material files next to the exported VHF and MEB files",
+        default=True,
+    )  # type: ignore
+
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(self, "export_scope")
+        layout.prop(self, "export_mtx")
+
+    def execute(self, context):
+        try:
+            result = export_vehicle_vhf(
+                self.filepath,
+                context,
+                export_scope=self.export_scope,
+                export_mtx=self.export_mtx,
+            )
+            self.report(
+                {"INFO"},
+                f"VHF exported: {result['parts']} part(s), {result['meshes']} mesh(es)",
+            )
+            return {"FINISHED"}
+        except Exception as e:
+            self.report({"ERROR"}, f"VHF export failed: {e}")
+            return {"CANCELLED"}
+
+
 class MadnessDynamicObjectsExporter(bpy.types.Operator, ExportHelper):
     """Export Dynamic Objects (generates both dynamic_collisions.xml and env.xml)"""
 
@@ -471,6 +525,10 @@ def menu_func_export(self, context):
         text="Madness Dynamic Objects (collision & env)",
     )
     self.layout.operator(
+        MadnessVhfExporter.bl_idname,
+        text="Madness Hierarchy (.vhf)",
+    )
+    self.layout.operator(
         MadnessSoundExporter.bl_idname,
         text="Madness Sound Definitions (.lsd)",
     )
@@ -506,6 +564,7 @@ def register():
         MadnessLightsExporter,
         MadnessGclExporter,
         MadnessDynamicObjectsExporter,
+        MadnessVhfExporter,
         MadnessSoundExporter,
     ]
 
@@ -525,6 +584,7 @@ def unregister():
 
     main_classes = [
         MadnessSoundExporter,
+        MadnessVhfExporter,
         MadnessDynamicObjectsExporter,
         MadnessLightsExporter,
         MadnessSingleMebExporter,

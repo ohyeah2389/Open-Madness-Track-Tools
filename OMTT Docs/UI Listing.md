@@ -102,6 +102,7 @@ Visible for empties.
 Most exporters have no options UI beyond the file browser.
 - Madness Scene `.sgx`, `.meb`, `.mtx`
 	- Export MTX Files
+	- Purge MTX / Purge MEB / Purge DDS
 - Madness Cameras `.xml`
 	- No options
 - Madness Single MEB `.meb` + `.mtx`
@@ -112,6 +113,9 @@ Most exporters have no options UI beyond the file browser.
 	- No options
 - Madness Dynamic Objects (collision & env)
 	- No options
+- Madness Hierarchy `.vhf`
+	- export_scope
+	- Export MTX Files
 - Madness Sound Definitions `.lsd`
 	- No options
 - Madness LiveTrack Cells `.gcl`

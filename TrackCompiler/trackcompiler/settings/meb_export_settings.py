@@ -41,6 +41,12 @@ class MEBExportSettings(bpy.types.PropertyGroup):
         default=False
     ) # type: ignore
 
+    vhf_modifiable: BoolProperty(
+        name="VHF Modifiable",
+        description="Write Modifiable on this mesh when it is exported in a vehicle VHF",
+        default=False,
+    ) # type: ignore
+
     skip_uv_compression: BoolProperty(
         name="Skip UV Compression",
         description="Append _no_uv_comp to exported MEB filename for this mesh",
@@ -393,6 +399,7 @@ class MEB_PT_export_settings(bpy.types.Panel):
         col.prop(settings, "disable_material")
         col.prop(settings, "tangent_space")
         col.prop(settings, "bodywork")
+        col.prop(settings, "vhf_modifiable")
         col.prop(settings, "skip_uv_compression")
 
         row = col.row()
