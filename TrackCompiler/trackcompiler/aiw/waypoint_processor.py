@@ -289,7 +289,7 @@ class WaypointProcessor:
                 dwidth_right = abs(right_wall_distance)
 
         return {
-            'racing_offset': -racing_offset,
+            'racing_offset': racing_offset,
             'width': (width_left, width_right),
             'dwidth': (dwidth_left, dwidth_right)
         }
