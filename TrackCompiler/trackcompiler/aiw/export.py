@@ -480,7 +480,16 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
                 pit_waypoints[pit_behind_idx].wp_ptrs[3],  # branch_merge
             )
 
-    waypoint_span = aiw_props.track_features.waypoint_span
+    waypoint_span = 5.0
+    if centerline_obj:
+        centerline_vertices = WaypointProcessor._get_ordered_vertices(centerline_obj)
+        spacing = WaypointProcessor.average_path_spacing(centerline_vertices, closed=True)
+        if spacing > 0.0:
+            waypoint_span = spacing
+        else:
+            warnings.append("Could not measure centerline vertex spacing; waypoint span left at 5.00")
+    else:
+        warnings.append("No SMS_AIW_CENTERLINE mesh; waypoint span left at 5.00")
 
     # Calculate lap length and sector lengths
     lap_length = 0.0

@@ -3,7 +3,6 @@ This lists where every TrackCompiler Blender UI panel and section appears. The l
 ## Madness AIW Params
 Always visible.
 - Track Features
-	- Waypoint Span
 	- Left-Handed Pits
 	- Track Difficulty
 	- Pit Lanes

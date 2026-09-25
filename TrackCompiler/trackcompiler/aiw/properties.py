@@ -7,14 +7,6 @@ from bpy.props import StringProperty, BoolProperty, FloatProperty, IntProperty, 
 class AIWTrackFeatures(bpy.types.PropertyGroup):
     """Track features properties for AIW export."""
 
-    waypoint_span: FloatProperty(
-        name="Waypoint Span",
-        description="Distance between waypoints",
-        default=5.0,
-        min=0.1,
-        max=100.0,
-    )  # type: ignore
-
     pitlanes: IntProperty(
         name="Pit Lanes", description="Number of pit lanes", default=1, min=0, max=2
     )  # type: ignore

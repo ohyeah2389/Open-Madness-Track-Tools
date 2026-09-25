@@ -252,7 +252,11 @@ The AIW data serves the same purpose in Madness Engine games as it does in gMoto
 - `SMS_AIW_CENTERLINE`: Defines the location of the individual waypoints forming the main path. Pay attention to the vertex indices; they should be ordered correctly counting up along the path, with no errors. To easily fix a disordered vertex series, convert the line mesh to a curve and back to a mesh. 
 - `SMS_AIW_PITLINE`: Defines the location of the individual waypoints forming the pit path. Same vertex index restrictions apply.
 
-In the added Madness AIW Params section of the Scene Properties panel, make sure to set the "Waypoint Span" distance to roughly the average distance between each waypoint vertex. Remember that a spacing of less than 3 meters between each waypoint can cause very strange AI driving behaviors, such as being overly cautious.
+In the added Madness AIW Params section of the Scene Properties panel, make sure to set the "Waypoint Span" distance to roughly the average distance between each waypoint vertex.
+
+In toolkit versions v0.3.0 and greater, waypoint span is calculated automatically from the evaluated `SMS_AIW_CENTERLINE` mesh (the average distance between consecutive vertices along the path, including the closing segment). 
+
+A spacing of less than 3 meters between each waypoint can cause very strange AI driving behaviors, such as being overly cautious.
 
 The centerline also needs certain data set up for each waypoint regarding the cornering behavior of the computer opponents in that area. If no corner data is assigned, it is likely that the computer opponents will fling themselves off the side of the track once they reach a corner as they won't be aware that there is a corner. To set this up, create two attribute fields `corner_type` and `corner_state`. 
 

@@ -232,6 +232,18 @@ class WaypointProcessor:
         return ordered_vertices
 
     @staticmethod
+    def average_path_spacing(vertices: List[np.ndarray], closed: bool = True) -> float:
+        """Mean distance between consecutive vertices along a path."""
+        count = len(vertices)
+        if count < 2:
+            return 0.0
+        steps = count if closed else count - 1
+        total = 0.0
+        for i in range(steps):
+            total += float(np.linalg.norm(vertices[(i + 1) % count] - vertices[i]))
+        return total / steps
+
+    @staticmethod
     def _calculate_lateral_offsets(
         centerline_pos: np.ndarray,
         racing_line_obj: bpy.types.Object = None,

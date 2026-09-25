@@ -28,10 +28,6 @@ class AIW_PT_ScenePanel(bpy.types.Panel):
         box.label(text="Track Features", icon="SETTINGS")
 
         col = box.column(align=True)
-
-        col.prop(aiw_props.track_features, "waypoint_span")
-
-        col.separator()
         col.prop(aiw_props.track_features, "left_handed_pits")
         col.prop(aiw_props.track_features, "track_difficulty")
         col.prop(aiw_props.track_features, "pitlanes")
