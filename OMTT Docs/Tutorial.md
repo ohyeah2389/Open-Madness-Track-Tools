@@ -1,6 +1,8 @@
 This tutorial, like the entire project, is a work-in-progress and is, by definition and necessity, not complete. Please keep that in mind while following it. If you have any notes or questions, please post them to the Issues tracker of this repository.
 
 Before following this tutorial, you should install the TrackCompiler Blender extension provided in the releases of this repository. It is installable in the same way as any other Blender extension, through Preferences > Extensions > Install from Disk.
+
+An important note before we start: this tutorial and toolkit are for building original tracks only. Do not use this project to port, convert, or edit anyone else's work without their explicit permission. Doing so is unsupported, harmful, likely illegal, and entirely at your own risk. See "About Porting and Unauthorized Use" in the repository README.
 # Step 0: Shotgun Introduction to the Madness Engine
 The Madness Engine's game data is not designed to be modified by the end-user. That doesn't mean it isn't modifiable under the right configuration. 
 

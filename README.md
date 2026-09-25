@@ -10,6 +10,22 @@ This is an unofficial, independent project. It is not affiliated with, authorize
 
 No game assets or game code are distributed by this project. You must own a legitimate copy of the target game to use this toolkit.
 
+## About Porting and Unauthorized Use
+This toolkit has been designed for facilitating the creation of original content for Madness Engine games. I and the other contributors have deliberately not given it facilities for importing or modifying existing game data, or for converting prior work from other games to games running on the Madness Engine, even content you have the rights to work with. Porting, converting, or reprocessing work you did not create is counter to the core purpose and motivation of the toolkit.
+
+The toolkit grants you no rights in anything. Running a file through these tools does not transfer, create, or launder ownership or permission to use or distribute its outputs. If you did not create the input, you do not own the output. If you did not create some part of the input, you do not own that part of the output. This covers every kind of output the toolkit can create: binary-packed meshes, material definition data, scenegraphs, hierarchies, AI waypoints, cameras, lights, sounds, LiveTrack data, vehicles, and anything else.
+
+Processing another person's work without their informed and verifiable permission is not permitted by this project. That includes:
+- Converting tracks, cars, or any other assets from other games or mods
+- Editing, re-exporting, or redistributing content that was already built for a Madness Engine game by someone else, including the official game developers and third-party creators, whether authorized by the official developers or not
+- Using any source data you do not have the rights to use
+
+This conduct likely infringes the original artist's copyright, may breach the licence and end-user terms that the work was originally released under, and does real harm to the people who created it. Anyone who does this is solely and personally responsible for it, including any takedowns, account or community bans, damages, legal costs, and other legal consequences that follow. The authors of this toolkit do not authorize, condone, or accept any responsibility for it, and will cooperate with rights holders who act against it within the limits of what they can do. The toolkit contains no telemetry, tracking, or licensing system, so the authors have no records of who downloads or uses it.
+
+If the original artist has explicitly given you permission to reprocess their work, that is acceptable, though still discouraged and still unsupported.
+
+Ported and unauthorized content receives zero support. Issues, questions, bug reports, and pull requests involving it, or aimed at making porting easier, will be closed without response.
+
 ## Limitations:
 I want people to be aware of the limitations of the current methodology upfront. Here is the non-exhaustive list of features that are not yet working:
 
@@ -85,8 +101,8 @@ This project is free software. Different components carry different licenses:
 | `OMTT Docs` | [CC BY-SA 4.0](OMTT%20Docs/LICENSE) |
 | `Example Project` | CC BY 4.0 |
 
-### Tracks you make with this are yours
-The copyleft terms apply to this toolkit and to derivatives of it. They do not apply to the tracks you build with it. The [output exception](LICENSE-EXCEPTION.txt) states this explicitly: files produced by these tools belong to you, you may license them however you like, and you may sell them.
+### Original tracks you make with this are yours
+The copyleft terms apply to this toolkit and to derivatives of it. They do not apply to the files the tools produce. The [output exception](LICENSE-EXCEPTION.txt) states this explicitly. If you created the inputs, the output is yours: you may license it however you like, and you may sell it. If you did not create the inputs, see [Porting and Unauthorized Use](#porting-and-unauthorized-use).
 
 ### Contributing and naming
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the sign-off requirement, and [TRADEMARKS.md](TRADEMARKS.md) for how the project name may be used.

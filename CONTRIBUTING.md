@@ -43,3 +43,7 @@ The full text is at <https://developercertificate.org/>.
 ## Do not contribute game-derived material
 
 This project documents and targets a closed-source engine, so it has to be careful about what it ships. Do not add files extracted from any game, including meshes, textures, sounds, collision data, shader binaries, or packaged archives. Documenting a file format is fine; redistributing proprietary files in that format is not fine.
+
+## Do not contribute porting features
+
+This toolkit supports the creation of original content only. Contributions that import, convert, or edit existing content, or that otherwise make porting easier, will not be accepted, neither will issues or support requests involving ported content. See "Porting and Unauthorized Use" in [README.md](README.md#about-porting-and-unauthorized-use).
