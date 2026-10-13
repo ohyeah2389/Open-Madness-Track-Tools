@@ -32,6 +32,10 @@ from ..utils import sanitize
 SCENE_SHADER_DB_KEY = "mtx_shader_database_id"
 SUPPORTED_DDS_FOURCC = {"DXT1", "DXT3", "DXT5", "BC5U"}
 SUPPORTED_DDS_DXGI_BC7 = {98, 99}  # BC7_UNORM / BC7_UNORM_SRGB
+SUPPORTED_DDS_DXGI_A8R8G8B8 = 87  # B8G8R8A8_UNORM (RGBA8888)
+_DDPF_FOURCC = 0x4
+_DDPF_RGB = 0x40
+_A8R8G8B8_MASKS = (0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000)
 
 
 def _available_shader_database_ids():
@@ -275,17 +279,23 @@ def _inspect_dds_format(texture_path: Path):
     if len(header) < 128 or header[:4] != b"DDS ":
         return False, "invalid DDS header"
 
-    # DDS_PIXELFORMAT starts 72 bytes into the 124-byte DDS header.
-    # File layout is: 4-byte "DDS " magic + 124-byte header.
-    # So dwFourCC (8 bytes into DDS_PIXELFORMAT) is at file offset 84.
+    pf_flags = struct.unpack_from("<I", header, 80)[0]
     fourcc = header[84:88].decode("ascii", "ignore").strip("\x00 ").upper()
     if fourcc in SUPPORTED_DDS_FOURCC:
         return True, fourcc
     if fourcc == "DX10" and len(header) >= 132:
-        dxgi_format = struct.unpack("<I", header[128:132])[0]
+        dxgi_format = struct.unpack_from("<I", header, 128)[0]
         if dxgi_format in SUPPORTED_DDS_DXGI_BC7:
             return True, f"BC7 (DXGI {dxgi_format})"
+        if dxgi_format == SUPPORTED_DDS_DXGI_A8R8G8B8:
+            return True, "A8R8G8B8"
         return False, f"DX10 (DXGI {dxgi_format})"
+    if not (pf_flags & _DDPF_FOURCC) and (pf_flags & _DDPF_RGB):
+        bit_count = struct.unpack_from("<I", header, 88)[0]
+        if bit_count == 32 and struct.unpack_from("<4I", header, 92) == _A8R8G8B8_MASKS:
+            return True, "A8R8G8B8"
+        if bit_count == 24:
+            return False, "R8G8B8"
     return False, fourcc or "unknown"
 
 
@@ -306,7 +316,7 @@ def get_texture_param_warning(param, context=None):
     if not is_supported:
         return (
             "unsupported",
-            f"Unsupported DDS format: {detected_format} (use DXT1, DXT3, DXT5, BC5U, or BC7)",
+            f"Unsupported DDS format: {detected_format} (use DXT1, DXT3, DXT5, BC5U, BC7, or A8R8G8B8)",
         )
     return None
 
