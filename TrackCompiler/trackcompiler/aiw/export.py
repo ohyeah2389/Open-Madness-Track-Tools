@@ -7,6 +7,7 @@ from bpy.props import StringProperty, PointerProperty  # type: ignore
 from bpy_extras.io_utils import ExportHelper  # type: ignore
 from . import parser
 from .ui import AIW_PT_ScenePanel
+from .corner_markers import apply_corner_markers
 from .waypoint_processor import WaypointProcessor
 from .connections import (
     connect_pit_lane_to_main_line,
@@ -483,12 +484,14 @@ def export_aiw(context, filepath: str, export_cut_lines: bool = True, export_wal
     waypoint_span = 5.0
     if centerline_obj:
         centerline_vertices = WaypointProcessor._get_ordered_vertices(centerline_obj)
+        apply_corner_markers(scene.objects, centerline_vertices, racing_waypoints, warnings)
         spacing = WaypointProcessor.average_path_spacing(centerline_vertices, closed=True)
         if spacing > 0.0:
             waypoint_span = spacing
         else:
             warnings.append("Could not measure centerline vertex spacing; waypoint span left at 5.00")
     else:
+        apply_corner_markers(scene.objects, [], [], warnings)
         warnings.append("No SMS_AIW_CENTERLINE mesh; waypoint span left at 5.00")
 
     # Calculate lap length and sector lengths

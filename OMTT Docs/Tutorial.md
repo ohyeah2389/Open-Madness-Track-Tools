@@ -259,7 +259,7 @@ In the added Madness AIW Params section of the Scene Properties panel, make sure
 In toolkit versions v0.3.0 and greater, waypoint span is calculated automatically from the evaluated `SMS_AIW_CENTERLINE` mesh (the average distance between consecutive vertices along the path, including the closing segment). 
 
 A spacing of less than 3 meters between each waypoint can cause very strange AI driving behaviors, such as being overly cautious.
-
+### Corner Data (Method 1)
 The centerline also needs certain data set up for each waypoint regarding the cornering behavior of the computer opponents in that area. If no corner data is assigned, it is likely that the computer opponents will fling themselves off the side of the track once they reach a corner as they won't be aware that there is a corner. To set this up, create two attribute fields `corner_type` and `corner_state`. 
 
 `corner_type` determines the "style" of corner at that waypoint:
@@ -278,7 +278,25 @@ The centerline also needs certain data set up for each waypoint regarding the co
 3. Exit
 
 To assign values to an attribute field, select the desired attribute field in the Object Data Properties panel, and in edit mode on the object with the desired vertices selected, on the top bar in the Mesh dropdown, click Set Attribute and type in the value to assign to those vertices for that attribute field. Note that these attribute fields need to be set as vertex-domain integers, not floats or any other data type or any other domain type. As a hint to assign the `corner_state` values: with all corner areas selected (after performing the `corner_type` assignments), assign them as Exit, then deselect the exits, then assign as Apex, then deselect the apexes, then assign the remaining as Entry.
+### Corner Data (Method 2)
+The same corner fields can be laid out with empties instead of vertex attributes by placing specially-named empties along `SMS_AIW_CENTERLINE`. On export, each one is projected onto the centerline and the waypoints between them are labeled automatically. If any of these described empties are in the scene, they supply `corner_type` and `corner_state` for the whole centerline. If none are present, Method 1 is used.
 
+For each corner, place four empties in this order along the direction of travel. The name only has to start with the prefix, so Blender's `.001` suffix is fine when a track has more than one corner:
+- `SMS_AIW_CS_ENTRY`
+- `SMS_AIW_CS_APEXSTART`
+- `SMS_AIW_CS_APEXEND`
+- `SMS_AIW_CS_EXIT`
+
+Waypoints from `ENTRY` to `APEXSTART` are Entry, from `APEXSTART` to `APEXEND` are Apex, and from `APEXEND` to `EXIT` are Exit. The waypoint at the `EXIT` empty is the first waypoint after the corner. Each `ENTRY` is matched with the next `EXIT` ahead of it on the centerline, including a corner that crosses the start/finish line. When one corner's `EXIT` sits on the next corner's `ENTRY`, that waypoint belongs to the next corner.
+
+Place one named empty between that corner's `ENTRY` and `EXIT` to determine the type of the corner:
+- `SMS_AIW_CT_LEFT` (left turn)
+- `SMS_AIW_CT_RIGHT` (right turn)
+- `SMS_AIW_CT_LOOSECHIC` (loose chicane)
+- `SMS_AIW_CT_TIGHTCHIC` (tight chicane)
+
+Waypoints outside every span are labeled as a straight. Export fails if a corner is missing one of the four state empties, if `APEXSTART` does not lie between `ENTRY` and `APEXEND`, or if a span does not contain exactly one type empty.
+### Other Objects
 A few objects are required to be created and placed correctly. These can be meshes or empties; all that matters is their object names. They should be placed with their origin on the physical surface below them (unlike AC where a raycast is automatically done to resolve this, if you place the pitboxes high up, the cars will slide upwards when "magnetically" dragged into the pitbox, which can look weird, among other issues).
 - `SMS_AIW_GARAGE_0A`: Spawn location of each car, uses A/B/C/etc. for additional garages paired with each `PITBOX` spot. Z up, Y forward, X right. Garage spots per pitbox are derived automatically from these objects (1 if only A is used, 2 if B is used, etc.).
 - `SMS_AIW_PITBOX_0`: Pitstop location for each car. If `GARAGE_...B/C/etc` are used, multiple cars may stop in the same pitbox. Z up, Y forward, X right. Pitbox count is derived automatically from these objects.

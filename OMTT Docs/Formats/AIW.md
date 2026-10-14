@@ -18,3 +18,8 @@ Corners must be assigned or the AI won't know when and where to slow down, resul
 2. Apex
 3. Exit
 (hint: to assign, select all corners, assign as Exit, then deselect the exits, then assign as Apex, then deselect the apexes, then assign the remaining as Entry)
+
+The same fields can instead be authored with special name-prefixed empties near `SMS_AIW_CENTERLINE`. 
+If any of these empties are present, they replace the vertex attributes above for the whole centerline.
+- Per corner, in travel order: `SMS_AIW_CS_ENTRY`, `SMS_AIW_CS_APEXSTART`, `SMS_AIW_CS_APEXEND`, `SMS_AIW_CS_EXIT`
+- One type empty between that ENTRY and EXIT: `SMS_AIW_CT_LEFT` (3), `SMS_AIW_CT_RIGHT` (4), `SMS_AIW_CT_LOOSECHIC` (5), `SMS_AIW_CT_TIGHTCHIC` (6)
