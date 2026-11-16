@@ -262,7 +262,6 @@ def extract_mesh_data_from_blender(
             eval_mesh.vertex_colors[0].data.foreach_get("color", color_data_all)
             color_data_all = color_data_all.reshape(-1, 4)
             loop_colors = color_data_all[loop_indices].copy()
-            loop_colors[:, 3] = 1.0
         else:
             loop_colors = np.ones((len(loop_indices), 4), dtype=np.float32)
 
